@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1;payment_v1";
+
+// PaymentService предоставляет методы для работы с платежами.
+service PaymentService {
+    // PayOrder обрабатывает запрос на оплату заказа и возвращает UUID транзакции.
+    rpc PayOrder (PayOrderRequest) returns (PayOrderResponse);
+}
+
+// PaymentMethod определяет возможные способы оплаты.
+enum PaymentMethod {
+    PAYMENT_METHOD_UNSPECIFIED = 0;    // Неизвестный способ оплаты (зарезервирован для ошибок или дефолта).
+    PAYMENT_METHOD_CARD = 1;           // Оплата банковской картой.
+    PAYMENT_METHOD_SBP = 2;            // Система быстрых платежей (СБП).
+    PAYMENT_METHOD_CREDIT_CARD = 3;    // Оплата кредитной картой.
+    PAYMENT_METHOD_INVESTOR_MONEY = 4; // Внутренний метод оплаты (деньги инвестора).
+}
+
+// PayOrderRequest содержит данные для запроса на оплату заказа.
+message PayOrderRequest {
+    string order_uuid = 1;        // UUID заказа, который нужно оплатить.
+    string user_uuid = 2;         // UUID пользователя, инициирующего оплату.
+    PaymentMethod payment_method = 3; // Выбранный способ оплаты.
+}
+
+// PayOrderResponse содержит результат обработки платежа.
+message PayOrderResponse {
+    string transaction_uuid = 1;  // UUID транзакции, созданной в результате оплаты.
+}

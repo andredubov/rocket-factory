@@ -32,7 +32,7 @@ vars:
 
   OPEN_API_FILES: '{{.ROOT_DIR}}/shared/api/bundles'
 
-  MODULES: assembly inventory order payment platform iam notification
+  MODULES: inventory order payment
 
 tasks:
   install-formatters:
@@ -454,3 +454,54 @@ tasks:
         
         echo
         echo "🎉 Все тесты API успешно выполнены!"
+
+  run:inventory:
+    cmds:
+      - |
+        go build -o ./bin/inventory ./inventory/cmd/main.go
+        ./bin/inventory -config-path ./inventory/config/.env
+
+  run:payment:
+    cmds:
+      - |
+        go build -o ./bin/payment ./payment/cmd/main.go
+        ./bin/payment -config-path ./payment/config/.env
+
+  docker-compose:generate-env:
+    desc: "Generate root .env file from service configs"
+    deps: [docker-compose:check-env-files]
+    cmds:
+      - |
+        echo "Generating {{.ENV_FILE}}..."
+        echo "INVENTORY_GRPC_HOST=$(grep 'GRPC_HOST=' ./inventory/config/.env | cut -d '=' -f2)" > {{.ENV_FILE}}
+        echo "INVENTORY_GRPC_PORT=$(grep 'GRPC_PORT=' ./inventory/config/.env | cut -d '=' -f2)" >> {{.ENV_FILE}}
+        echo "PAYMENT_GRPC_HOST=$(grep 'GRPC_HOST=' ./payment/config/.env | cut -d '=' -f2)" >> {{.ENV_FILE}}
+        echo "PAYMENT_GRPC_PORT=$(grep 'GRPC_PORT=' ./payment/config/.env | cut -d '=' -f2)" >> {{.ENV_FILE}}
+        echo "File {{.ENV_FILE}} created successfully!"
+    silent: false
+    vars:
+      ENV_FILE: .env
+
+  docker-compose:check-env-files:
+    desc: "Verify required .env files exist"
+    cmds:
+      - |
+        test -f ./inventory/config/.env || (echo "Error: ./inventory/config/.env not found" && exit 1)
+        test -f ./payment/config/.env || (echo "Error: ./payment/config/.env not found" && exit 1)
+    silent: true
+
+  docker-compose:local:down:
+    cmds:
+      - task: docker-compose:check-env-files
+      - task: docker-compose:generate-env
+      - |
+        docker compose --env-file .env down --remove-orphans 
+        rm .env
+
+  docker-compose:local:up:
+    cmds:
+      - task: docker-compose:check-env-files
+      - task: docker-compose:generate-env
+      - |
+        docker compose --env-file .env up --build -d
+        rm .env
