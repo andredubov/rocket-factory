@@ -9,7 +9,7 @@ vars:
   BUF_VERSION: '1.53.0'
   PROTOC_GEN_GO_VERSION: 'v1.36.6'
   PROTOC_GEN_GO_GRPC_VERSION: 'v1.5.1'
-  OGEN_VERSION: 'v1.12.0'
+  OGEN_VERSION: 'v1.14.0'
   YQ_VERSION: 'v4.45.2'
   GRPCURL_VERSION: 'v1.9.3'
 
@@ -31,6 +31,10 @@ vars:
   OPEN_API_ORDER_V1_BUNDLE: '{{.ROOT_DIR}}/shared/api/bundles/order.openapi.v1.bundle.yaml'
 
   OPEN_API_FILES: '{{.ROOT_DIR}}/shared/api/bundles'
+
+  OPEN_API_TARGET: '{{.ROOT_DIR}}/shared/pkg/openapi/order/v1'
+  OPEN_API_PACKAGE: 'order_v1'
+  OPEN_API_FILE: '{{.OPEN_API_ORDER_V1_BASE}}'
 
   MODULES: inventory order payment
 
@@ -179,6 +183,9 @@ tasks:
       - |
         [ -f {{.REDOCLY}} ] || {
           npm ci
+        } || {
+          echo "📦 Устанавливаем redocly-cli..."
+          npm install
         }
 
   redocly-cli:order-v1-bundle:
@@ -206,22 +213,8 @@ tasks:
     desc: "Генерация Go-кода из всех OpenAPI-деклараций с x-ogen"
     deps: [ ogen:install, yq:install ]
     cmds:
-      - task: redocly-cli:bundle
       - |
-        find {{.OPEN_API_FILES}} -name '*.yaml' -o -name '*.yml' | while read -r file; do
-          if [ -f "$file" ] && grep -q 'x-ogen:' "$file"; then
-            echo "🚀 Generating from: $file"
-            target=$({{.YQ}} e '."x-ogen".target' "$file")
-            package=$({{.YQ}} e '."x-ogen".package' "$file")
-            echo "📁 Target: $target"
-            echo "📦 Package: $package"
-            {{.OGEN}} \
-              --target "$target" \
-              --package "$package" \
-              --clean \
-              "$file" || exit 1
-          fi
-        done
+        {{.OGEN}} --target "{{.OPEN_API_TARGET}}" --package "{{.OPEN_API_PACKAGE}}" --clean "{{.OPEN_API_FILE}}" || exit 1
 
   gen:
     desc: "Генерация всех proto и OpenAPI деклараций"
@@ -466,6 +459,12 @@ tasks:
       - |
         go build -o ./bin/payment ./payment/cmd/main.go
         ./bin/payment -config-path ./payment/config/.env
+
+  run:order:
+    cmds:
+      - |
+        go build -o ./bin/order ./order/cmd/main.go
+        ./bin/order -config-path ./order/config/.env
 
   docker-compose:generate-env:
     desc: "Generate root .env file from service configs"

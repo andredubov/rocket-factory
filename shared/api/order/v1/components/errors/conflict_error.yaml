@@ -1,0 +1,13 @@
+type: object
+required:
+  - code
+  - message
+properties:
+  code:
+    type: integer
+    description: HTTP status code
+    default: 409
+  message:
+    type: string
+    description: Description of the response
+    default: Conflict

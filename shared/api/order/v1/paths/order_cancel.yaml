@@ -1,0 +1,28 @@
+post:
+  tags: [Orders]
+  summary: Cancel an order
+  description: Cancel an existing order
+  operationId: cancelOrder
+  parameters:
+    - $ref: '../parameters/order_uuid.yaml'
+  responses:
+    '204':
+      description:  Заказ успешно отменён
+    '404':
+      description: Заказ не найден
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/not_found_error.yaml"
+    '409':
+      description: Заказ уже оплачен и не может быть отменён
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/conflict_error.yaml"
+    default:
+      description: Что-то пошло не так...
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/internal_server_error.yaml"

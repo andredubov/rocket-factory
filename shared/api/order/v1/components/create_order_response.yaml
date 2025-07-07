@@ -1,0 +1,17 @@
+type: object
+description: |
+  Ответ при успешном создании заказа.
+  Содержит UUID заказа и рассчитанную итоговую стоимость.
+properties:
+  order_uuid:
+    type: string
+    format: uuid
+    description: Уникальный идентификатор созданного заказа
+    example: "o1b2c3d4-e5f6-7890-g1h2-i3j4k5l6m7n8"
+  total_price:
+    type: number
+    format: double
+    description: |
+      Общая сумма заказа, рассчитанная как сумма стоимостей всех деталей.
+      Представляется в виде десятичного числа с 2 знаками после запятой.
+    example: 123.45

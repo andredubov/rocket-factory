@@ -1,0 +1,41 @@
+post:
+  tags: [Orders]
+  summary: Pay for an order
+  description: Process payment for an existing order
+  operationId: payOrder
+  parameters:
+    - $ref: '../parameters/order_uuid.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/pay_order_request.yaml'
+  responses:
+    '200':
+      description: |
+        Заказ успешно оплачен.
+        Ответ при успешной оплате заказа.
+        Содержит идентификатор транзакции.
+      content:
+        application/json:
+          schema:
+            $ref: '../components/pay_order_response.yaml'
+    '400':
+      description: Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/bad_request_error.yaml"
+    '404':
+      description: Заказ не оплачен
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/not_found_error.yaml"
+    default:
+      description: Что-то пошло не так
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/internal_server_error.yaml"
