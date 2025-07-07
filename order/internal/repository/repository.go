@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
 	"github.com/gofrs/uuid"
+
+	"github.com/andredubov/rocket-factory/order/internal/repository/model"
 )
 
 // Error definitions

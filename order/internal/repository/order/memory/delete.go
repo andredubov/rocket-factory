@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/gofrs/uuid"
+
+	"github.com/andredubov/rocket-factory/order/internal/repository"
 )
 
 // DeleteOrder removes an order from the repository by its UUID.

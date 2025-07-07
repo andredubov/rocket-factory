@@ -7,6 +7,5 @@ import (
 )
 
 func (i *Implementation) CreateOrder(ctx context.Context, req *order_v1.CreateOrderRequest) (order_v1.CreateOrderRes, error) {
-
 	return nil, nil
 }

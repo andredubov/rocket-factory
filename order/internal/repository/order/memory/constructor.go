@@ -3,9 +3,10 @@ package memory
 import (
 	"sync"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/model"
-	"github.com/gofrs/uuid"
 )
 
 // ordersRepository is an in-memory implementation of the Orders repository.

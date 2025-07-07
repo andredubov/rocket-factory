@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gofrs/uuid"
+
 	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/model"
-	"github.com/gofrs/uuid"
 )
 
 // GetUserOrders retrieves all orders belonging to a specific user.

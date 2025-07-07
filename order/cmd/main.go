@@ -11,11 +11,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/andredubov/rocket-factory/order/internal/api/v1/order"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 const (
