@@ -96,16 +96,13 @@ func (a *App) initGRPCServer(ctx context.Context) error {
 
 // runGRPCServer starts GRPC server on configured address
 func (a *App) runGRPCServer() error {
-	log.Printf("GRPC server is running on %s", a.serviceProvider.GRPCConfig().Address())
+	addr := a.serviceProvider.GRPCConfig().Address()
+	log.Printf("gRPC server starting on %s", addr)
 
-	listener, err := net.Listen("tcp", a.serviceProvider.GRPCConfig().Address())
+	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
 
-	if err = a.grpcServer.Serve(listener); err != nil {
-		return err
-	}
-
-	return nil
+	return a.grpcServer.Serve(listener) // Blocking call
 }
