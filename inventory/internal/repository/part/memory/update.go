@@ -2,8 +2,8 @@ package memory
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
@@ -18,7 +18,7 @@ func (p *inventoryRepository) UpdatePart(ctx context.Context, part model.Part) e
 
 	// Verify part exists before update
 	if _, exists := p.parts[part.Uuid]; !exists {
-		return fmt.Errorf("part with UUID %s not found", part.Uuid)
+		return repository.ErrPartWithUUIDNotFound(part.Uuid)
 	}
 
 	// Create defensive copy to prevent external modifications

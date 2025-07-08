@@ -2,7 +2,8 @@ package memory
 
 import (
 	"context"
-	"fmt"
+
+	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 )
 
 // DeletePart removes a part from the repository by UUID
@@ -16,7 +17,7 @@ func (p *inventoryRepository) DeletePart(ctx context.Context, uuid string) error
 
 	// Verify part exists before deletion
 	if _, exists := p.parts[uuid]; !exists {
-		return fmt.Errorf("part with UUID %s not found", uuid)
+		return repository.ErrPartWithUUIDNotFound(uuid)
 	}
 
 	delete(p.parts, uuid) // Remove part from map

@@ -2,8 +2,8 @@ package memory
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
@@ -73,7 +73,7 @@ func (i *inventoryRepository) GetPart(ctx context.Context, uuid string) (*model.
 
 	part, exists := i.parts[uuid]
 	if !exists {
-		return nil, fmt.Errorf("part with UUID %s not found", uuid)
+		return nil, repository.ErrPartWithUUIDNotFound(uuid)
 	}
 
 	return part, nil
