@@ -13,22 +13,29 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/andredubov/rocket-factory/order/internal/api/v1/order"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
+	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
+	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
 const (
-	httpPort             = "8080"
-	readHeaderTimeout    = 5 * time.Second
-	shutdownTimeout      = 30 * time.Second
-	paymentServerAddress = "localhost:50050"
+	httpPort                = "8080"
+	readHeaderTimeout       = 5 * time.Second
+	shutdownTimeout         = 30 * time.Second
+	paymentServiceAddress   = "localhost:50051"
+	inventoryServiceAddress = "localhost:50052"
 )
 
 func main() {
+	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
+	inventoryServiceClient := newInventoryServiceClient(paymentServiceAddress)
 	ordersRepository := memory.NewOrderRepository()
-	ordersHandler := order.NewOrderHandler(ordersRepository)
+	ordersHandler := order.NewOrderHandler(ordersRepository, paymentServiceClient, inventoryServiceClient)
 
 	orderServer, err := order_v1.NewServer(ordersHandler)
 	if err != nil {
@@ -68,4 +75,40 @@ func main() {
 	}
 
 	log.Println("server stopped")
+}
+
+func newPaymentServiceClient(serviceAddress string) payment_v1.PaymentServiceClient {
+	dialOptions := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	conn, err := grpc.NewClient(serviceAddress, dialOptions...)
+	if err != nil {
+		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
+	}
+
+	client := payment_v1.NewPaymentServiceClient(conn)
+	if err != nil {
+		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
+	}
+
+	return client
+}
+
+func newInventoryServiceClient(serviceAddress string) inventory_v1.InventoryServiceClient {
+	dialOptions := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	conn, err := grpc.NewClient(serviceAddress, dialOptions...)
+	if err != nil {
+		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
+	}
+
+	client := inventory_v1.NewInventoryServiceClient(conn)
+	if err != nil {
+		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
+	}
+
+	return client
 }

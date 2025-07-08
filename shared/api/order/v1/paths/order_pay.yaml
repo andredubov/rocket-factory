@@ -33,6 +33,12 @@ post:
         application/json:
           schema:
             $ref: "../components/errors/not_found_error.yaml"
+    '409':
+      description: Заказ уже оплачен и не может быть оплачен снова
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/conflict_error.yaml"
     default:
       description: Что-то пошло не так
       content:

@@ -2,9 +2,8 @@ package memory
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 
 	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/model"
@@ -38,7 +37,7 @@ func (r *ordersRepository) GetOrder(ctx context.Context, uuid uuid.UUID) (*model
 
 	order, exists := r.orders[uuid]
 	if !exists {
-		return nil, fmt.Errorf("%w: %s", repository.ErrOrderNotFound, uuid)
+		return nil, repository.ErrOrderNotFoundWith(uuid)
 	}
 
 	// Return a copy to prevent external modifications

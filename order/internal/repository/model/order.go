@@ -1,6 +1,6 @@
 package model
 
-import "github.com/gofrs/uuid"
+import "github.com/google/uuid"
 
 // OrderStatus represents the possible states of an order
 type OrderStatus string
@@ -37,7 +37,7 @@ type PaymentMethod string
 //   - false otherwise
 func (pm PaymentMethod) IsValid() bool {
 	switch pm {
-	case PaymentMethodCard, PaymentMethodSBP, PaymentMethodCreditCard, PaymentMethodBankTransfer:
+	case PaymentMethodUnknown, PaymentMethodCard, PaymentMethodSBP, PaymentMethodCreditCard, PaymentMethodInvestorMoney:
 		return true
 	default:
 		return false
@@ -46,6 +46,8 @@ func (pm PaymentMethod) IsValid() bool {
 
 // Valid PaymentMethod values
 const (
+	// Unknowm payment
+	PaymentMethodUnknown PaymentMethod = "UNKNOWN"
 	// Standard debit/credit card payment
 	PaymentMethodCard PaymentMethod = "CARD"
 	// Faster Payments System (Russian payment system)
@@ -53,7 +55,7 @@ const (
 	// Credit card payment
 	PaymentMethodCreditCard PaymentMethod = "CREDIT_CARD"
 	// Bank transfer payment
-	PaymentMethodBankTransfer PaymentMethod = "BANK_TRANSFER"
+	PaymentMethodInvestorMoney PaymentMethod = "INVESTOR_MONEY"
 )
 
 // PaymentInfo contains details about order payment
@@ -73,7 +75,7 @@ type Order struct {
 	// List of part identifiers included in the order
 	PartUUIDs []uuid.UUID
 	// Total price of the order in minor units (e.g., cents)
-	TotalPrice int64
+	TotalPrice float64
 	// Payment details (nullable)
 	PaymentInfo *PaymentInfo
 	// Current status of the order

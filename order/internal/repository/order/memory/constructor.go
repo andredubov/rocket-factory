@@ -3,7 +3,7 @@ package memory
 import (
 	"sync"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 
 	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/model"

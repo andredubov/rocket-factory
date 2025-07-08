@@ -2,7 +2,6 @@ package memory
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/model"
@@ -18,17 +17,17 @@ import (
 // Thread-safe: uses mutex for synchronization.
 func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) error {
 	if !order.Status.IsValid() {
-		return fmt.Errorf("%w: %s", repository.ErrInvalidOrderStatus, order.Status)
+		return repository.ErrInvalidOrderStatusWith(order.Status)
 	}
 	if order.PaymentInfo != nil && !order.PaymentInfo.PaymentMethod.IsValid() {
-		return fmt.Errorf("%w: %s", repository.ErrInvalidPaymentMethod, order.PaymentInfo.PaymentMethod)
+		return repository.ErrInvalidPaymentMethodWith(order.PaymentInfo.PaymentMethod)
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if _, exists := r.orders[order.OrderUUID]; exists {
-		return fmt.Errorf("%w: %s", repository.ErrOrderAlreadyExists, order.OrderUUID)
+		return repository.ErrOrderAlreadyExistsWith(order.OrderUUID)
 	}
 
 	// Store a copy of the order to prevent external modifications

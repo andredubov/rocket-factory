@@ -1403,6 +1403,8 @@ func (s *PaymentMethod) Decode(d *jx.Decoder) error {
 	}
 	// Try to use constant string.
 	switch PaymentMethod(v) {
+	case PaymentMethodUNKNOWN:
+		*s = PaymentMethodUNKNOWN
 	case PaymentMethodCARD:
 		*s = PaymentMethodCARD
 	case PaymentMethodSBP:

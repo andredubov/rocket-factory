@@ -2,9 +2,8 @@ package memory
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/gofrs/uuid"
+	"github.com/google/uuid"
 
 	"github.com/andredubov/rocket-factory/order/internal/repository"
 )
@@ -17,7 +16,7 @@ func (r *ordersRepository) DeleteOrder(ctx context.Context, uuid uuid.UUID) erro
 	defer r.mu.Unlock()
 
 	if _, exists := r.orders[uuid]; !exists {
-		return fmt.Errorf("%w: %s", repository.ErrOrderNotFound, uuid)
+		return repository.ErrOrderNotFoundWith(uuid)
 	}
 
 	delete(r.orders, uuid)

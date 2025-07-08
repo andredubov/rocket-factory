@@ -32,6 +32,12 @@ post:
         application/json:
           schema:
             $ref: "../components/errors/bad_request_error.yaml"
+    '409':
+      description: Заказ уже оплачен и не может быть оплачен снова
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/conflict_error.yaml"            
     '500':
       description: Произошла внутренняя ошибка сервера или InventoryService недоступен
       content:
