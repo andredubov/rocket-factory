@@ -450,21 +450,18 @@ tasks:
 
   run:inventory:
     cmds:
-      - |
-        go build -o ./bin/inventory ./inventory/cmd/main.go
-        ./bin/inventory -config-path ./inventory/config/.env
+      - go build -o ./bin/inventory ./inventory/cmd/main.go
+      - ./bin/inventory -config-path ./inventory/config/.env
 
   run:payment:
     cmds:
-      - |
-        go build -o ./bin/payment ./payment/cmd/main.go
-        ./bin/payment -config-path ./payment/config/.env
+      - go build -o ./bin/payment ./payment/cmd/main.go
+      - ./bin/payment -config-path ./payment/config/.env
 
   run:order:
     cmds:
-      - |
-        go build -o ./bin/order ./order/cmd/main.go
-        ./bin/order -config-path ./order/config/.env
+      - go build -o ./bin/order ./order/cmd/main.go
+      - ./bin/order -config-path ./order/config/.env
 
   docker-compose:generate-env:
     desc: "Generate root .env file from service configs"
@@ -493,14 +490,12 @@ tasks:
     cmds:
       - task: docker-compose:check-env-files
       - task: docker-compose:generate-env
-      - |
-        docker compose --env-file .env down --remove-orphans 
-        rm .env
+      - docker compose --env-file .env down --remove-orphans 
+      - rm .env
 
   docker-compose:local:up:
     cmds:
       - task: docker-compose:check-env-files
       - task: docker-compose:generate-env
-      - |
-        docker compose --env-file .env up --build -d
-        rm .env
+      - docker compose --env-file .env up --build -d
+      - rm .env
