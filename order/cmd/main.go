@@ -33,7 +33,7 @@ const (
 
 func main() {
 	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
-	inventoryServiceClient := newInventoryServiceClient(paymentServiceAddress)
+	inventoryServiceClient := newInventoryServiceClient(inventoryServiceAddress)
 	ordersRepository := memory.NewOrderRepository()
 	ordersHandler := order.NewOrderHandler(ordersRepository, paymentServiceClient, inventoryServiceClient)
 
