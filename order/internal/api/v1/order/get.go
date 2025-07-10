@@ -1,4 +1,4 @@
-package order
+package handler
 
 import (
 	"context"
@@ -11,14 +11,14 @@ import (
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 )
 
-func (i *Implementation) GetOrderByUuid(ctx context.Context, params order_v1.GetOrderByUuidParams) (order_v1.GetOrderByUuidRes, error) {
+// GetOrderByUuid возвращает информацию о заказе по его UUID.
+func (i *OrderImplementation) GetOrderByUuid(ctx context.Context, params order_v1.GetOrderByUuidParams) (order_v1.GetOrderByUuidRes, error) {
 	// Проверяем не отменен ли контекст перед началом работы
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("context cancelled before processing: %w", err)
 	}
 
 	// Получаем заказ из репозитория
-	// В случае ошибки проверяем, является ли она ошибкой "не найдено"
 	order, err := i.ordersRepository.GetOrder(ctx, params.OrderUUID)
 	if err != nil {
 		if errors.Is(err, repository.ErrOrderNotFound) {
@@ -43,10 +43,8 @@ func (i *Implementation) GetOrderByUuid(ctx context.Context, params order_v1.Get
 
 	// Если есть информация о платеже, добавляем ее в ответ
 	if order.PaymentInfo != nil {
-		// Добавляем UUID транзакции (может быть nil)
 		res.TransactionUUID = order_v1.NewOptNilUUID(order.PaymentInfo.TransactionUUID)
 
-		// Конвертируем метод оплаты из внутреннего формата в API-формат
 		paymentMethod, err := convertToPaymentMethod(order.PaymentInfo.PaymentMethod)
 		if err != nil {
 			return nil, fmt.Errorf("payment method conversion error: %w", err)
@@ -57,14 +55,7 @@ func (i *Implementation) GetOrderByUuid(ctx context.Context, params order_v1.Get
 	return res, nil
 }
 
-// convertToPaymentMethod конвертирует внутреннее представление метода оплаты
-// в формат, используемый в API.
-// Параметры:
-//   - method: метод оплаты во внутреннем формате
-//
-// Возвращает:
-//   - order_v1.PaymentMethod: метод оплаты в API-формате
-//   - error: ошибка, если передан неизвестный метод оплаты
+// convertToPaymentMethod конвертирует внутреннее представление метода оплаты в формат API.
 func convertToPaymentMethod(method model.PaymentMethod) (order_v1.PaymentMethod, error) {
 	switch method {
 	case model.PaymentMethodCard:

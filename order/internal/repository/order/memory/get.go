@@ -10,8 +10,6 @@ import (
 )
 
 // GetUserOrders retrieves all orders belonging to a specific user.
-// Returns an empty slice if no orders found for the user.
-// Thread-safe: uses RWMutex for concurrent reads.
 func (r *ordersRepository) GetUserOrders(ctx context.Context, userUUID uuid.UUID) ([]model.Order, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -29,8 +27,6 @@ func (r *ordersRepository) GetUserOrders(ctx context.Context, userUUID uuid.UUID
 }
 
 // GetOrder retrieves a single order by its UUID.
-// Returns an error if the order doesn't exist.
-// Thread-safe: uses RWMutex for concurrent reads.
 func (r *ordersRepository) GetOrder(ctx context.Context, uuid uuid.UUID) (*model.Order, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

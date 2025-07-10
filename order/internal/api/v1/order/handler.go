@@ -1,4 +1,4 @@
-package order
+package handler
 
 import (
 	"github.com/andredubov/rocket-factory/order/internal/repository"
@@ -7,19 +7,21 @@ import (
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
-type Implementation struct {
+// OrderImplementation реализует интерфейс обработчика заказов.
+type OrderImplementation struct {
 	order_v1.UnimplementedHandler
 	ordersRepository repository.Orders
 	paymentClient    payment_v1.PaymentServiceClient
 	inventoryClient  inventory_v1.InventoryServiceClient
 }
 
+// NewOrderHandler создает новый экземпляр обработчика заказов.
 func NewOrderHandler(
 	repo repository.Orders,
 	paymentClient payment_v1.PaymentServiceClient,
 	inventoryClient inventory_v1.InventoryServiceClient,
-) *Implementation {
-	return &Implementation{
+) *OrderImplementation {
+	return &OrderImplementation{
 		ordersRepository: repo,
 		paymentClient:    paymentClient,
 		inventoryClient:  inventoryClient,

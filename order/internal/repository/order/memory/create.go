@@ -8,13 +8,6 @@ import (
 )
 
 // AddOrder adds a new order to the repository.
-// Validates order status and payment method before adding.
-// Returns an error if:
-//   - order status is invalid
-//   - payment method is invalid
-//   - order with the same UUID already exists
-//
-// Thread-safe: uses mutex for synchronization.
 func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) error {
 	if !order.Status.IsValid() {
 		return repository.ErrInvalidOrderStatusWith(order.Status)

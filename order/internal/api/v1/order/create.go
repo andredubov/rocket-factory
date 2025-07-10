@@ -1,4 +1,4 @@
-package order
+package handler
 
 import (
 	"context"
@@ -15,7 +15,8 @@ import (
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
-func (i *Implementation) CreateOrder(ctx context.Context, req *order_v1.CreateOrderRequest) (order_v1.CreateOrderRes, error) {
+// CreateOrder обрабатывает запрос на создание нового заказа.
+func (i *OrderImplementation) CreateOrder(ctx context.Context, req *order_v1.CreateOrderRequest) (order_v1.CreateOrderRes, error) {
 	// Валидация
 	if len(req.GetPartUuids()) == 0 {
 		return &order_v1.BadRequestError{

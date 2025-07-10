@@ -1,4 +1,4 @@
-package order
+package handler
 
 import (
 	"context"
@@ -14,7 +14,8 @@ import (
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
-func (i *Implementation) PayOrder(ctx context.Context, req *order_v1.PayOrderRequest, params order_v1.PayOrderParams) (order_v1.PayOrderRes, error) {
+// PayOrder обрабатывает запрос на оплату заказа.
+func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrderRequest, params order_v1.PayOrderParams) (order_v1.PayOrderRes, error) {
 	// Получаем заказ из репозитория
 	order, err := i.ordersRepository.GetOrder(ctx, params.OrderUUID)
 	if err != nil {
@@ -84,7 +85,7 @@ func (i *Implementation) PayOrder(ctx context.Context, req *order_v1.PayOrderReq
 	return response, nil
 }
 
-// ConvertModelPaymentMethodToProto конвертирует model.PaymentMethod в payment_v1.PaymentMethod
+// ConvertModelPaymentMethodToProto конвертирует model.PaymentMethod в payment_v1.PaymentMethod.
 func ConvertModelPaymentMethodToProto(method model.PaymentMethod) payment_v1.PaymentMethod {
 	switch method {
 	case model.PaymentMethodCard:

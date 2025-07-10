@@ -8,13 +8,6 @@ import (
 )
 
 // UpdateOrder modifies an existing order in the repository.
-// Validates order status and payment method before updating.
-// Returns an error if:
-//   - order status is invalid
-//   - payment method is invalid
-//   - order doesn't exist
-//
-// Thread-safe: uses mutex for synchronization.
 func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) error {
 	if !order.Status.IsValid() {
 		return repository.ErrInvalidOrderStatusWith(order.Status)

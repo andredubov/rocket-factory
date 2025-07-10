@@ -1,4 +1,4 @@
-package order
+package handler
 
 import (
 	"context"
@@ -11,7 +11,8 @@ import (
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 )
 
-func (i *Implementation) CancelOrder(ctx context.Context, params order_v1.CancelOrderParams) (order_v1.CancelOrderRes, error) {
+// CancelOrder обрабатывает запрос на отмену заказа.
+func (i *OrderImplementation) CancelOrder(ctx context.Context, params order_v1.CancelOrderParams) (order_v1.CancelOrderRes, error) {
 	// Получаем заказ из репозитория
 	order, err := i.ordersRepository.GetOrder(ctx, params.OrderUUID)
 	if err != nil {

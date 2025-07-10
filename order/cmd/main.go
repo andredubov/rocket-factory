@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/andredubov/rocket-factory/order/internal/api/v1/order"
+	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
@@ -35,7 +35,7 @@ func main() {
 	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
 	inventoryServiceClient := newInventoryServiceClient(inventoryServiceAddress)
 	ordersRepository := memory.NewOrderRepository()
-	ordersHandler := order.NewOrderHandler(ordersRepository, paymentServiceClient, inventoryServiceClient)
+	ordersHandler := handler.NewOrderHandler(ordersRepository, paymentServiceClient, inventoryServiceClient)
 
 	orderServer, err := order_v1.NewServer(ordersHandler)
 	if err != nil {
