@@ -39,8 +39,11 @@ func (i *InventoryImplementation) ListParts(ctx context.Context, req *inventory_
 	// Fetch parts from repository using filter
 	parts, err := i.inventoryRepository.GetPartList(ctx, filter)
 	if err != nil {
-		log.Printf("target parts not found: %s", err.Error())
-		return nil, status.Errorf(codes.Internal, "target parts not found")
+		if errors.Is(err, repository.ErrPartNotFound) {
+			log.Printf("target parts not found")
+			return nil, status.Errorf(codes.NotFound, "target parts not found")
+		}
+		return nil, err
 	}
 
 	// Convert domain models to gRPC response
