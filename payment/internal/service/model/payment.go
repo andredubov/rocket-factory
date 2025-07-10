@@ -1,19 +1,29 @@
 package model
 
-import payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
+type PaymentMethod int32
+
+// Valid PaymentMethod values
+const (
+	PaymentMethodUnknown       PaymentMethod = 0
+	PaymentMethodCard          PaymentMethod = 1
+	PaymentMethodSbp           PaymentMethod = 2
+	PaymentMethodreditCard     PaymentMethod = 3
+	PaymentMethodInvestorMoney PaymentMethod = 4
+)
+
+// IsValid checks if the PaymentMethod has a valid value
+func (os PaymentMethod) IsValid() bool {
+	switch os {
+	case PaymentMethodUnknown, PaymentMethodCard, PaymentMethodSbp, PaymentMethodreditCard, PaymentMethodInvestorMoney:
+		return true
+	default:
+		return false
+	}
+}
 
 // Payment represents a payment transaction in the domain layer.
-// It contains essential information linking a user's payment method to a specific order.
 type Payment struct {
-	// UserID identifies the user making the payment.
-	// Note: Currently sourced from OrderUuid in the proto request,
-	UserID string
-
-	// OrderID references the associated order for this payment.
-	// This should match the order system's unique identifier.
-	OrderID string
-
-	// PaymentMethod specifies how the payment is being processed.
-	// This is converted directly from the gRPC enum PaymentMethod.
-	PaymentMethod payment_v1.PaymentMethod
+	UserID        string
+	OrderID       string
+	PaymentMethod PaymentMethod
 }

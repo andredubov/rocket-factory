@@ -15,9 +15,9 @@ import (
 // serviceProvider implements the dependency injection container pattern.
 // It lazily initializes and provides access to all service dependencies.
 type serviceProvider struct {
-	paymentService       service.Payments       // Business logic service
-	grpcConfig           config.GRPCConfig      // gRPC server configuration
-	serverImplementation *server.Implementation // gRPC handler implementation
+	paymentService       service.Payments              // Business logic service
+	grpcConfig           config.GRPCConfig             // gRPC server configuration
+	serverImplementation *server.PaymentImplementation // gRPC handler implementation
 }
 
 // newServiceProvider creates a new service provider instance.
@@ -51,10 +51,10 @@ func (s *serviceProvider) PaymentService(ctx context.Context) service.Payments {
 
 // ServerImplementation creates and provides the gRPC server implementation.
 // It initializes all required dependencies (payment service) automatically.
-func (s *serviceProvider) ServerImplementation(ctx context.Context) *server.Implementation {
+func (s *serviceProvider) ServerImplementation(ctx context.Context) *server.PaymentImplementation {
 	if s.serverImplementation == nil {
 		paymentService := s.PaymentService(ctx)
-		s.serverImplementation = server.NewImplementation(paymentService)
+		s.serverImplementation = server.NewPaymentImplementation(paymentService)
 	}
 
 	return s.serverImplementation

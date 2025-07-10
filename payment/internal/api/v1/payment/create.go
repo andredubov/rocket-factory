@@ -12,23 +12,7 @@ import (
 )
 
 // PayOrder handles gRPC request for order payment.
-//
-// Converts incoming request to domain model, processes payment through payment service,
-// and returns response with transaction ID.
-//
-// Parameters:
-//
-//	ctx - context for timeouts and operation cancellation
-//	r   - incoming payment request with payment details
-//
-// Returns:
-//
-//	*payment_v1.PayOrderResponse - response containing transaction UUID
-//	error - failure case error:
-//	        - codes.Internal: when payment creation fails
-//
-// Logs successful transactions.
-func (i *Implementation) PayOrder(ctx context.Context, req *payment_v1.PayOrderRequest) (*payment_v1.PayOrderResponse, error) {
+func (i *PaymentImplementation) PayOrder(ctx context.Context, req *payment_v1.PayOrderRequest) (*payment_v1.PayOrderResponse, error) {
 	// Convert gRPC request to domain model
 	payment := converter.PaymentFromRequest(req)
 

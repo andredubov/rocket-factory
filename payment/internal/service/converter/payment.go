@@ -8,8 +8,8 @@ import (
 // PaymentFromRequest converts a gRPC PayOrderRequest into the domain Payment model.
 func PaymentFromRequest(r *payment_v1.PayOrderRequest) model.Payment {
 	return model.Payment{
-		UserID:        r.GetOrderUuid(),
+		UserID:        r.GetUserUuid(),
 		OrderID:       r.GetOrderUuid(),
-		PaymentMethod: r.GetPaymentMethod(),
+		PaymentMethod: model.PaymentMethod(r.GetPaymentMethod()),
 	}
 }
