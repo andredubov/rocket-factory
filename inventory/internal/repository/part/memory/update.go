@@ -8,10 +8,6 @@ import (
 )
 
 // UpdatePart modifies an existing part in the repository
-// Thread-safe operation using mutex lock
-// Returns:
-// - nil if part was updated successfully
-// - error if part with specified UUID doesn't exist
 func (p *inventoryRepository) UpdatePart(ctx context.Context, part model.Part) error {
 	p.mu.Lock()         // Acquire write lock
 	defer p.mu.Unlock() // Ensure lock is released

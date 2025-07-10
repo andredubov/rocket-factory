@@ -8,7 +8,6 @@ import (
 )
 
 // PartFilterFromListRequest converts a gRPC ListPartsRequest filter to a domain PartFilter
-// Handles nil checks and converts protobuf Categories to domain Categories
 func PartFilterFromListRequest(r *inventory_v1.ListPartsRequest) model.PartFilter {
 	// Return empty filter if request or filter is nil
 	if r == nil || r.Filter == nil {
@@ -17,12 +16,9 @@ func PartFilterFromListRequest(r *inventory_v1.ListPartsRequest) model.PartFilte
 
 	// Convert protobuf categories to domain categories
 	pbCategories := r.GetFilter().GetCategories()
-	categories := make([]model.Category, len(pbCategories))
+	categories := make([]model.PartCategory, len(pbCategories))
 	for i, cat := range pbCategories {
-		categories[i] = model.Category{
-			ID:   cat.GetId(),
-			Name: cat.GetName(),
-		}
+		categories[i] = model.PartCategory(*cat.Enum())
 	}
 
 	// Build and return the domain filter with all converted fields
@@ -36,7 +32,6 @@ func PartFilterFromListRequest(r *inventory_v1.ListPartsRequest) model.PartFilte
 }
 
 // PartsToResponse converts a slice of domain Parts to a gRPC ListPartsResponse
-// Handles conversion of all part fields including nested structures and timestamps
 func PartsToResponse(parts []model.Part) *inventory_v1.ListPartsResponse {
 	// Pre-allocate slice for protobuf parts
 	pbParts := make([]*inventory_v1.Part, len(parts))
@@ -49,10 +44,7 @@ func PartsToResponse(parts []model.Part) *inventory_v1.ListPartsResponse {
 			Description:   part.Description,
 			Price:         part.Price,
 			StockQuantity: part.StockQuantity,
-			Category: &inventory_v1.Category{
-				Id:   part.Category.ID,
-				Name: part.Category.Name,
-			},
+			Category:      inventory_v1.Category(part.Category),
 			Dimensions: &inventory_v1.Dimensions{
 				Length: part.Dimensions.Length,
 				Width:  part.Dimensions.Width,

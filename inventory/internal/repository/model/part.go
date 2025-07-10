@@ -21,7 +21,7 @@ type Part struct {
 	Description   string           // Detailed description
 	Price         float64          // Unit price in base currency
 	StockQuantity int64            // Current inventory count
-	Category      Category         // Classification group
+	Category      PartCategory     // Classification group
 	Dimensions    Dimensions       // Physical measurements
 	Manufacturer  Manufacturer     // Producer information
 	Tags          []string         // Searchable keywords

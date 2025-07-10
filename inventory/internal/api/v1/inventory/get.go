@@ -2,30 +2,29 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
 // GetPart handles requests to retrieve a single inventory part by its UUID.
-// It converts the gRPC request to a domain model, fetches the part from the repository,
-// and converts the result back to a gRPC response format.
-// Returns:
-// - gRPC NotFound error if the part doesn't exist
-// - gRPC Internal error for repository failures
-// - Successful response with the part data if found
-func (i *Implementation) GetPart(ctx context.Context, req *inventory_v1.GetPartRequest) (*inventory_v1.GetPartResponse, error) {
+func (i *InventoryImplementation) GetPart(ctx context.Context, req *inventory_v1.GetPartRequest) (*inventory_v1.GetPartResponse, error) {
 	uuid := req.GetUuid() // Extract UUID from request
 
 	// Fetch part from repository
 	part, err := i.inventoryRepository.GetPart(ctx, uuid)
 	if err != nil {
-		log.Printf("target part not found: %s", err.Error())
-		return nil, status.Errorf(codes.Internal, "target part not found")
+		if errors.Is(err, repository.ErrPartNotFound) {
+			log.Printf("part with UUID %s not found", uuid)
+			return nil, status.Errorf(codes.NotFound, "part with UUID %s not found", uuid)
+		}
+		return nil, err
 	}
 
 	// Convert domain model to gRPC response
@@ -33,12 +32,7 @@ func (i *Implementation) GetPart(ctx context.Context, req *inventory_v1.GetPartR
 }
 
 // ListParts handles requests to retrieve multiple inventory parts with optional filtering.
-// It converts the gRPC filter request to a domain filter, fetches matching parts
-// from the repository, and converts the results to a gRPC response format.
-// Returns:
-// - gRPC Internal error for repository failures
-// - Successful response with the list of parts (empty if no matches)
-func (i *Implementation) ListParts(ctx context.Context, req *inventory_v1.ListPartsRequest) (*inventory_v1.ListPartsResponse, error) {
+func (i *InventoryImplementation) ListParts(ctx context.Context, req *inventory_v1.ListPartsRequest) (*inventory_v1.ListPartsResponse, error) {
 	// Convert gRPC filter to domain filter
 	filter := converter.PartFilterFromListRequest(req)
 

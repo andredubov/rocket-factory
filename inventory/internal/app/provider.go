@@ -15,9 +15,9 @@ import (
 // serviceProvider implements the dependency container pattern
 // It provides lazy initialization of application components
 type serviceProvider struct {
-	inventoryRepository  repository.Inventory   // Inventory data access layer
-	grpcConfig           config.GRPCConfig      // GRPC server configuration
-	serverImplementation *server.Implementation // GRPC service implementation
+	inventoryRepository  repository.Inventory            // Inventory data access layer
+	grpcConfig           config.GRPCConfig               // GRPC server configuration
+	serverImplementation *server.InventoryImplementation // GRPC service implementation
 }
 
 // newServiceProvider creates a new service provider instance
@@ -51,10 +51,10 @@ func (s *serviceProvider) InventoryRepository(ctx context.Context) repository.In
 
 // ServerImplementation creates GRPC service handler
 // Initializes all required dependencies (repository)
-func (s *serviceProvider) ServerImplementation(ctx context.Context) *server.Implementation {
+func (s *serviceProvider) ServerImplementation(ctx context.Context) *server.InventoryImplementation {
 	if s.serverImplementation == nil {
 		inventoryRepository := s.InventoryRepository(ctx)
-		s.serverImplementation = server.NewImplementation(inventoryRepository)
+		s.serverImplementation = server.NewInventoryImplementation(inventoryRepository)
 	}
 
 	return s.serverImplementation

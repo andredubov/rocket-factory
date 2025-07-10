@@ -59,11 +59,11 @@ func filterByCountry(parts []model.Part, countries []string) []model.Part {
 }
 
 // Filter by category (OR logic within categories)
-func filterByCategory(parts []model.Part, categories []model.Category) []model.Part {
+func filterByCategory(parts []model.Part, categories []model.PartCategory) []model.Part {
 	var result []model.Part
 	for _, part := range parts {
 		for _, cat := range categories {
-			if part.Category.ID == cat.ID || strings.EqualFold(part.Category.Name, cat.Name) {
+			if part.Category == cat {
 				result = append(result, part)
 				break
 			}

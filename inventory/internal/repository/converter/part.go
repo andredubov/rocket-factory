@@ -8,7 +8,6 @@ import (
 )
 
 // PartFromRequest converts a gRPC GetPartRequest to a domain Part
-// Currently only extracts the UUID, other fields would be populated from repository
 func PartFromRequest(request *inventory_v1.GetPartRequest) model.Part {
 	return model.Part{
 		Uuid: request.GetUuid(),
@@ -16,7 +15,6 @@ func PartFromRequest(request *inventory_v1.GetPartRequest) model.Part {
 }
 
 // PartToResponse converts a domain Part to a gRPC GetPartResponse
-// Handles conversion of all fields including metadata and nested structures
 func PartToResponse(part *model.Part) *inventory_v1.GetPartResponse {
 	// Convert metadata map from domain Value to protobuf Value
 	metadata := make(map[string]*inventory_v1.Value)
@@ -52,10 +50,7 @@ func PartToResponse(part *model.Part) *inventory_v1.GetPartResponse {
 				Height: part.Dimensions.Height,
 				Weight: part.Dimensions.Weight,
 			},
-			Category: &inventory_v1.Category{
-				Id:   part.Category.ID,
-				Name: part.Category.Name,
-			},
+			Category: inventory_v1.Category(part.Category),
 			Manufacturer: &inventory_v1.Manufacturer{
 				Name:    part.Manufacturer.Name,
 				Country: part.Manufacturer.Country,
