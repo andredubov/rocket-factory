@@ -43,10 +43,13 @@ message PartsFilter {
     repeated string tags = 5;                   // Список тегов
 }
 
-// Категория товара
-message Category {
-    string id = 1;
-    string name = 2;
+// Category определяет возможные способы оплаты.
+enum Category {
+    CATEGORY_UNSPECIFIED = 0;   // Неизвестная категория
+    CATEGORY_ENGINE = 1;        // Двигатель
+    CATEGORY_FUEL = 2;          // Топливо
+    CATEGORY_PORTHOLE = 3;      // Иллюминатор
+    CATEGORY_WING = 4;          // Крыло
 }
 
 // Физические размеры и вес

@@ -22,6 +22,62 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Category определяет возможные способы оплаты.
+type Category int32
+
+const (
+	Category_CATEGORY_UNSPECIFIED Category = 0 // Неизвестная категория
+	Category_CATEGORY_ENGINE      Category = 1 // Двигатель
+	Category_CATEGORY_FUEL        Category = 2 // Топливо
+	Category_CATEGORY_PORTHOLE    Category = 3 // Иллюминатор
+	Category_CATEGORY_WING        Category = 4 // Крыло
+)
+
+// Enum value maps for Category.
+var (
+	Category_name = map[int32]string{
+		0: "CATEGORY_UNSPECIFIED",
+		1: "CATEGORY_ENGINE",
+		2: "CATEGORY_FUEL",
+		3: "CATEGORY_PORTHOLE",
+		4: "CATEGORY_WING",
+	}
+	Category_value = map[string]int32{
+		"CATEGORY_UNSPECIFIED": 0,
+		"CATEGORY_ENGINE":      1,
+		"CATEGORY_FUEL":        2,
+		"CATEGORY_PORTHOLE":    3,
+		"CATEGORY_WING":        4,
+	}
+)
+
+func (x Category) Enum() *Category {
+	p := new(Category)
+	*p = x
+	return p
+}
+
+func (x Category) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Category) Descriptor() protoreflect.EnumDescriptor {
+	return file_inventory_v1_inventory_proto_enumTypes[0].Descriptor()
+}
+
+func (Category) Type() protoreflect.EnumType {
+	return &file_inventory_v1_inventory_proto_enumTypes[0]
+}
+
+func (x Category) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Category.Descriptor instead.
+func (Category) EnumDescriptor() ([]byte, []int) {
+	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{0}
+}
+
 // Запрос для получения детали по UUID
 type GetPartRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -207,7 +263,7 @@ type PartsFilter struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	Uuids                 []string               `protobuf:"bytes,1,rep,name=uuids,proto3" json:"uuids,omitempty"`                                                              // Список UUID'ов
 	Names                 []string               `protobuf:"bytes,2,rep,name=names,proto3" json:"names,omitempty"`                                                              // Список имён
-	Categories            []*Category            `protobuf:"bytes,3,rep,name=categories,proto3" json:"categories,omitempty"`                                                    // Список категорий
+	Categories            []Category             `protobuf:"varint,3,rep,packed,name=categories,proto3,enum=inventory.v1.Category" json:"categories,omitempty"`                 // Список категорий
 	ManufacturerCountries []string               `protobuf:"bytes,4,rep,name=manufacturer_countries,json=manufacturerCountries,proto3" json:"manufacturer_countries,omitempty"` // Список стран производителей
 	Tags                  []string               `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty"`                                                                // Список тегов
 	unknownFields         protoimpl.UnknownFields
@@ -258,7 +314,7 @@ func (x *PartsFilter) GetNames() []string {
 	return nil
 }
 
-func (x *PartsFilter) GetCategories() []*Category {
+func (x *PartsFilter) GetCategories() []Category {
 	if x != nil {
 		return x.Categories
 	}
@@ -279,59 +335,6 @@ func (x *PartsFilter) GetTags() []string {
 	return nil
 }
 
-// Категория товара
-type Category struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *Category) Reset() {
-	*x = Category{}
-	mi := &file_inventory_v1_inventory_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Category) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Category) ProtoMessage() {}
-
-func (x *Category) ProtoReflect() protoreflect.Message {
-	mi := &file_inventory_v1_inventory_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Category.ProtoReflect.Descriptor instead.
-func (*Category) Descriptor() ([]byte, []int) {
-	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *Category) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Category) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
 // Физические размеры и вес
 type Dimensions struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -345,7 +348,7 @@ type Dimensions struct {
 
 func (x *Dimensions) Reset() {
 	*x = Dimensions{}
-	mi := &file_inventory_v1_inventory_proto_msgTypes[6]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -357,7 +360,7 @@ func (x *Dimensions) String() string {
 func (*Dimensions) ProtoMessage() {}
 
 func (x *Dimensions) ProtoReflect() protoreflect.Message {
-	mi := &file_inventory_v1_inventory_proto_msgTypes[6]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -370,7 +373,7 @@ func (x *Dimensions) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Dimensions.ProtoReflect.Descriptor instead.
 func (*Dimensions) Descriptor() ([]byte, []int) {
-	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{6}
+	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Dimensions) GetLength() float64 {
@@ -413,7 +416,7 @@ type Manufacturer struct {
 
 func (x *Manufacturer) Reset() {
 	*x = Manufacturer{}
-	mi := &file_inventory_v1_inventory_proto_msgTypes[7]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -425,7 +428,7 @@ func (x *Manufacturer) String() string {
 func (*Manufacturer) ProtoMessage() {}
 
 func (x *Manufacturer) ProtoReflect() protoreflect.Message {
-	mi := &file_inventory_v1_inventory_proto_msgTypes[7]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -438,7 +441,7 @@ func (x *Manufacturer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Manufacturer.ProtoReflect.Descriptor instead.
 func (*Manufacturer) Descriptor() ([]byte, []int) {
-	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{7}
+	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Manufacturer) GetName() string {
@@ -478,7 +481,7 @@ type Value struct {
 
 func (x *Value) Reset() {
 	*x = Value{}
-	mi := &file_inventory_v1_inventory_proto_msgTypes[8]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -490,7 +493,7 @@ func (x *Value) String() string {
 func (*Value) ProtoMessage() {}
 
 func (x *Value) ProtoReflect() protoreflect.Message {
-	mi := &file_inventory_v1_inventory_proto_msgTypes[8]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -503,7 +506,7 @@ func (x *Value) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Value.ProtoReflect.Descriptor instead.
 func (*Value) Descriptor() ([]byte, []int) {
-	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{8}
+	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Value) GetKind() isValue_Kind {
@@ -585,7 +588,7 @@ type Part struct {
 	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
 	Price         float64                `protobuf:"fixed64,4,opt,name=price,proto3" json:"price,omitempty"`
 	StockQuantity int64                  `protobuf:"varint,5,opt,name=stock_quantity,json=stockQuantity,proto3" json:"stock_quantity,omitempty"`
-	Category      *Category              `protobuf:"bytes,6,opt,name=category,proto3" json:"category,omitempty"`
+	Category      Category               `protobuf:"varint,6,opt,name=category,proto3,enum=inventory.v1.Category" json:"category,omitempty"`
 	Dimensions    *Dimensions            `protobuf:"bytes,7,opt,name=dimensions,proto3" json:"dimensions,omitempty"`
 	Manufacturer  *Manufacturer          `protobuf:"bytes,8,opt,name=manufacturer,proto3" json:"manufacturer,omitempty"`
 	Tags          []string               `protobuf:"bytes,9,rep,name=tags,proto3" json:"tags,omitempty"`
@@ -598,7 +601,7 @@ type Part struct {
 
 func (x *Part) Reset() {
 	*x = Part{}
-	mi := &file_inventory_v1_inventory_proto_msgTypes[9]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -610,7 +613,7 @@ func (x *Part) String() string {
 func (*Part) ProtoMessage() {}
 
 func (x *Part) ProtoReflect() protoreflect.Message {
-	mi := &file_inventory_v1_inventory_proto_msgTypes[9]
+	mi := &file_inventory_v1_inventory_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -623,7 +626,7 @@ func (x *Part) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Part.ProtoReflect.Descriptor instead.
 func (*Part) Descriptor() ([]byte, []int) {
-	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{9}
+	return file_inventory_v1_inventory_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Part) GetUuid() string {
@@ -661,11 +664,11 @@ func (x *Part) GetStockQuantity() int64 {
 	return 0
 }
 
-func (x *Part) GetCategory() *Category {
+func (x *Part) GetCategory() Category {
 	if x != nil {
 		return x.Category
 	}
-	return nil
+	return Category_CATEGORY_UNSPECIFIED
 }
 
 func (x *Part) GetDimensions() *Dimensions {
@@ -727,13 +730,10 @@ const file_inventory_v1_inventory_proto_rawDesc = "" +
 	"\x05uuids\x18\x01 \x03(\tR\x05uuids\x12\x14\n" +
 	"\x05names\x18\x02 \x03(\tR\x05names\x126\n" +
 	"\n" +
-	"categories\x18\x03 \x03(\v2\x16.inventory.v1.CategoryR\n" +
+	"categories\x18\x03 \x03(\x0e2\x16.inventory.v1.CategoryR\n" +
 	"categories\x125\n" +
 	"\x16manufacturer_countries\x18\x04 \x03(\tR\x15manufacturerCountries\x12\x12\n" +
-	"\x04tags\x18\x05 \x03(\tR\x04tags\".\n" +
-	"\bCategory\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\"j\n" +
+	"\x04tags\x18\x05 \x03(\tR\x04tags\"j\n" +
 	"\n" +
 	"Dimensions\x12\x16\n" +
 	"\x06length\x18\x01 \x01(\x01R\x06length\x12\x14\n" +
@@ -758,7 +758,7 @@ const file_inventory_v1_inventory_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05price\x18\x04 \x01(\x01R\x05price\x12%\n" +
 	"\x0estock_quantity\x18\x05 \x01(\x03R\rstockQuantity\x122\n" +
-	"\bcategory\x18\x06 \x01(\v2\x16.inventory.v1.CategoryR\bcategory\x128\n" +
+	"\bcategory\x18\x06 \x01(\x0e2\x16.inventory.v1.CategoryR\bcategory\x128\n" +
 	"\n" +
 	"dimensions\x18\a \x01(\v2\x18.inventory.v1.DimensionsR\n" +
 	"dimensions\x12>\n" +
@@ -772,7 +772,13 @@ const file_inventory_v1_inventory_proto_rawDesc = "" +
 	"updated_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\tupdatedAt\x1aP\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12)\n" +
-	"\x05value\x18\x02 \x01(\v2\x13.inventory.v1.ValueR\x05value:\x028\x012\xa8\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x13.inventory.v1.ValueR\x05value:\x028\x01*v\n" +
+	"\bCategory\x12\x18\n" +
+	"\x14CATEGORY_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fCATEGORY_ENGINE\x10\x01\x12\x11\n" +
+	"\rCATEGORY_FUEL\x10\x02\x12\x15\n" +
+	"\x11CATEGORY_PORTHOLE\x10\x03\x12\x11\n" +
+	"\rCATEGORY_WING\x10\x042\xa8\x01\n" +
 	"\x10InventoryService\x12F\n" +
 	"\aGetPart\x12\x1c.inventory.v1.GetPartRequest\x1a\x1d.inventory.v1.GetPartResponse\x12L\n" +
 	"\tListParts\x12\x1e.inventory.v1.ListPartsRequest\x1a\x1f.inventory.v1.ListPartsResponseBQZOgithub.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1;inventory_v1b\x06proto3"
@@ -789,14 +795,15 @@ func file_inventory_v1_inventory_proto_rawDescGZIP() []byte {
 	return file_inventory_v1_inventory_proto_rawDescData
 }
 
-var file_inventory_v1_inventory_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_inventory_v1_inventory_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_inventory_v1_inventory_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_inventory_v1_inventory_proto_goTypes = []any{
-	(*GetPartRequest)(nil),        // 0: inventory.v1.GetPartRequest
-	(*GetPartResponse)(nil),       // 1: inventory.v1.GetPartResponse
-	(*ListPartsRequest)(nil),      // 2: inventory.v1.ListPartsRequest
-	(*ListPartsResponse)(nil),     // 3: inventory.v1.ListPartsResponse
-	(*PartsFilter)(nil),           // 4: inventory.v1.PartsFilter
-	(*Category)(nil),              // 5: inventory.v1.Category
+	(Category)(0),                 // 0: inventory.v1.Category
+	(*GetPartRequest)(nil),        // 1: inventory.v1.GetPartRequest
+	(*GetPartResponse)(nil),       // 2: inventory.v1.GetPartResponse
+	(*ListPartsRequest)(nil),      // 3: inventory.v1.ListPartsRequest
+	(*ListPartsResponse)(nil),     // 4: inventory.v1.ListPartsResponse
+	(*PartsFilter)(nil),           // 5: inventory.v1.PartsFilter
 	(*Dimensions)(nil),            // 6: inventory.v1.Dimensions
 	(*Manufacturer)(nil),          // 7: inventory.v1.Manufacturer
 	(*Value)(nil),                 // 8: inventory.v1.Value
@@ -806,20 +813,20 @@ var file_inventory_v1_inventory_proto_goTypes = []any{
 }
 var file_inventory_v1_inventory_proto_depIdxs = []int32{
 	9,  // 0: inventory.v1.GetPartResponse.part:type_name -> inventory.v1.Part
-	4,  // 1: inventory.v1.ListPartsRequest.filter:type_name -> inventory.v1.PartsFilter
+	5,  // 1: inventory.v1.ListPartsRequest.filter:type_name -> inventory.v1.PartsFilter
 	9,  // 2: inventory.v1.ListPartsResponse.parts:type_name -> inventory.v1.Part
-	5,  // 3: inventory.v1.PartsFilter.categories:type_name -> inventory.v1.Category
-	5,  // 4: inventory.v1.Part.category:type_name -> inventory.v1.Category
+	0,  // 3: inventory.v1.PartsFilter.categories:type_name -> inventory.v1.Category
+	0,  // 4: inventory.v1.Part.category:type_name -> inventory.v1.Category
 	6,  // 5: inventory.v1.Part.dimensions:type_name -> inventory.v1.Dimensions
 	7,  // 6: inventory.v1.Part.manufacturer:type_name -> inventory.v1.Manufacturer
 	10, // 7: inventory.v1.Part.metadata:type_name -> inventory.v1.Part.MetadataEntry
 	11, // 8: inventory.v1.Part.created_at:type_name -> google.protobuf.Timestamp
 	11, // 9: inventory.v1.Part.updated_at:type_name -> google.protobuf.Timestamp
 	8,  // 10: inventory.v1.Part.MetadataEntry.value:type_name -> inventory.v1.Value
-	0,  // 11: inventory.v1.InventoryService.GetPart:input_type -> inventory.v1.GetPartRequest
-	2,  // 12: inventory.v1.InventoryService.ListParts:input_type -> inventory.v1.ListPartsRequest
-	1,  // 13: inventory.v1.InventoryService.GetPart:output_type -> inventory.v1.GetPartResponse
-	3,  // 14: inventory.v1.InventoryService.ListParts:output_type -> inventory.v1.ListPartsResponse
+	1,  // 11: inventory.v1.InventoryService.GetPart:input_type -> inventory.v1.GetPartRequest
+	3,  // 12: inventory.v1.InventoryService.ListParts:input_type -> inventory.v1.ListPartsRequest
+	2,  // 13: inventory.v1.InventoryService.GetPart:output_type -> inventory.v1.GetPartResponse
+	4,  // 14: inventory.v1.InventoryService.ListParts:output_type -> inventory.v1.ListPartsResponse
 	13, // [13:15] is the sub-list for method output_type
 	11, // [11:13] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name
@@ -832,7 +839,7 @@ func file_inventory_v1_inventory_proto_init() {
 	if File_inventory_v1_inventory_proto != nil {
 		return
 	}
-	file_inventory_v1_inventory_proto_msgTypes[8].OneofWrappers = []any{
+	file_inventory_v1_inventory_proto_msgTypes[7].OneofWrappers = []any{
 		(*Value_StringValue)(nil),
 		(*Value_Int64Value)(nil),
 		(*Value_DoubleValue)(nil),
@@ -843,13 +850,14 @@ func file_inventory_v1_inventory_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_inventory_v1_inventory_proto_rawDesc), len(file_inventory_v1_inventory_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   11,
+			NumEnums:      1,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_inventory_v1_inventory_proto_goTypes,
 		DependencyIndexes: file_inventory_v1_inventory_proto_depIdxs,
+		EnumInfos:         file_inventory_v1_inventory_proto_enumTypes,
 		MessageInfos:      file_inventory_v1_inventory_proto_msgTypes,
 	}.Build()
 	File_inventory_v1_inventory_proto = out.File
