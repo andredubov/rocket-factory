@@ -1,0 +1,10 @@
+type: object
+description: |
+  Данные для оплаты заказа.
+  Требуется выбор одного из доступных методов оплаты.
+required: [payment_method]
+properties:
+  payment_method:
+    $ref: ./enums/payment_method.yaml
+    description: Выбранный способ оплаты
+    example: "CARD"

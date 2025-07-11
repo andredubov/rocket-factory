@@ -1,0 +1,52 @@
+post:
+  tags: [Orders]
+  summary: Создать новый заказ
+  description: |
+    Создает новый заказ на основе выбранных пользователем деталей.
+    Проверяет наличие всех деталей через InventoryService.
+    Рассчитывает общую стоимость.
+  operationId: createOrder
+  requestBody:
+    required: true
+    description: Данные для создания заказа
+    content:
+      application/json:
+        schema:
+          $ref: "../components/create_order_request.yaml"
+  responses:
+    '200':
+      description: |
+        Заказ успешно создан.
+        Возвращает UUID заказа и общую стоимость.
+      content:
+        application/json:
+          schema:
+            $ref: "../components/create_order_response.yaml"
+    '400':
+      description: |
+        Некорректный запрос:
+        - Не указан user_uuid
+        - Не указаны part_uuids
+        - Одна или несколько деталей не найдены
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/bad_request_error.yaml"
+    '409':
+      description: Заказ уже оплачен и не может быть оплачен снова
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/conflict_error.yaml"            
+    '500':
+      description: Произошла внутренняя ошибка сервера или InventoryService недоступен
+      content:
+        application/json:
+          schema:
+            $ref: ../components/errors/internal_server_error.yaml
+    default:
+      description: Произошла какая-то ошибка
+      content:
+        application/json:
+          schema:
+            $ref: "../components/errors/generic_error.yaml"

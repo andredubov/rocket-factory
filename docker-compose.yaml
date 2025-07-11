@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  payment-service:
+    image: payment-service
+    container_name: payment_service
+    build:
+      context: .
+      dockerfile: ./payment/Dockerfile
+    env_file:
+      - ./payment/config/.env
+    ports:
+      - ${PAYMENT_GRPC_PORT}:${PAYMENT_GRPC_PORT}
+    networks:
+      rocketfactorynet:
+        ipv4_address: 172.19.0.2
+  inventory-service:
+    image: inventory-service
+    container_name: inventory_service
+    build:
+      context: .
+      dockerfile: ./inventory/Dockerfile
+    env_file:
+      - ./inventory/config/.env
+    ports:
+      - ${INVENTORY_GRPC_PORT}:${INVENTORY_GRPC_PORT}
+    networks:
+      rocketfactorynet:
+        ipv4_address: 172.19.0.3
+networks:
+  rocketfactorynet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
