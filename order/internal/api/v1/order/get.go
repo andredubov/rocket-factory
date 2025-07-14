@@ -6,8 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository"
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
+	"github.com/andredubov/rocket-factory/order/internal/model"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 )
 
@@ -19,9 +18,9 @@ func (i *OrderImplementation) GetOrderByUuid(ctx context.Context, params order_v
 	}
 
 	// Получаем заказ из репозитория
-	order, err := i.ordersRepository.GetOrder(ctx, params.OrderUUID)
+	order, err := i.ordersService.GetOrder(ctx, params.OrderUUID)
 	if err != nil {
-		if errors.Is(err, repository.ErrOrderNotFound) {
+		if errors.Is(err, model.ErrOrderNotFound) {
 			// Возвращаем структурированную ошибку API для случая "не найдено"
 			return &order_v1.NotFoundError{
 				Code:    http.StatusNotFound,

@@ -8,8 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository"
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
+	"github.com/andredubov/rocket-factory/order/internal/model"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
@@ -17,9 +16,9 @@ import (
 // PayOrder обрабатывает запрос на оплату заказа.
 func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrderRequest, params order_v1.PayOrderParams) (order_v1.PayOrderRes, error) {
 	// Получаем заказ из репозитория
-	order, err := i.ordersRepository.GetOrder(ctx, params.OrderUUID)
+	order, err := i.ordersService.GetOrder(ctx, params.OrderUUID)
 	if err != nil {
-		if errors.Is(err, repository.ErrOrderNotFound) {
+		if errors.Is(err, model.ErrOrderNotFound) {
 			return &order_v1.NotFoundError{
 				Code:    http.StatusNotFound,
 				Message: "order not found",
@@ -73,7 +72,7 @@ func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrd
 	order.Status = model.OrderStatusPaid
 
 	// Сохранение обновленного заказа
-	if err := i.ordersRepository.UpdateOrder(ctx, *order); err != nil {
+	if err := i.ordersService.UpdateOrder(ctx, *order); err != nil {
 		return nil, fmt.Errorf("failed to update order: %w", err)
 	}
 

@@ -18,6 +18,7 @@ import (
 
 	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
+	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
@@ -35,7 +36,8 @@ func main() {
 	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
 	inventoryServiceClient := newInventoryServiceClient(inventoryServiceAddress)
 	ordersRepository := memory.NewOrderRepository()
-	ordersHandler := handler.NewOrderHandler(ordersRepository, paymentServiceClient, inventoryServiceClient)
+	ordersService := orders.NewService(ordersRepository)
+	ordersHandler := handler.NewOrderHandler(ordersService, paymentServiceClient, inventoryServiceClient)
 
 	orderServer, err := order_v1.NewServer(ordersHandler)
 	if err != nil {
