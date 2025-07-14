@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/andredubov/rocket-factory/payment/internal/service/model"
+	"github.com/andredubov/rocket-factory/payment/internal/model"
 )
 
 // Payments defines the contract for payment processing operations.

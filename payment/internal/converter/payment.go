@@ -1,7 +1,7 @@
 package converter
 
 import (
-	"github.com/andredubov/rocket-factory/payment/internal/service/model"
+	"github.com/andredubov/rocket-factory/payment/internal/model"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/andredubov/rocket-factory/payment/internal/service/model"
+	"github.com/andredubov/rocket-factory/payment/internal/model"
 )
 
 // Create implements the Payments interface by generating a new payment transaction.

@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/andredubov/rocket-factory/payment/internal/service/converter"
+	"github.com/andredubov/rocket-factory/payment/internal/converter"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
