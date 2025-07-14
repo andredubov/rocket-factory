@@ -10,12 +10,15 @@ import (
 	server "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
 )
 
 // serviceProvider implements the dependency container pattern
 // It provides lazy initialization of application components
 type serviceProvider struct {
-	inventoryRepository  repository.Inventory            // Inventory data access layer
+	inventoryRepository  repository.Inventory
+	inventoryService     service.Inventory
 	grpcConfig           config.GRPCConfig               // GRPC server configuration
 	serverImplementation *server.InventoryImplementation // GRPC service implementation
 }
@@ -49,12 +52,23 @@ func (s *serviceProvider) InventoryRepository(ctx context.Context) repository.In
 	return s.inventoryRepository
 }
 
+// InventoryService provides access to inventory service layer
+func (s *serviceProvider) InventoryService(ctx context.Context) service.Inventory {
+	if s.inventoryService == nil {
+		s.inventoryService = inventory.NewService(
+			s.InventoryRepository(ctx),
+		)
+	}
+
+	return s.inventoryService
+}
+
 // ServerImplementation creates GRPC service handler
-// Initializes all required dependencies (repository)
+// Initializes all required dependencies (service)
 func (s *serviceProvider) ServerImplementation(ctx context.Context) *server.InventoryImplementation {
 	if s.serverImplementation == nil {
-		inventoryRepository := s.InventoryRepository(ctx)
-		s.serverImplementation = server.NewInventoryImplementation(inventoryRepository)
+		inventoryService := s.InventoryService(ctx)
+		s.serverImplementation = server.NewInventoryImplementation(inventoryService)
 	}
 
 	return s.serverImplementation

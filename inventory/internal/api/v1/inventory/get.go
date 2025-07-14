@@ -8,8 +8,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
+	"github.com/andredubov/rocket-factory/inventory/internal/converter"
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
@@ -17,10 +17,10 @@ import (
 func (i *InventoryImplementation) GetPart(ctx context.Context, req *inventory_v1.GetPartRequest) (*inventory_v1.GetPartResponse, error) {
 	uuid := req.GetUuid() // Extract UUID from request
 
-	// Fetch part from repository
-	part, err := i.inventoryRepository.GetPart(ctx, uuid)
+	// Fetch part from service
+	part, err := i.inventoryService.GetPart(ctx, uuid)
 	if err != nil {
-		if errors.Is(err, repository.ErrPartNotFound) {
+		if errors.Is(err, model.ErrPartNotFound) {
 			log.Printf("part with UUID %s not found", uuid)
 			return nil, status.Errorf(codes.NotFound, "part with UUID %s not found", uuid)
 		}
@@ -36,10 +36,10 @@ func (i *InventoryImplementation) ListParts(ctx context.Context, req *inventory_
 	// Convert gRPC filter to domain filter
 	filter := converter.PartFilterFromListRequest(req)
 
-	// Fetch parts from repository using filter
-	parts, err := i.inventoryRepository.GetPartList(ctx, filter)
+	// Fetch parts from service using filter
+	parts, err := i.inventoryService.GetPartList(ctx, filter)
 	if err != nil {
-		if errors.Is(err, repository.ErrPartNotFound) {
+		if errors.Is(err, model.ErrPartNotFound) {
 			log.Printf("target parts not found")
 			return nil, status.Errorf(codes.NotFound, "target parts not found")
 		}

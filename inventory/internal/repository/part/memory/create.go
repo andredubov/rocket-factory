@@ -8,7 +8,6 @@ import (
 )
 
 // AddPart adds a new part to the in-memory repository
-// Thread-safe operation using mutex lock
 // Returns:
 // - nil if part was added successfully
 // - error if part with same UUID already exists
