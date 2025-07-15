@@ -26,7 +26,7 @@ func OrderToRepoModel(order model.Order) repoModel.Order {
 }
 
 // OrderToModel converts a repository model (repoModel.Order) to a domain model (model.Order).
-func OrderToModel(order repoModel.Order) model.Order {
+func OrderToModel(order repoModel.Order) *model.Order {
 	var paymentInfo *model.PaymentInfo
 	if order.PaymentInfo != nil {
 		paymentInfo = &model.PaymentInfo{
@@ -35,7 +35,7 @@ func OrderToModel(order repoModel.Order) model.Order {
 		}
 	}
 
-	return model.Order{
+	return &model.Order{
 		OrderUUID:   order.OrderUUID,
 		UserUUID:    order.UserUUID,
 		PartUUIDs:   order.PartUUIDs,
@@ -43,4 +43,18 @@ func OrderToModel(order repoModel.Order) model.Order {
 		PaymentInfo: paymentInfo,
 		Status:      model.OrderStatus(order.Status),
 	}
+}
+
+// OrdersToModel converts a slice of repository order models (repoModel.Order) to a slice of domain order models (model.Order).
+func OrdersToModel(orders []repoModel.Order) []model.Order {
+	result := make([]model.Order, 0, len(orders))
+
+	for _, order := range orders {
+		domainOrder := OrderToModel(order)
+		if domainOrder != nil {
+			result = append(result, *domainOrder)
+		}
+	}
+
+	return result
 }
