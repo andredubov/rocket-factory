@@ -17,6 +17,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
+	grpcClient "github.com/andredubov/rocket-factory/order/internal/client/grpc"
+	"github.com/andredubov/rocket-factory/order/internal/client/grpc/payment/v1"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
@@ -79,7 +81,7 @@ func main() {
 	log.Println("server stopped")
 }
 
-func newPaymentServiceClient(serviceAddress string) payment_v1.PaymentServiceClient {
+func newPaymentServiceClient(serviceAddress string) grpcClient.PaymentClient {
 	dialOptions := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -94,7 +96,7 @@ func newPaymentServiceClient(serviceAddress string) payment_v1.PaymentServiceCli
 		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
 	}
 
-	return client
+	return payment.NewClient(client)
 }
 
 func newInventoryServiceClient(serviceAddress string) inventory_v1.InventoryServiceClient {

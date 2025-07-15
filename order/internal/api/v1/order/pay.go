@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/uuid"
-
+	"github.com/andredubov/rocket-factory/order/internal/converter"
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
-	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
 // PayOrder обрабатывает запрос на оплату заказа.
@@ -48,21 +46,8 @@ func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrd
 		PaymentMethod: model.PaymentMethod(req.PaymentMethod),
 	}
 
-	// Создание запроса в платежный сервис
-	paymentRequest := &payment_v1.PayOrderRequest{
-		OrderUuid:     order.OrderUUID.String(),
-		UserUuid:      order.UserUUID.String(),
-		PaymentMethod: ConvertModelPaymentMethodToProto(order.PaymentInfo.PaymentMethod),
-	}
-
 	// Вызов платежного сервиса
-	paymentResponse, err := i.paymentClient.PayOrder(ctx, paymentRequest)
-	if err != nil {
-		return nil, fmt.Errorf("payment service error: %w", err)
-	}
-
-	// Парсинг UUID транзакции
-	transactionUUID, err := uuid.Parse(paymentResponse.GetTransactionUuid())
+	transactionUUID, err := i.paymentClient.PayOrder(ctx, order)
 	if err != nil {
 		return nil, fmt.Errorf("invalid transaction uuid: %w", err)
 	}
@@ -76,26 +61,5 @@ func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrd
 		return nil, fmt.Errorf("failed to update order: %w", err)
 	}
 
-	// Формирование ответа
-	response := &order_v1.PayOrderResponse{
-		TransactionUUID: order_v1.NewOptUUID(transactionUUID),
-	}
-
-	return response, nil
-}
-
-// ConvertModelPaymentMethodToProto конвертирует model.PaymentMethod в payment_v1.PaymentMethod.
-func ConvertModelPaymentMethodToProto(method model.PaymentMethod) payment_v1.PaymentMethod {
-	switch method {
-	case model.PaymentMethodCard:
-		return payment_v1.PaymentMethod_PAYMENT_METHOD_CARD
-	case model.PaymentMethodSBP:
-		return payment_v1.PaymentMethod_PAYMENT_METHOD_SBP
-	case model.PaymentMethodCreditCard:
-		return payment_v1.PaymentMethod_PAYMENT_METHOD_CREDIT_CARD
-	case model.PaymentMethodInvestorMoney:
-		return payment_v1.PaymentMethod_PAYMENT_METHOD_INVESTOR_MONEY
-	default:
-		return payment_v1.PaymentMethod_PAYMENT_METHOD_UNSPECIFIED
-	}
+	return converter.OrderToPayOrderResponse(order), nil
 }
