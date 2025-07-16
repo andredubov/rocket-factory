@@ -32,35 +32,5 @@ func (i *OrderImplementation) GetOrderByUuid(ctx context.Context, params order_v
 		return nil, fmt.Errorf("repository error: %w", err)
 	}
 
-	// Создаем базовый ответ с обязательными полями заказа
-	response := converter.OrderToGetOrderResponse(order)
-
-	// Если есть информация о платеже, добавляем ее в ответ
-	if order.PaymentInfo != nil {
-		response.TransactionUUID = order_v1.NewOptNilUUID(order.PaymentInfo.TransactionUUID)
-
-		paymentMethod, err := convertToPaymentMethod(order.PaymentInfo.PaymentMethod)
-		if err != nil {
-			return nil, fmt.Errorf("payment method conversion error: %w", err)
-		}
-		response.PaymentMethod = order_v1.NewOptPaymentMethod(paymentMethod)
-	}
-
-	return response, nil
-}
-
-// convertToPaymentMethod конвертирует внутреннее представление метода оплаты в формат API.
-func convertToPaymentMethod(method model.PaymentMethod) (order_v1.PaymentMethod, error) {
-	switch method {
-	case model.PaymentMethodCard:
-		return order_v1.PaymentMethodCARD, nil
-	case model.PaymentMethodSBP:
-		return order_v1.PaymentMethodSBP, nil
-	case model.PaymentMethodCreditCard:
-		return order_v1.PaymentMethodCREDITCARD, nil
-	case model.PaymentMethodInvestorMoney:
-		return order_v1.PaymentMethodINVESTORMONEY, nil
-	default:
-		return "", fmt.Errorf("unsupported payment method: %s", method)
-	}
+	return converter.OrderToGetOrderResponse(order)
 }
