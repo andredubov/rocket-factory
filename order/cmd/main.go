@@ -18,6 +18,7 @@ import (
 
 	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
 	grpcClient "github.com/andredubov/rocket-factory/order/internal/client/grpc"
+	"github.com/andredubov/rocket-factory/order/internal/client/grpc/inventory/v1"
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/payment/v1"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
@@ -99,7 +100,7 @@ func newPaymentServiceClient(serviceAddress string) grpcClient.PaymentClient {
 	return payment.NewClient(client)
 }
 
-func newInventoryServiceClient(serviceAddress string) inventory_v1.InventoryServiceClient {
+func newInventoryServiceClient(serviceAddress string) grpcClient.InventoryClient {
 	dialOptions := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -114,5 +115,5 @@ func newInventoryServiceClient(serviceAddress string) inventory_v1.InventoryServ
 		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
 	}
 
-	return client
+	return inventory.NewClient(client)
 }

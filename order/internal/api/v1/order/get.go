@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/andredubov/rocket-factory/order/internal/converter"
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 )
@@ -32,26 +33,20 @@ func (i *OrderImplementation) GetOrderByUuid(ctx context.Context, params order_v
 	}
 
 	// Создаем базовый ответ с обязательными полями заказа
-	res := &order_v1.GetOrderResponse{
-		OrderUUID:  order.OrderUUID,                    // UUID заказа
-		UserUUID:   order.UserUUID,                     // UUID пользователя
-		PartUuids:  order.PartUUIDs,                    // Список UUID деталей в заказе
-		TotalPrice: order.TotalPrice,                   // Общая стоимость заказа
-		Status:     order_v1.OrderStatus(order.Status), // Текущий статус заказа
-	}
+	response := converter.OrderToGetOrderResponse(order)
 
 	// Если есть информация о платеже, добавляем ее в ответ
 	if order.PaymentInfo != nil {
-		res.TransactionUUID = order_v1.NewOptNilUUID(order.PaymentInfo.TransactionUUID)
+		response.TransactionUUID = order_v1.NewOptNilUUID(order.PaymentInfo.TransactionUUID)
 
 		paymentMethod, err := convertToPaymentMethod(order.PaymentInfo.PaymentMethod)
 		if err != nil {
 			return nil, fmt.Errorf("payment method conversion error: %w", err)
 		}
-		res.PaymentMethod = order_v1.NewOptPaymentMethod(paymentMethod)
+		response.PaymentMethod = order_v1.NewOptPaymentMethod(paymentMethod)
 	}
 
-	return res, nil
+	return response, nil
 }
 
 // convertToPaymentMethod конвертирует внутреннее представление метода оплаты в формат API.

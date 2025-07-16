@@ -12,7 +12,6 @@ import (
 	"github.com/andredubov/rocket-factory/order/internal/converter"
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
-	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
 // CreateOrder обрабатывает запрос на создание нового заказа.
@@ -29,22 +28,17 @@ func (i *OrderImplementation) CreateOrder(ctx context.Context, req *order_v1.Cre
 		}, nil
 	}
 
-	// Проверка наличия деталей и расчет стоимости
-	total := decimal.NewFromFloat(0)
-	for _, partUuid := range order.PartUUIDs {
-		inventoryRequest := inventory_v1.GetPartRequest{Uuid: partUuid.String()}
-		inventoryResponse, err := i.inventoryClient.GetPart(ctx, &inventoryRequest)
-		if err != nil {
-			return &order_v1.BadRequestError{
-				Code:    http.StatusBadRequest,
-				Message: fmt.Sprintf("invalid part %s: %v", partUuid, err),
-			}, nil
-		}
+	filter := makePartFilterFrom(order)
 
-		total = total.Add(decimal.NewFromFloat(inventoryResponse.GetPart().GetPrice()))
+	parts, err := i.inventoryClient.ListParts(ctx, filter)
+	if err != nil {
+		return &order_v1.BadRequestError{
+			Code:    http.StatusBadRequest,
+			Message: fmt.Sprintf("invalid part %v", err),
+		}, nil
 	}
 
-	order.TotalPrice, _ = total.Round(2).Float64()
+	order.TotalPrice = calculateTotalSum(parts)
 
 	// Сохранение
 	if err := i.ordersService.AddOrder(ctx, order); err != nil {
@@ -58,4 +52,23 @@ func (i *OrderImplementation) CreateOrder(ctx context.Context, req *order_v1.Cre
 	}
 
 	return converter.OrderToCreateOrderResponse(order), nil
+}
+
+func makePartFilterFrom(order model.Order) model.PartFilter {
+	uuids := make([]string, 0, len(order.PartUUIDs))
+	for _, uuid := range order.PartUUIDs {
+		uuids = append(uuids, uuid.String())
+	}
+
+	return model.PartFilter{UUIDs: uuids}
+}
+
+func calculateTotalSum(parts []model.Part) float64 {
+	total := decimal.NewFromFloat(0)
+	for _, part := range parts {
+		total = total.Add(decimal.NewFromFloat(part.Price))
+	}
+	result, _ := total.Round(2).Float64()
+
+	return result
 }

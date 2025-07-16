@@ -27,3 +27,14 @@ func OrderToPayOrderResponse(order *model.Order) *order_v1.PayOrderResponse {
 		TransactionUUID: order_v1.NewOptUUID(order.PaymentInfo.TransactionUUID),
 	}
 }
+
+// OrderToGetOrderResponse converts a domain Order model to a PayOrderResponse protobuf message.
+func OrderToGetOrderResponse(order *model.Order) *order_v1.GetOrderResponse {
+	return &order_v1.GetOrderResponse{
+		OrderUUID:  order.OrderUUID,                    // UUID заказа
+		UserUUID:   order.UserUUID,                     // UUID пользователя
+		PartUuids:  order.PartUUIDs,                    // Список UUID деталей в заказе
+		TotalPrice: order.TotalPrice,                   // Общая стоимость заказа
+		Status:     order_v1.OrderStatus(order.Status), // Текущий статус заказа
+	}
+}

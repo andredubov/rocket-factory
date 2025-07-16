@@ -8,8 +8,9 @@ import (
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
+// TransactionUuidFromResponse extracts and parses the transaction UUID from a payment service response.
 func TransactionUuidFromResponse(response *payment_v1.PayOrderResponse) (uuid.UUID, error) {
-	// Парсинг UUID транзакции
+	// Parse transaction UUID
 	transactionUUID, err := uuid.Parse(response.GetTransactionUuid())
 	if err != nil {
 		return uuid.New(), fmt.Errorf("invalid transaction uuid: %w", err)
