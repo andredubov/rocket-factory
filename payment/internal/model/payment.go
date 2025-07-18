@@ -23,7 +23,7 @@ func (os PaymentMethod) IsValid() bool {
 
 // Payment represents a payment transaction in the domain layer.
 type Payment struct {
-	UserID        string
-	OrderID       string
+	UserUuid      string
+	OrderUuid     string
 	PaymentMethod PaymentMethod
 }

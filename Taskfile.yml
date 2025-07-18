@@ -38,6 +38,7 @@ vars:
   OPEN_API_FILE: '{{.OPEN_API_ORDER_V1_BASE}}'
   
   COVERAGE_DIR: '{{.ROOT_DIR}}/coverage'
+  COVERAGE_FILE: total.out
 
   MODULES: inventory order payment
 
@@ -277,26 +278,59 @@ tasks:
         {{.MOCKERY}}
 
   test-coverage:
-    desc: "Тесты с покрытием бизнес-логики, автоматический поиск и анализ всех модулей"
+    desc: "Тесты с покрытием бизнес-логики (service/repository), отчёт по каждому модулю + общий"
     cmds:
       - |
         echo "🧪 Запускаем расчёт покрытия..."
         rm -rf {{.COVERAGE_DIR}}
         mkdir -p {{.COVERAGE_DIR}}
         
-        # Находим все пакеты, для которых нужно измерить покрытие (исключаем mocks)
-        TARGET_PACKAGES=$(go list ./internal/... | grep -v "/mocks" | grep -E '/(api|service)/' | tr '\n' ',')
+        ERR=0
+        for mod in {{.MODULES}}; do
+          echo "📦 Обрабатываем модуль: $mod"
         
-        if [ -z "$TARGET_PACKAGES" ]; then
-          echo "⚠️ Не найдено пакетов для тестирования"
-          exit 1
+          TARGET_PKGS=$(go list ./$mod/... \
+            | grep -E '/(internal/(service|repository))' \
+            | grep -vE '/(mocks|testdata|pkg|api|proto|pb|cmd)' \
+            | paste -sd "," -)
+        
+          if [ -z "$TARGET_PKGS" ]; then
+            echo "⚠️  Нет подходящих пакетов в $mod"
+            continue
+          fi
+        
+          go test -coverpkg="$TARGET_PKGS" \
+            -coverprofile={{.COVERAGE_DIR}}/$mod.out \
+            -covermode=atomic \
+            $(echo "$TARGET_PKGS" | tr "," " ") || ERR=1
+        done
+        
+        if [ $ERR -ne 0 ]; then
+          echo "❌ Ошибки во время тестов"
+          exit $ERR
         fi
         
-        echo "🧪 Запуск тестов со сбором покрытия для всех модулей..."
-        go test -v -coverprofile={{.COVERAGE_DIR}}/coverage.out -coverpkg=$TARGET_PACKAGES ./...
+        echo
+        echo "📊 Покрытие по каждому модулю:"
+        for mod in {{.MODULES}}; do
+          OUTFILE="{{.COVERAGE_DIR}}/$mod.out"
+          if [ -f "$OUTFILE" ]; then
+            printf " • %s: " "$mod"
+            go tool cover -func="$OUTFILE" | tail -n1
+          fi
+        done
         
-        echo "🧾 Общее покрытие:"
-        go tool cover -func={{.COVERAGE_DIR}}/coverage.out | tail -n1
+        echo
+        echo "📦 Склеиваем все покрытия..."
+        {
+          echo "mode: atomic"
+          find {{.COVERAGE_DIR}} -type f -name '*.out' ! -name '{{.COVERAGE_FILE}}' \
+            -exec grep -h -v "^mode:" {} +
+        } > {{.COVERAGE_DIR}}/{{.COVERAGE_FILE}}
+        
+        echo
+        echo "🧾 Общее покрытие по всем модулям:"
+        go tool cover -func={{.COVERAGE_DIR}}/{{.COVERAGE_FILE}} | tail -n1
 
   coverage:html:
     desc: "Генерирует HTML-отчёт покрытия и открывает его в браузере"
@@ -305,16 +339,58 @@ tasks:
       - |
         OUTPUT={{.COVERAGE_DIR}}/coverage.html
         echo "🌐 Генерируем HTML-отчёт..."
-        go tool cover -html={{.COVERAGE_DIR}}/coverage.out -o $OUTPUT
+        go tool cover -html={{.COVERAGE_DIR}}/{{.COVERAGE_FILE}} -o $OUTPUT
 
-        echo "🚀 Открываем $OUTPUT"
+        echo "🚀 Пытаемся открыть $OUTPUT"
+        
+        # Попытка для macOS
         if command -v open &> /dev/null; then
-          open $OUTPUT  # macOS
-        elif command -v xdg-open &> /dev/null; then
-          xdg-open $OUTPUT  # Linux
-        else
-          echo "📂 Отчёт сохранён в $OUTPUT (открой вручную)"
+          open $OUTPUT 2>/dev/null && exit 0
         fi
+        
+        # Попытка для Linux с xdg-open
+        if command -v xdg-open &> /dev/null; then
+          xdg-open $OUTPUT 2>/dev/null && exit 0
+        fi
+        
+        # Попытка найти конкретные браузеры
+        BROWSERS=(
+          firefox
+          google-chrome
+          chromium
+          chromium-browser
+          microsoft-edge
+          opera
+        )
+        
+        for browser in "${BROWSERS[@]}"; do
+          if command -v $browser &> /dev/null; then
+            $browser $OUTPUT 2>/dev/null && exit 0
+          fi
+        done
+        
+        # Если ничего не сработало
+        echo "⚠️ Не удалось открыть браузер автоматически"
+        echo "📂 Отчёт сохранён в: $OUTPUT"
+        echo "   Скопируйте путь и откройте вручную в любом браузере:"
+        echo "   file://$OUTPUT"
+        exit 0
+
+  test:
+    desc: "Запускает юнит-тесты для всех модулей"
+    summary: |
+      Запускает юнит-тесты для указанных модулей проекта.
+      Можно указать конкретные модули через переменную MODULES.
+    cmds:
+      - |
+        ERR=0
+        for mod in {{.MODULES}}; do
+          if [ -d "$mod" ]; then
+            echo "🧪 Тестируем модуль $mod"
+            go test -v ./$mod/... || ERR=1
+          fi
+        done
+        exit $ERR
 
   test-api:
     desc: "🧪 Запуск тестов для проверки API микросервисов"

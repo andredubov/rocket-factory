@@ -27,7 +27,5 @@ func (i *PaymentImplementation) PayOrder(ctx context.Context, req *payment_v1.Pa
 	log.Printf("Оплата прошла успешно, transaction_uuid: %s\n", uuid)
 
 	// Return response with transaction ID
-	return &payment_v1.PayOrderResponse{
-		TransactionUuid: uuid,
-	}, nil
+	return converter.TransactionUuidToResponse(uuid), nil
 }
