@@ -17,3 +17,9 @@ packages:
   github.com/andredubov/rocket-factory/inventory/internal/service:
     config:
       include-regex: ".*Inventory"
+  github.com/andredubov/rocket-factory/order/internal/repository:
+    config:
+      include-regex: ".*Orders"
+  github.com/andredubov/rocket-factory/order/internal/service:
+    config:
+      include-regex: ".*Orders"
