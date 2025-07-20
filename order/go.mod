@@ -6,9 +6,15 @@ replace github.com/andredubov/rocket-factory/shared => ../shared
 
 require (
 	github.com/andredubov/rocket-factory/shared v0.0.0-00010101000000-000000000000
+	github.com/dvln/testify v0.0.0-20161024040450-c9680faee19e
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	google.golang.org/grpc v1.73.0
+)
+
+require (
+	github.com/dvln/go-difflib v0.0.0-20160110105554-792786c7400a // indirect
+	github.com/dvln/go-spew v0.0.0-20161022190105-ab0ae842c130 // indirect
 )
 
 require (
