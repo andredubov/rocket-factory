@@ -8,7 +8,6 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 )
 
 // TestAddPart_Success verifies that a valid part can be successfully added through the service layer.
@@ -43,7 +42,7 @@ func (s *InventoryServiceSuite) TestAddPart_Success() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("AddPart", ctx, converter.PartToRepoModel(part)).Return(nil)
+	s.inventoryRepository.On("AddPart", ctx, part).Return(nil)
 
 	// Test
 	err := s.inventoryService.AddPart(ctx, part)
@@ -68,7 +67,7 @@ func (s *InventoryServiceSuite) TestAddPart_RepositoryError() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("AddPart", ctx, converter.PartToRepoModel(part)).Return(expectedErr)
+	s.inventoryRepository.On("AddPart", ctx, part).Return(expectedErr)
 
 	// Test
 	err := s.inventoryService.AddPart(ctx, part)
@@ -89,7 +88,7 @@ func (s *InventoryServiceSuite) TestAddPart_InvalidPart() {
 	}
 
 	// Mock expectations
-	s.inventoryRepository.On("AddPart", ctx, converter.PartToRepoModel(invalidPart)).Return(errors.New("Some error"))
+	s.inventoryRepository.On("AddPart", ctx, invalidPart).Return(errors.New("Some error"))
 
 	// Test
 	err := s.inventoryService.AddPart(ctx, invalidPart)

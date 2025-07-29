@@ -6,8 +6,6 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
-	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
 // TestGetPartList_Success verifies successful retrieval of filtered parts through the service layer.
@@ -25,20 +23,20 @@ func (s *InventoryServiceSuite) TestGetPartList_Success() {
 			},
 		}
 
-		repoParts = []repoModel.Part{
+		parts = []model.Part{
 			{
 				Uuid:     gofakeit.UUID(),
 				Name:     "Engine Part",
-				Category: repoModel.PartCategoryEngine,
-				Manufacturer: repoModel.Manufacturer{
+				Category: model.PartCategoryEngine,
+				Manufacturer: model.Manufacturer{
 					Country: "USA",
 				},
 			},
 			{
 				Uuid:     gofakeit.UUID(),
 				Name:     "Fuel Part",
-				Category: repoModel.PartCategoryFuel,
-				Manufacturer: repoModel.Manufacturer{
+				Category: model.PartCategoryFuel,
+				Manufacturer: model.Manufacturer{
 					Country: "Germany",
 				},
 			},
@@ -46,17 +44,16 @@ func (s *InventoryServiceSuite) TestGetPartList_Success() {
 	)
 
 	// Mock expectations
-	repoFilter := converter.PartFilterToRepoModel(filter)
-	s.inventoryRepository.On("GetPartList", ctx, repoFilter).Return(repoParts, nil)
+	s.inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil)
 
 	// Test
-	parts, err := s.inventoryService.GetPartList(ctx, filter)
+	retrivedParts, err := s.inventoryService.GetPartList(ctx, filter)
 
 	// Verify
 	s.Require().NoError(err)
-	s.Require().Len(parts, 2)
-	s.Require().Equal(converter.PartToModel(repoParts[0]), parts[0])
-	s.Require().Equal(converter.PartToModel(repoParts[1]), parts[1])
+	s.Require().Len(retrivedParts, 2)
+	s.Require().Equal(retrivedParts[0], parts[0])
+	s.Require().Equal(retrivedParts[1], parts[1])
 }
 
 // TestGetPartList_EmptyFilter verifies behavior when querying with an empty filter.
@@ -67,8 +64,7 @@ func (s *InventoryServiceSuite) TestGetPartList_EmptyFilter() {
 	var (
 		ctx    = context.Background()
 		filter = model.PartFilter{} // Empty filter
-
-		repoParts = []repoModel.Part{
+		parts  = []model.Part{
 			{
 				Uuid: gofakeit.UUID(),
 				Name: "Test Part",
@@ -77,16 +73,15 @@ func (s *InventoryServiceSuite) TestGetPartList_EmptyFilter() {
 	)
 
 	// Mock expectations
-	repoFilter := converter.PartFilterToRepoModel(filter)
-	s.inventoryRepository.On("GetPartList", ctx, repoFilter).Return(repoParts, nil)
+	s.inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil)
 
 	// Test
-	parts, err := s.inventoryService.GetPartList(ctx, filter)
+	retrivedParts, err := s.inventoryService.GetPartList(ctx, filter)
 
 	// Verify
 	s.Require().NoError(err)
 	s.Require().Len(parts, 1)
-	s.Require().Equal(converter.PartToModel(repoParts[0]), parts[0])
+	s.Require().Equal(retrivedParts[0], parts[0])
 }
 
 // TestGetPartList_RepositoryError verifies proper error propagation from the repository.
@@ -103,8 +98,7 @@ func (s *InventoryServiceSuite) TestGetPartList_RepositoryError() {
 	)
 
 	// Mock expectations
-	repoFilter := converter.PartFilterToRepoModel(filter)
-	s.inventoryRepository.On("GetPartList", ctx, repoFilter).Return(nil, expectedErr)
+	s.inventoryRepository.On("GetPartList", ctx, filter).Return(nil, expectedErr)
 
 	// Test
 	parts, err := s.inventoryService.GetPartList(ctx, filter)
@@ -128,8 +122,7 @@ func (s *InventoryServiceSuite) TestGetPartList_EmptyResult() {
 	)
 
 	// Mock expectations
-	repoFilter := converter.PartFilterToRepoModel(filter)
-	s.inventoryRepository.On("GetPartList", ctx, repoFilter).Return([]repoModel.Part{}, nil)
+	s.inventoryRepository.On("GetPartList", ctx, filter).Return([]model.Part{}, nil)
 
 	// Test
 	parts, err := s.inventoryService.GetPartList(ctx, filter)

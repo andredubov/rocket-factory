@@ -5,22 +5,22 @@ import (
 
 	"github.com/dvln/testify/suite"
 
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/mocks"
-	"github.com/andredubov/rocket-factory/inventory/internal/service"
+	api "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
 	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/mocks"
 )
 
 // InventoryServiceSuite defines the test suite for inventory service integration tests.
 // Contains mocked dependencies and the service instance being tested.
 type InventoryServiceSuite struct {
 	suite.Suite
-	inventoryRepository *mocks.Inventory
-	inventoryService    service.Inventory
+	inventoryRepository *mocks.InventoryRepository
+	inventoryService    api.InventoryService
 }
 
 // SetupTest initializes the test environment before each test case.
 func (s *InventoryServiceSuite) SetupTest() {
-	s.inventoryRepository = mocks.NewInventory(s.T())
+	s.inventoryRepository = mocks.NewInventoryRepository(s.T())
 	s.inventoryService = inventory.NewService(s.inventoryRepository)
 }
 

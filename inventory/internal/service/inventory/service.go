@@ -1,15 +1,15 @@
 package inventory
 
 import (
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
+	api "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
 	"github.com/andredubov/rocket-factory/inventory/internal/service"
 )
 
 type inventoryService struct {
-	inventoryRepository repository.Inventory
+	inventoryRepository service.InventoryRepository
 }
 
-func NewService(repo repository.Inventory) service.Inventory {
+func NewService(repo service.InventoryRepository) api.InventoryService {
 	return &inventoryService{
 		inventoryRepository: repo,
 	}

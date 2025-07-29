@@ -7,8 +7,6 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
-	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
 // TestGetPart_Success verifies successful retrieval of a part through the service layer.
@@ -20,20 +18,20 @@ func (s *InventoryServiceSuite) TestGetPart_Success() {
 		ctx  = context.Background()
 		uuid = gofakeit.UUID()
 
-		repoPart = &repoModel.Part{
+		part = &model.Part{
 			Uuid:          uuid,
 			Name:          gofakeit.Word(),
 			Description:   gofakeit.Sentence(10),
 			Price:         gofakeit.Float64Range(1, 1000),
 			StockQuantity: int64(gofakeit.IntRange(1, 100)),
-			Category:      repoModel.PartCategory(gofakeit.IntRange(1, 4)),
-			Dimensions: repoModel.Dimensions{
+			Category:      model.PartCategory(gofakeit.IntRange(1, 4)),
+			Dimensions: model.Dimensions{
 				Length: gofakeit.Float64Range(1, 100),
 				Width:  gofakeit.Float64Range(1, 100),
 				Height: gofakeit.Float64Range(1, 100),
 				Weight: gofakeit.Float64Range(1, 100),
 			},
-			Manufacturer: repoModel.Manufacturer{
+			Manufacturer: model.Manufacturer{
 				Name:    gofakeit.Company(),
 				Country: gofakeit.Country(),
 				Website: gofakeit.URL(),
@@ -45,16 +43,16 @@ func (s *InventoryServiceSuite) TestGetPart_Success() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPart", ctx, uuid).Return(repoPart, nil)
+	s.inventoryRepository.On("GetPart", ctx, uuid).Return(part, nil)
 
 	// Test
-	part, err := s.inventoryService.GetPart(ctx, uuid)
+	retrievedPart, err := s.inventoryService.GetPart(ctx, uuid)
 
 	// Verify
 	s.Require().NoError(err)
 	s.Require().NotNil(part)
 	s.Require().Equal(uuid, part.Uuid)
-	s.Require().Equal(converter.PartToModel(*repoPart), *part)
+	s.Require().Equal(*retrievedPart, *part)
 }
 
 // TestGetPart_NotFoundError verifies proper error handling when requesting a non-existent part.
