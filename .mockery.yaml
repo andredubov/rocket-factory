@@ -8,12 +8,12 @@ resolve-type-alias: False
 issue-845-fix: True
 
 packages:
-  github.com/andredubov/rocket-factory/payment/internal/service:
+  github.com/andredubov/rocket-factory/payment/internal/api/v1/payment:
     config:
-      include-regex: ".*Payment"
+      include-regex: ".*PaymentService"
   github.com/andredubov/rocket-factory/inventory/internal/service:
     config:
-      include-regex: ".*Inventory"
+      include-regex: ".*InventoryRepository"
   github.com/andredubov/rocket-factory/order/internal/repository:
     config:
       include-regex: ".*Orders"

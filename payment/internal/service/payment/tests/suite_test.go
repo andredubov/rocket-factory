@@ -5,13 +5,13 @@ import (
 
 	"github.com/dvln/testify/suite"
 
-	"github.com/andredubov/rocket-factory/payment/internal/service"
+	api "github.com/andredubov/rocket-factory/payment/internal/api/v1/payment"
 	"github.com/andredubov/rocket-factory/payment/internal/service/payment"
 )
 
 type PaymentServiceSuite struct {
 	suite.Suite
-	paymentService service.Payments
+	paymentService api.PaymentService
 }
 
 func (s *PaymentServiceSuite) SetupTest() {
