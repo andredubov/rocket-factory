@@ -34,12 +34,12 @@ func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrd
 	}
 
 	// Валидация метода оплаты
-	if !model.PaymentMethod(req.PaymentMethod).IsValid() {
-		return &order_v1.BadRequestError{
-			Code:    http.StatusBadRequest,
-			Message: "invalid payment method",
-		}, nil
-	}
+	// if !model.PaymentMethod(req.PaymentMethod).IsValid() {
+	// 	return &order_v1.BadRequestError{
+	// 		Code:    http.StatusBadRequest,
+	// 		Message: "invalid payment method",
+	// 	}, nil
+	// }
 
 	// Подготовка платежной информации
 	order.PaymentInfo = &model.PaymentInfo{
