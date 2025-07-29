@@ -112,5 +112,6 @@ func convertMetadataToModel(metadata map[string]repoModel.Value) map[string]mode
 
 		result[k] = modelValue
 	}
+
 	return result
 }

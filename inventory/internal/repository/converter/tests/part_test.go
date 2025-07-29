@@ -137,7 +137,7 @@ func (s *InventoryRepoConverterSuite) TestPartToRepoModel_EmptyFields() {
 	s.Require().Equal(source.Manufacturer.Country, result.Manufacturer.Country)
 	s.Require().Equal(source.Manufacturer.Website, result.Manufacturer.Website)
 	s.Require().Nil(result.Tags)
-	s.Require().NotNil(result.Metadata)
+	s.Require().Nil(result.Metadata)
 	s.Require().Equal(source.CreatedAt, result.CreatedAt)
 	s.Require().Equal(source.UpdatedAt, result.UpdatedAt)
 }
@@ -276,7 +276,7 @@ func (s *InventoryRepoConverterSuite) TestPartToModel_EmptyFields() {
 	s.Require().Equal(source.Manufacturer.Country, result.Manufacturer.Country)
 	s.Require().Equal(source.Manufacturer.Website, result.Manufacturer.Website)
 	s.Require().Nil(result.Tags)
-	s.Require().NotNil(result.Metadata)
+	s.Require().Nil(result.Metadata)
 	s.Require().Equal(source.CreatedAt, result.CreatedAt)
 	s.Require().Equal(source.UpdatedAt, result.UpdatedAt)
 }
