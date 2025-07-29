@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository"
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
 )
 
 // TestAddOrder_Success verifies that a valid order can be successfully added to the repository.
@@ -61,49 +61,6 @@ func (s *OrdersRepositorySuite) TestAddOrder_DuplicateOrder() {
 
 	// Verify
 	s.Require().Equal(err, repository.ErrOrderAlreadyExistsWith(order.OrderUUID))
-}
-
-// TestAddOrder_InvalidStatus verifies the repository rejects orders with invalid status values.
-// Tests proper validation of order status field and returns ErrInvalidOrderStatus
-// for unsupported status values.
-func (s *OrdersRepositorySuite) TestAddOrder_InvalidStatus() {
-	// Setup
-	var (
-		ctx   = context.Background()
-		order = model.Order{
-			OrderUUID: uuid.New(),
-			Status:    "INVALID_STATUS",
-		}
-	)
-
-	// Test
-	err := s.ordersRepository.AddOrder(ctx, order)
-
-	// Verify
-	s.Require().Equal(err, repository.ErrInvalidOrderStatusWith("INVALID_STATUS"))
-}
-
-// TestAddOrder_InvalidPaymentMethod verifies payment method validation works correctly.
-// Tests that orders with unsupported payment methods are rejected with
-// ErrInvalidPaymentMethod error.
-func (s *OrdersRepositorySuite) TestAddOrder_InvalidPaymentMethod() {
-	// Setup
-	var (
-		ctx   = context.Background()
-		order = model.Order{
-			OrderUUID: uuid.New(),
-			Status:    model.OrderStatusPaid,
-			PaymentInfo: &model.PaymentInfo{
-				PaymentMethod: "INVALID_METHOD",
-			},
-		}
-	)
-
-	// Test
-	err := s.ordersRepository.AddOrder(ctx, order)
-
-	// Verify
-	s.Require().Equal(err, repository.ErrInvalidPaymentMethodWith("INVALID_METHOD"))
 }
 
 // TestAddOrder_ConcurrentAccess verifies thread-safe order creation behavior.

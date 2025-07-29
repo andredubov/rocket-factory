@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository"
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
 )
 
 // TestDeleteOrder_Success verifies successful deletion of an existing order from the repository.

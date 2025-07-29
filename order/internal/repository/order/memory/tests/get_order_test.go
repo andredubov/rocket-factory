@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
+	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
 // TestGetUserOrders_Success verifies successful retrieval of a user's orders from the repository.

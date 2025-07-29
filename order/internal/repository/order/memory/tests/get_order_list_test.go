@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
+	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
 // TestGetUserOrders_ReturnsCorrectOrders verifies correct filtering of orders by user ID.

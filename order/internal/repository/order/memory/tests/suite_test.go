@@ -5,14 +5,14 @@ import (
 
 	"github.com/dvln/testify/suite"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
+	"github.com/andredubov/rocket-factory/order/internal/service"
 )
 
 // InventoryRepositorySuite is a test suite for orders repository operations.
 type OrdersRepositorySuite struct {
 	suite.Suite
-	ordersRepository repository.Orders
+	ordersRepository service.OrdersRepository
 }
 
 // SetupTest prepares the test environment before each test case execution.
