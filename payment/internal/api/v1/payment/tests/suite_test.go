@@ -5,19 +5,19 @@ import (
 
 	"github.com/dvln/testify/suite"
 
-	server "github.com/andredubov/rocket-factory/payment/internal/api/v1/payment"
-	"github.com/andredubov/rocket-factory/payment/internal/service/mocks"
+	api "github.com/andredubov/rocket-factory/payment/internal/api/v1/payment"
+	"github.com/andredubov/rocket-factory/payment/internal/api/v1/payment/mocks"
 )
 
 type APISuite struct {
 	suite.Suite
-	paymentService *mocks.Payments
-	grpcServer     *server.PaymentImplementation
+	paymentService *mocks.PaymentService
+	grpcServer     *api.PaymentImplementation
 }
 
 func (s *APISuite) SetupTest() {
-	s.paymentService = mocks.NewPayments(s.T())
-	s.grpcServer = server.NewPaymentImplementation(s.paymentService)
+	s.paymentService = mocks.NewPaymentService(s.T())
+	s.grpcServer = api.NewPaymentImplementation(s.paymentService)
 }
 
 func (s *APISuite) TearDownTest() {
