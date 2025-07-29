@@ -11,12 +11,15 @@ packages:
   github.com/andredubov/rocket-factory/payment/internal/api/v1/payment:
     config:
       include-regex: ".*PaymentService"
+  github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory:
+    config:
+      include-regex: ".*InventoryService"
   github.com/andredubov/rocket-factory/inventory/internal/service:
     config:
       include-regex: ".*InventoryRepository"
-  github.com/andredubov/rocket-factory/order/internal/repository:
+  github.com/andredubov/rocket-factory/order/internal/api/v1/order:
     config:
-      include-regex: ".*Orders"
+      include-regex: ".*OrdersService"
   github.com/andredubov/rocket-factory/order/internal/service:
     config:
-      include-regex: ".*Orders"
+      include-regex: ".*OrdersRepository"

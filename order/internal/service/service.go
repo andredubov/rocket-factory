@@ -8,8 +8,8 @@ import (
 	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
-// Orders defines the interface for order service operations.
-type Orders interface {
+// OrdersRepository defines the interface for order repository operations.
+type OrdersRepository interface {
 	GetOrder(ctx context.Context, uuid uuid.UUID) (*model.Order, error)
 	AddOrder(ctx context.Context, order model.Order) error
 	UpdateOrder(ctx context.Context, order model.Order) error

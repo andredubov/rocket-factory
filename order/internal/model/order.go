@@ -1,6 +1,8 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 type OrderStatus string
 
@@ -11,13 +13,16 @@ const (
 	OrderStatusCancelled OrderStatus = "CANCELLED"
 )
 
-// IsValid checks if the OrderStatus has a valid value
-func (os OrderStatus) IsValid() bool {
-	switch os {
-	case OrderStatusPending, OrderStatusPaid, OrderStatusCancelled:
-		return true
+func NewOrderStatus(paymentMethod string) (OrderStatus, error) {
+	switch paymentMethod {
+	case "UNKNOWN":
+		return OrderStatusPending, nil
+	case "CARD":
+		return OrderStatusPaid, nil
+	case "SBP":
+		return OrderStatusCancelled, nil
 	default:
-		return false
+		return OrderStatusPending, ErrInvalidOrderStatus
 	}
 }
 
@@ -32,13 +37,20 @@ const (
 	PaymentMethodInvestorMoney PaymentMethod = "INVESTOR_MONEY"
 )
 
-// IsValid checks if the PaymentMethod has a valid value
-func (pm PaymentMethod) IsValid() bool {
-	switch pm {
-	case PaymentMethodUnknown, PaymentMethodCard, PaymentMethodSBP, PaymentMethodCreditCard, PaymentMethodInvestorMoney:
-		return true
+func NewPaymentMethod(paymentMethod string) (PaymentMethod, error) {
+	switch paymentMethod {
+	case "UNKNOWN":
+		return PaymentMethodUnknown, nil
+	case "CARD":
+		return PaymentMethodCard, nil
+	case "SBP":
+		return PaymentMethodSBP, nil
+	case "CREDIT_CARD":
+		return PaymentMethodCreditCard, nil
+	case "INVESTOR_MONEY":
+		return PaymentMethodInvestorMoney, nil
 	default:
-		return false
+		return PaymentMethodUnknown, ErrInvalidPaymentMethod
 	}
 }
 

@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
 )
 
 // TestAddOrder_Success verifies successful order creation through the service layer.
@@ -24,8 +23,7 @@ func (s *OrdersServiceSuite) TestAddOrder_Success() {
 		Status:    model.OrderStatusPending,
 	}
 
-	repoOrder := converter.OrderToRepoModel(order)
-	s.ordersRepository.On("AddOrder", ctx, repoOrder).Return(nil)
+	s.ordersRepository.On("AddOrder", ctx, order).Return(nil)
 
 	// Act
 	err := s.ordersService.AddOrder(ctx, order)
@@ -50,8 +48,7 @@ func (s *OrdersServiceSuite) TestAddOrder_InvalidStatus() {
 		expectedError = model.ErrInvalidOrderStatus
 	)
 
-	repoOrder := converter.OrderToRepoModel(order)
-	s.ordersRepository.On("AddOrder", ctx, repoOrder).Return(expectedError)
+	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
 
 	// Act
 	err := s.ordersService.AddOrder(ctx, order)
@@ -80,8 +77,7 @@ func (s *OrdersServiceSuite) TestAddOrder_InvalidPaymentMethod() {
 		expectedError = model.ErrInvalidPaymentMethod
 	)
 
-	repoOrder := converter.OrderToRepoModel(order)
-	s.ordersRepository.On("AddOrder", ctx, repoOrder).Return(expectedError)
+	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
 
 	// Act
 	err := s.ordersService.AddOrder(ctx, order)
@@ -107,8 +103,7 @@ func (s *OrdersServiceSuite) TestAddOrder_RepositoryError() {
 		expectedError = model.ErrOrderAlreadyExists
 	)
 
-	repoOrder := converter.OrderToRepoModel(order)
-	s.ordersRepository.On("AddOrder", ctx, repoOrder).Return(expectedError)
+	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
 
 	// Act
 	err := s.ordersService.AddOrder(ctx, order)
@@ -155,8 +150,7 @@ func (s *OrdersServiceSuite) TestAddOrder_WithGofakeit() {
 				}
 			}
 
-			repoOrder := converter.OrderToRepoModel(order)
-			s.ordersRepository.On("AddOrder", ctx, repoOrder).Return(nil)
+			s.ordersRepository.On("AddOrder", ctx, order).Return(nil)
 
 			// Act
 			err := s.ordersService.AddOrder(ctx, order)
@@ -183,8 +177,7 @@ func (s *OrdersServiceSuite) TestAddOrder_EmptyPartUUIDs() {
 		expectedError = errors.New("at least one part required")
 	)
 
-	repoOrder := converter.OrderToRepoModel(order)
-	s.ordersRepository.On("AddOrder", ctx, repoOrder).Return(expectedError)
+	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
 
 	// Act
 	err := s.ordersService.AddOrder(ctx, order)
