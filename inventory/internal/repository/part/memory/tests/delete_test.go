@@ -6,8 +6,8 @@ import (
 
 	"github.com/brianvoe/gofakeit/v7"
 
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
 // TestDeletePart_Success verifies that an existing part can be successfully deleted from the repository.

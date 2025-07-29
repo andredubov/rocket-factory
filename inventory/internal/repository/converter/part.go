@@ -61,6 +61,10 @@ func PartToModel(part repoModel.Part) model.Part {
 
 // convertMetadataToRepo converts metadata values from domain model format to repository model format.
 func convertMetadataToRepo(metadata map[string]model.Value) map[string]repoModel.Value {
+	if metadata == nil {
+		return nil
+	}
+
 	result := make(map[string]repoModel.Value)
 	for k, v := range metadata {
 		var repoValue repoModel.Value
@@ -85,6 +89,10 @@ func convertMetadataToRepo(metadata map[string]model.Value) map[string]repoModel
 
 // convertMetadataToModel converts metadata values from repository model format to domain model format.
 func convertMetadataToModel(metadata map[string]repoModel.Value) map[string]model.Value {
+	if metadata == nil {
+		return nil
+	}
+
 	result := make(map[string]model.Value)
 	for k, v := range metadata {
 		var modelValue model.Value

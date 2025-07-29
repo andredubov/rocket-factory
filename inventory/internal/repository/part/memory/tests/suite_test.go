@@ -7,15 +7,15 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/dvln/testify/suite"
 
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service"
 )
 
 // InventoryRepositorySuite is a test suite for inventory repository operations.
 type InventoryRepositorySuite struct {
 	suite.Suite
-	inventoryRepository repository.Inventory
+	inventoryRepository service.InventoryRepository
 	parts               []model.Part
 }
 

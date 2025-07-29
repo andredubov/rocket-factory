@@ -6,8 +6,8 @@ import (
 
 	"github.com/brianvoe/gofakeit/v7"
 
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
 // TestGetPart_Success verifies that a part can be successfully retrieved from the repository

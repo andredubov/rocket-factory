@@ -3,8 +3,10 @@ package memory
 import (
 	"context"
 
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
+	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
 // GetPartList retrieves parts matching the filter criteria
@@ -20,46 +22,54 @@ func (i *inventoryRepository) GetPartList(ctx context.Context, filter model.Part
 	i.mu.RLock()         // Acquire read lock
 	defer i.mu.RUnlock() // Ensure lock is released
 
+	repoFilter := converter.PartFilterToRepoModel(filter)
+
 	// Return all parts if no filters specified
-	if isEmptyFilter(filter) {
+	if isEmptyFilter(repoFilter) {
 		parts := make([]model.Part, 0, len(i.parts))
-		for _, part := range i.parts {
-			parts = append(parts, *part)
+		for _, repoPart := range i.parts {
+			part := converter.PartToModel(*repoPart)
+			parts = append(parts, part)
 		}
 		return parts, nil
 	}
 
-	var result []model.Part
+	var repoPartList []repoModel.Part
 
 	// First filter pass - by UUIDs (OR logic)
-	if len(filter.UUIDs) > 0 {
-		for _, uuid := range filter.UUIDs {
-			if part, exists := i.parts[uuid]; exists {
-				result = append(result, *part)
+	if len(repoFilter.UUIDs) > 0 {
+		for _, uuid := range repoFilter.UUIDs {
+			if repoPart, exists := i.parts[uuid]; exists {
+				repoPartList = append(repoPartList, *repoPart)
 			}
 		}
 	} else {
 		// If no UUID filter, start with all parts
-		for _, part := range i.parts {
-			result = append(result, *part)
+		for _, repoPart := range i.parts {
+			repoPartList = append(repoPartList, *repoPart)
 		}
 	}
 
 	// Apply subsequent filters (AND logic between fields)
 	if len(filter.Names) > 0 {
-		result = filterByName(result, filter.Names)
+		repoPartList = filterByName(repoPartList, repoFilter.Names)
 	}
 	if len(filter.Categories) > 0 {
-		result = filterByCategory(result, filter.Categories)
+		repoPartList = filterByCategory(repoPartList, repoFilter.Categories)
 	}
 	if len(filter.ManufacturerCountries) > 0 {
-		result = filterByCountry(result, filter.ManufacturerCountries)
+		repoPartList = filterByCountry(repoPartList, repoFilter.ManufacturerCountries)
 	}
 	if len(filter.Tags) > 0 {
-		result = filterByTags(result, filter.Tags)
+		repoPartList = filterByTags(repoPartList, repoFilter.Tags)
 	}
 
-	return result, nil
+	partList := make([]model.Part, 0, len(repoPartList))
+	for _, repoPart := range repoPartList {
+		partList = append(partList, converter.PartToModel(repoPart))
+	}
+
+	return partList, nil
 }
 
 // GetPart retrieves a single part by UUID
@@ -71,10 +81,11 @@ func (i *inventoryRepository) GetPart(ctx context.Context, uuid string) (*model.
 	i.mu.RLock()         // Acquire read lock
 	defer i.mu.RUnlock() // Ensure lock is released
 
-	part, exists := i.parts[uuid]
+	repoPart, exists := i.parts[uuid]
 	if !exists {
 		return nil, repository.ErrPartWithUUIDNotFound(uuid)
 	}
 
-	return part, nil
+	part := converter.PartToModel(*repoPart)
+	return &part, nil
 }

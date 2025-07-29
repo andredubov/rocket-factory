@@ -4,28 +4,28 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
+	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/service"
 )
 
 // inventoryRepository is an in-memory implementation of the Inventory repository
 // Uses a map for storage and RWMutex for concurrent access safety
 type inventoryRepository struct {
-	mu    sync.RWMutex           // Read-write mutex to protect concurrent access
-	parts map[string]*model.Part // Map storing parts by their UUID
+	mu    sync.RWMutex               // Read-write mutex to protect concurrent access
+	parts map[string]*repoModel.Part // Map storing parts by their UUID
 }
 
 // NewInventoryRepository creates a new in-memory inventory repository instance
 // Returns a ready-to-use repository with initialized storage map
-func NewInventoryRepository() repository.Inventory {
+func NewInventoryRepository() service.InventoryRepository {
 	return &inventoryRepository{
-		parts: make(map[string]*model.Part), // Initialize empty parts map
+		parts: make(map[string]*repoModel.Part), // Initialize empty parts map
 	}
 }
 
 // Filter by tags (OR logic within tags, part must have at least one matching tag)
-func filterByTags(parts []model.Part, tags []string) []model.Part {
-	var result []model.Part
+func filterByTags(parts []repoModel.Part, tags []string) []repoModel.Part {
+	var result []repoModel.Part
 	for _, part := range parts {
 		partMatched := false
 		for _, tag := range tags {
@@ -45,8 +45,8 @@ func filterByTags(parts []model.Part, tags []string) []model.Part {
 }
 
 // Filter by manufacturer country (OR logic within countries)
-func filterByCountry(parts []model.Part, countries []string) []model.Part {
-	var result []model.Part
+func filterByCountry(parts []repoModel.Part, countries []string) []repoModel.Part {
+	var result []repoModel.Part
 	for _, part := range parts {
 		for _, country := range countries {
 			if strings.EqualFold(part.Manufacturer.Country, country) {
@@ -59,8 +59,8 @@ func filterByCountry(parts []model.Part, countries []string) []model.Part {
 }
 
 // Filter by category (OR logic within categories)
-func filterByCategory(parts []model.Part, categories []model.PartCategory) []model.Part {
-	var result []model.Part
+func filterByCategory(parts []repoModel.Part, categories []repoModel.PartCategory) []repoModel.Part {
+	var result []repoModel.Part
 	for _, part := range parts {
 		for _, cat := range categories {
 			if part.Category == cat {
@@ -73,8 +73,8 @@ func filterByCategory(parts []model.Part, categories []model.PartCategory) []mod
 }
 
 // Filter by name (OR logic within names)
-func filterByName(parts []model.Part, names []string) []model.Part {
-	var result []model.Part
+func filterByName(parts []repoModel.Part, names []string) []repoModel.Part {
+	var result []repoModel.Part
 	for _, part := range parts {
 		for _, name := range names {
 			if strings.EqualFold(part.Name, name) {
@@ -87,7 +87,7 @@ func filterByName(parts []model.Part, names []string) []model.Part {
 }
 
 // Helper function to check if filter is empty
-func isEmptyFilter(filter model.PartFilter) bool {
+func isEmptyFilter(filter repoModel.PartFilter) bool {
 	return len(filter.UUIDs) == 0 &&
 		len(filter.Names) == 0 &&
 		len(filter.Categories) == 0 &&

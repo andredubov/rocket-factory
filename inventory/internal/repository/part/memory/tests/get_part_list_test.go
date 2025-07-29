@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
