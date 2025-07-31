@@ -2,187 +2,148 @@ package tests
 
 import (
 	"context"
-	"errors"
 
-	"github.com/brianvoe/gofakeit/v7"
+	"github.com/dvln/testify/mock"
 	"github.com/google/uuid"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
-// TestAddOrder_Success verifies successful order creation through the service layer.
-// Tests that a valid order with all required fields can be properly processed
-// and stored in the repository without errors.
-func (s *OrdersServiceSuite) TestAddOrder_Success() {
-	// Arrange
-	ctx := context.Background()
-	order := model.Order{
-		OrderUUID: uuid.New(),
-		UserUUID:  uuid.New(),
-		PartUUIDs: []uuid.UUID{uuid.New(), uuid.New()},
-		Status:    model.OrderStatusPending,
-	}
+// TestCreateOrder_Success tests the successful order creation scenario.
+func (s *OrdersServiceSuite) TestCreateOrder_Success() {
+	var (
+		ctx                = context.Background()
+		userUUID           = uuid.New()
+		partUUIDs          = []uuid.UUID{uuid.New(), uuid.New()}
+		expectedTotalPrice = 300.0
+		order              = model.Order{
+			UserUUID:  userUUID,
+			PartUUIDs: partUUIDs,
+		}
+		parts = []model.Part{
+			{Uuid: partUUIDs[0].String(), Price: 100},
+			{Uuid: partUUIDs[1].String(), Price: 200},
+		}
+		partFilter = createPartFilter(partUUIDs)
+	)
 
-	s.ordersRepository.On("AddOrder", ctx, order).Return(nil)
+	// Mock expectations
+	s.inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
+	s.ordersRepository.On("AddOrder", ctx, mock.Anything).Return(nil)
 
-	// Act
-	err := s.ordersService.AddOrder(ctx, order)
+	// Test
+	err := s.ordersService.CreateOrder(ctx, order)
 
-	// Assert
+	// Verify
 	s.NoError(err)
-}
+	s.inventoryClient.AssertExpectations(s.T())
+	s.ordersRepository.AssertExpectations(s.T())
 
-// TestAddOrder_InvalidStatus verifies validation of order status during creation.
-// Tests that orders with invalid status values are rejected with the appropriate
-// ErrInvalidOrderStatus error before reaching the repository.
-func (s *OrdersServiceSuite) TestAddOrder_InvalidStatus() {
-	// Arrange
-	var (
-		ctx   = context.Background()
-		order = model.Order{
-			OrderUUID: uuid.New(),
-			UserUUID:  uuid.New(),
-			PartUUIDs: []uuid.UUID{uuid.New()},
-			Status:    "INVALID_STATUS",
-		}
-		expectedError = model.ErrInvalidOrderStatus
-	)
-
-	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
-
-	// Act
-	err := s.ordersService.AddOrder(ctx, order)
-
-	// Assert
-	s.Error(err)
-	s.Equal(err, model.ErrInvalidOrderStatus)
-}
-
-// TestAddOrder_InvalidPaymentMethod verifies payment method validation.
-// Tests that orders with invalid payment methods are rejected with
-// ErrInvalidPaymentMethod error, ensuring only valid payment options are accepted.
-func (s *OrdersServiceSuite) TestAddOrder_InvalidPaymentMethod() {
-	// Arrange
-	var (
-		ctx   = context.Background()
-		order = model.Order{
-			OrderUUID: uuid.New(),
-			UserUUID:  uuid.New(),
-			PartUUIDs: []uuid.UUID{uuid.New()},
-			Status:    model.OrderStatusPending,
-			PaymentInfo: &model.PaymentInfo{
-				PaymentMethod: "INVALID_METHOD",
-			},
-		}
-		expectedError = model.ErrInvalidPaymentMethod
-	)
-
-	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
-
-	// Act
-	err := s.ordersService.AddOrder(ctx, order)
-
-	// Assert
-	s.Error(err)
-	s.Equal(err, model.ErrInvalidPaymentMethod)
-}
-
-// TestAddOrder_RepositoryError verifies proper error propagation from repository.
-// Tests that repository-level errors (like duplicate orders) are correctly
-// propagated through the service layer with their original error type.
-func (s *OrdersServiceSuite) TestAddOrder_RepositoryError() {
-	// Arrange
-	var (
-		ctx   = context.Background()
-		order = model.Order{
-			OrderUUID: uuid.New(),
-			UserUUID:  uuid.New(),
-			PartUUIDs: []uuid.UUID{uuid.New()},
-			Status:    model.OrderStatusPending,
-		}
-		expectedError = model.ErrOrderAlreadyExists
-	)
-
-	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
-
-	// Act
-	err := s.ordersService.AddOrder(ctx, order)
-
-	// Assert
-	s.Error(err)
-	s.Equal(err, expectedError)
-}
-
-// TestAddOrder_WithGofakeit performs randomized testing of order creation.
-// Generates multiple test cases with random valid data to verify the service
-// handles various valid input combinations correctly. Includes random payment
-// information generation to test optional field handling.
-func (s *OrdersServiceSuite) TestAddOrder_WithGofakeit() {
-	// Generate 5 random test cases
-	for i := 0; i < 5; i++ {
-		s.Run(gofakeit.BeerName(), func() {
-			// Arrange
-			var (
-				ctx   = context.Background()
-				order = model.Order{
-					OrderUUID: uuid.New(),
-					UserUUID:  uuid.New(),
-					PartUUIDs: []uuid.UUID{uuid.New(), uuid.New()},
-					Status: model.OrderStatus(gofakeit.RandomString([]string{
-						string(model.OrderStatusPending),
-						string(model.OrderStatusPaid),
-						string(model.OrderStatusCancelled),
-					})),
-					TotalPrice: gofakeit.Float64Range(10, 1000),
-				}
-			)
-
-			// Randomly add payment info (50% chance)
-			if gofakeit.Bool() {
-				order.PaymentInfo = &model.PaymentInfo{
-					PaymentMethod: model.PaymentMethod(gofakeit.RandomString([]string{
-						string(model.PaymentMethodCard),
-						string(model.PaymentMethodSBP),
-						string(model.PaymentMethodCreditCard),
-						string(model.PaymentMethodInvestorMoney),
-					})),
-					TransactionUUID: uuid.New(),
-				}
-			}
-
-			s.ordersRepository.On("AddOrder", ctx, order).Return(nil)
-
-			// Act
-			err := s.ordersService.AddOrder(ctx, order)
-
-			// Assert
-			s.NoError(err)
-		})
+	// Проверка аргументов AddOrder
+	if len(s.ordersRepository.Calls) > 0 {
+		args := s.ordersRepository.Calls[0].Arguments
+		addedOrder := args.Get(1).(model.Order)
+		s.Equal(userUUID, addedOrder.UserUUID)
+		s.Equal(partUUIDs, addedOrder.PartUUIDs)
+		s.Equal(model.OrderStatusPending, addedOrder.Status)
+		s.Equal(expectedTotalPrice, addedOrder.TotalPrice)
+		s.NotEqual(uuid.Nil, addedOrder.OrderUUID)
 	}
 }
 
-// TestAddOrder_EmptyPartUUIDs verifies validation of orders with empty part lists.
-// Tests that orders without any parts are rejected with an appropriate error,
-// enforcing the business rule that orders must contain at least one part.
-func (s *OrdersServiceSuite) TestAddOrder_EmptyPartUUIDs() {
-	// Arrange
+// TestCreateOrder_EmptyParts tests order creation with empty parts list.
+func (s *OrdersServiceSuite) TestCreateOrder_EmptyParts() {
 	var (
 		ctx   = context.Background()
 		order = model.Order{
-			OrderUUID: uuid.New(),
 			UserUUID:  uuid.New(),
 			PartUUIDs: []uuid.UUID{},
-			Status:    model.OrderStatusPending,
 		}
-		expectedError = errors.New("at least one part required")
 	)
 
-	s.ordersRepository.On("AddOrder", ctx, order).Return(expectedError)
+	// Test
+	err := s.ordersService.CreateOrder(ctx, order)
 
-	// Act
-	err := s.ordersService.AddOrder(ctx, order)
+	// Verify
+	s.Error(err)
+	s.Equal(err, model.ErrOrderHasNoParts)
+	s.ordersRepository.AssertNotCalled(s.T(), "AddOrder")
+}
 
-	// Assert
-	s.Require().Error(err)
-	s.Require().Equal(err, expectedError)
+// TestCreateOrder_InventoryClientError tests order creation when inventory service fails.
+func (s *OrdersServiceSuite) TestCreateOrder_InventoryClientError() {
+	var (
+		ctx       = context.Background()
+		partUUIDs = []uuid.UUID{uuid.New(), uuid.New()}
+		order     = model.Order{
+			UserUUID:  uuid.New(),
+			PartUUIDs: partUUIDs,
+		}
+		parts      = []model.Part{}
+		partFilter = createPartFilter(partUUIDs)
+	)
+
+	// Mock expectations
+	s.inventoryClient.On("ListParts", ctx, partFilter).Return(parts, model.ErrInvalidPartFilter)
+
+	// Test
+	err := s.ordersService.CreateOrder(ctx, order)
+
+	// Verify
+	s.Error(err)
+	s.ErrorIs(err, model.ErrInvalidPartFilter)
+	s.inventoryClient.AssertExpectations(s.T())
+	s.ordersRepository.AssertNotCalled(s.T(), "AddOrder")
+}
+
+// TestCreateOrder_RepositoryError tests order creation when repository fails.
+func (s *OrdersServiceSuite) TestCreateOrder_RepositoryError() {
+	var (
+		ctx                = context.Background()
+		userUUID           = uuid.New()
+		partUUIDs          = []uuid.UUID{uuid.New(), uuid.New()}
+		expectedTotalPrice = 300.0
+		order              = model.Order{
+			UserUUID:  userUUID,
+			PartUUIDs: partUUIDs,
+		}
+		parts = []model.Part{
+			{Uuid: partUUIDs[0].String(), Price: 100},
+			{Uuid: partUUIDs[1].String(), Price: 200},
+		}
+		partFilter = createPartFilter(partUUIDs)
+	)
+
+	// Mock expectations
+	s.inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
+	s.ordersRepository.On("AddOrder", ctx, mock.Anything).Return(model.ErrOrderAlreadyExists)
+
+	// Test
+	err := s.ordersService.CreateOrder(ctx, order)
+
+	// Verify
+	s.Error(err)
+	s.ErrorIs(err, model.ErrOrderAlreadyExists)
+	s.inventoryClient.AssertExpectations(s.T())
+	s.ordersRepository.AssertExpectations(s.T())
+
+	// Проверка аргументов, с которыми был вызван AddOrder
+	if len(s.ordersRepository.Calls) > 0 {
+		args := s.ordersRepository.Calls[0].Arguments
+		addedOrder := args.Get(1).(model.Order)
+		s.Equal(userUUID, addedOrder.UserUUID)
+		s.Equal(partUUIDs, addedOrder.PartUUIDs)
+		s.Equal(model.OrderStatusPending, addedOrder.Status)
+		s.Equal(expectedTotalPrice, addedOrder.TotalPrice)
+		s.NotEqual(uuid.Nil, addedOrder.OrderUUID)
+	}
+}
+
+// createPartFilter creates a PartFilter from given UUIDs.
+func createPartFilter(partUUIDs []uuid.UUID) model.PartFilter {
+	filter := model.PartFilter{}
+	for _, uuid := range partUUIDs {
+		filter.UUIDs = append(filter.UUIDs, uuid.String())
+	}
+	return filter
 }

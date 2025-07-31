@@ -54,6 +54,21 @@ func OrderToGetOrderResponse(order *model.Order) (*order_v1.GetOrderResponse, er
 	return response, nil
 }
 
+// OrderToPartFilter converts a domain Order model to domain PartFilter
+func OrderToPartFilter(order model.Order) model.PartFilter {
+	uuids := make([]string, 0, len(order.PartUUIDs))
+	for _, uuid := range order.PartUUIDs {
+		uuids = append(uuids, uuid.String())
+	}
+
+	return model.PartFilter{UUIDs: uuids}
+}
+
+// OrderPaymentMethodFromRequest converts a PayOrderRequest paymentmethod to
+func OrderPaymentMethodFromRequest(req *order_v1.PayOrderRequest) string {
+	return string(req.PaymentMethod)
+}
+
 // convertToPaymentMethod конвертирует внутреннее представление метода оплаты в формат API.
 func convertToPaymentMethod(method model.PaymentMethod) (order_v1.PaymentMethod, error) {
 	switch method {

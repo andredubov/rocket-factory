@@ -13,13 +13,13 @@ const (
 	OrderStatusCancelled OrderStatus = "CANCELLED"
 )
 
-func NewOrderStatus(paymentMethod string) (OrderStatus, error) {
-	switch paymentMethod {
-	case "UNKNOWN":
+func NewOrderStatus(orderStatus string) (OrderStatus, error) {
+	switch orderStatus {
+	case "PENDING_PAYMENT":
 		return OrderStatusPending, nil
-	case "CARD":
+	case "PAID":
 		return OrderStatusPaid, nil
-	case "SBP":
+	case "CANCELLED":
 		return OrderStatusCancelled, nil
 	default:
 		return OrderStatusPending, ErrInvalidOrderStatus

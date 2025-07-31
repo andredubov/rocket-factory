@@ -17,13 +17,3 @@ func (s *ordersService) GetOrder(ctx context.Context, uuid uuid.UUID) (*model.Or
 
 	return order, nil
 }
-
-// GetUserOrders returns all orders belonging to a user by their UUID.
-func (s *ordersService) GetUserOrders(ctx context.Context, userUUID uuid.UUID) ([]model.Order, error) {
-	orders, err := s.ordersRepository.GetUserOrders(ctx, userUUID)
-	if err != nil {
-		return nil, err
-	}
-
-	return orders, nil
-}
