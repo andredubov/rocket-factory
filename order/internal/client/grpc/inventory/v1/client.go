@@ -1,7 +1,7 @@
 package inventory
 
 import (
-	"github.com/andredubov/rocket-factory/order/internal/client/grpc"
+	"github.com/andredubov/rocket-factory/order/internal/service"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
@@ -12,7 +12,7 @@ type inventoryClient struct {
 }
 
 // NewClient creates a new instance of inventoryClient.
-func NewClient(client inventory_v1.InventoryServiceClient) grpc.InventoryClient {
+func NewClient(client inventory_v1.InventoryServiceClient) service.InventoryClient {
 	return &inventoryClient{
 		generatedClient: client,
 	}

@@ -10,16 +10,16 @@ issue-845-fix: True
 packages:
   github.com/andredubov/rocket-factory/payment/internal/api/v1/payment:
     config:
-      include-regex: ".*PaymentService"
+      include-regex: "PaymentService"
   github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory:
     config:
-      include-regex: ".*InventoryService"
+      include-regex: "InventoryService"
   github.com/andredubov/rocket-factory/inventory/internal/service:
     config:
-      include-regex: ".*InventoryRepository"
+      include-regex: "InventoryRepository"
   github.com/andredubov/rocket-factory/order/internal/api/v1/order:
     config:
-      include-regex: ".*OrdersService"
+      include-regex: "OrdersService"
   github.com/andredubov/rocket-factory/order/internal/service:
     config:
-      include-regex: ".*OrdersRepository"
+      include-regex: "OrdersRepository|InventoryClient|PaymentClient"

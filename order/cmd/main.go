@@ -17,10 +17,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
-	grpcClient "github.com/andredubov/rocket-factory/order/internal/client/grpc"
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/inventory/v1"
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/payment/v1"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
+	"github.com/andredubov/rocket-factory/order/internal/service"
 	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
@@ -39,7 +39,7 @@ func main() {
 	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
 	inventoryServiceClient := newInventoryServiceClient(inventoryServiceAddress)
 	ordersRepository := memory.NewOrderRepository()
-	ordersService := orders.NewService(ordersRepository)
+	ordersService := orders.NewService(ordersRepository, paymentServiceClient, inventoryServiceClient)
 	ordersHandler := handler.NewOrderHandler(ordersService, paymentServiceClient, inventoryServiceClient)
 
 	orderServer, err := order_v1.NewServer(ordersHandler)
@@ -82,7 +82,7 @@ func main() {
 	log.Println("server stopped")
 }
 
-func newPaymentServiceClient(serviceAddress string) grpcClient.PaymentClient {
+func newPaymentServiceClient(serviceAddress string) service.PaymentClient {
 	dialOptions := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -100,7 +100,7 @@ func newPaymentServiceClient(serviceAddress string) grpcClient.PaymentClient {
 	return payment.NewClient(client)
 }
 
-func newInventoryServiceClient(serviceAddress string) grpcClient.InventoryClient {
+func newInventoryServiceClient(serviceAddress string) service.InventoryClient {
 	dialOptions := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}

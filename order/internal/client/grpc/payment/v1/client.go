@@ -1,7 +1,7 @@
 package payment
 
 import (
-	"github.com/andredubov/rocket-factory/order/internal/client/grpc"
+	"github.com/andredubov/rocket-factory/order/internal/service"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
@@ -12,7 +12,7 @@ type paymentClient struct {
 }
 
 // NewClient creates a new instance of paymentClient.
-func NewClient(client payment_v1.PaymentServiceClient) grpc.PaymentClient {
+func NewClient(client payment_v1.PaymentServiceClient) service.PaymentClient {
 	return &paymentClient{
 		generatedClient: client,
 	}

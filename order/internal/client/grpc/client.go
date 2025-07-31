@@ -1,17 +1,9 @@
 package grpc
 
-import (
-	"context"
+// type InventoryClient interface {
+// 	ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error)
+// }
 
-	"github.com/google/uuid"
-
-	"github.com/andredubov/rocket-factory/order/internal/model"
-)
-
-type InventoryClient interface {
-	ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error)
-}
-
-type PaymentClient interface {
-	PayOrder(ctx context.Context, order *model.Order) (uuid.UUID, error)
-}
+// type PaymentClient interface {
+// 	PayOrder(ctx context.Context, order *model.Order) (uuid.UUID, error)
+// }
