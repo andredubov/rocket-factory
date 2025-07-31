@@ -14,13 +14,17 @@ import (
 type OrdersServiceSuite struct {
 	suite.Suite
 	ordersRepository *mocks.OrdersRepository
+	paymentClient    *mocks.PaymentClient
+	inventoryClient  *mocks.InventoryClient
 	ordersService    api.OrdersService
 }
 
 // SetupTest initializes the test environment before each test case.
 func (s *OrdersServiceSuite) SetupTest() {
 	s.ordersRepository = mocks.NewOrdersRepository(s.T())
-	s.ordersService = orders.NewService(s.ordersRepository)
+	s.paymentClient = mocks.NewPaymentClient(s.T())
+	s.inventoryClient = mocks.NewInventoryClient(s.T())
+	s.ordersService = orders.NewService(s.ordersRepository, s.paymentClient, s.inventoryClient)
 }
 
 // TearDownTest performs cleanup after each test case.
