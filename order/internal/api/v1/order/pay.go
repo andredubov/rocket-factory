@@ -13,8 +13,9 @@ import (
 
 // PayOrder обрабатывает запрос на оплату заказа.
 func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrderRequest, params order_v1.PayOrderParams) (order_v1.PayOrderRes, error) {
-	// Получаем заказ из репозитория
-	order, err := i.ordersService.GetOrder(ctx, params.OrderUUID)
+	paymentMethod := converter.OrderPaymentMethodFromRequest(req)
+	// Оплачиваем заказ
+	order, err := i.ordersService.PayOrder(ctx, params.OrderUUID, paymentMethod)
 	if err != nil {
 		if errors.Is(err, model.ErrOrderNotFound) {
 			return &order_v1.NotFoundError{
@@ -22,43 +23,22 @@ func (i *OrderImplementation) PayOrder(ctx context.Context, req *order_v1.PayOrd
 				Message: "order not found",
 			}, nil
 		}
+
+		if errors.Is(err, model.ErrInvalidOrderStatus) {
+			return &order_v1.ConflictError{
+				Code:    http.StatusConflict,
+				Message: "order is not in pending status",
+			}, nil
+		}
+
+		if errors.Is(err, model.ErrInvalidPaymentMethod) {
+			return &order_v1.BadRequestError{
+				Code:    http.StatusBadRequest,
+				Message: "invalid payment method",
+			}, nil
+		}
+
 		return nil, fmt.Errorf("failed to get order: %w", err)
-	}
-
-	// Валидация статуса заказа
-	if order.Status != model.OrderStatusPending {
-		return &order_v1.ConflictError{
-			Code:    http.StatusConflict,
-			Message: "order is not in pending status",
-		}, nil
-	}
-
-	// Валидация метода оплаты
-	// if !model.PaymentMethod(req.PaymentMethod).IsValid() {
-	// 	return &order_v1.BadRequestError{
-	// 		Code:    http.StatusBadRequest,
-	// 		Message: "invalid payment method",
-	// 	}, nil
-	// }
-
-	// Подготовка платежной информации
-	order.PaymentInfo = &model.PaymentInfo{
-		PaymentMethod: model.PaymentMethod(req.PaymentMethod),
-	}
-
-	// Вызов платежного сервиса
-	transactionUUID, err := i.paymentClient.PayOrder(ctx, order)
-	if err != nil {
-		return nil, fmt.Errorf("invalid transaction uuid: %w", err)
-	}
-
-	// Обновление информации о заказе
-	order.PaymentInfo.TransactionUUID = transactionUUID
-	order.Status = model.OrderStatusPaid
-
-	// Сохранение обновленного заказа
-	if err := i.ordersService.UpdateOrder(ctx, *order); err != nil {
-		return nil, fmt.Errorf("failed to update order: %w", err)
 	}
 
 	return converter.OrderToPayOrderResponse(order), nil

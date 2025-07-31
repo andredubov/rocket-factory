@@ -12,8 +12,8 @@ import (
 
 // CancelOrder обрабатывает запрос на отмену заказа.
 func (i *OrderImplementation) CancelOrder(ctx context.Context, params order_v1.CancelOrderParams) (order_v1.CancelOrderRes, error) {
-	// Получаем заказ из репозитория
-	order, err := i.ordersService.GetOrder(ctx, params.OrderUUID)
+	// отменяем заказ
+	err := i.ordersService.CancelOrder(ctx, params.OrderUUID)
 	if err != nil {
 		if errors.Is(err, model.ErrOrderNotFound) {
 			return &order_v1.NotFoundError{
@@ -21,36 +21,23 @@ func (i *OrderImplementation) CancelOrder(ctx context.Context, params order_v1.C
 				Message: "order not found",
 			}, nil
 		}
-		return nil, fmt.Errorf("failed to get order: %w", err)
-	}
 
-	// Проверяем статус заказа
-	switch order.Status {
-	case model.OrderStatusPaid:
-		// Если заказ уже оплачен - возвращаем ошибку 409
-		return &order_v1.ConflictError{
-			Code:    http.StatusConflict,
-			Message: "order has been paid and cannot be cancelled",
-		}, nil
-	case model.OrderStatusCancelled:
-		// Если заказ уже отменен - возвращаем ошибку 409
-		return &order_v1.ConflictError{
-			Code:    http.StatusConflict,
-			Message: "order is already cancelled",
-		}, nil
-	}
-
-	// Меняем статус на Cancelled для заказов в статусе Pending
-	order.Status = model.OrderStatusCancelled
-
-	// Обновляем заказ в репозитории
-	if err := i.ordersService.UpdateOrder(ctx, *order); err != nil {
-		if errors.Is(err, model.ErrOrderNotFound) {
-			return &order_v1.NotFoundError{
-				Code:    http.StatusNotFound,
-				Message: "order not found",
+		if errors.Is(err, model.ErrOrderAlreadyPaid) {
+			// Если заказ уже оплачен - возвращаем ошибку 409
+			return &order_v1.ConflictError{
+				Code:    http.StatusConflict,
+				Message: "order has been paid and cannot be cancelled",
 			}, nil
 		}
+
+		if errors.Is(err, model.ErrOrderAlreadyCancelled) {
+			// Если заказ уже отменен - возвращаем ошибку 409
+			return &order_v1.ConflictError{
+				Code:    http.StatusConflict,
+				Message: "order is already cancelled",
+			}, nil
+		}
+
 		return nil, fmt.Errorf("failed to update order: %w", err)
 	}
 
