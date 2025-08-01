@@ -2,72 +2,88 @@ package tests
 
 import (
 	"context"
+	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/order/internal/service/mocks"
+	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
 )
 
 // TestGetOrder_Success tests successful retrieval of an existing order.
-func (s *OrdersServiceSuite) TestGetOrder_Success() {
+func TestGetOrder_Success(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
-		order     = &model.Order{
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
+		order            = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusPending,
 		}
 	)
 
 	// Mock expectation
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
 
 	// Test
-	result, err := s.ordersService.GetOrder(ctx, orderUUID)
+	result, err := ordersService.GetOrder(ctx, orderUUID)
 
 	// Verify
-	s.NoError(err)
-	s.Equal(order, result)
-	s.ordersRepository.AssertExpectations(s.T())
+	require.NoError(t, err)
+	require.Equal(t, order, result)
+	ordersRepository.AssertExpectations(t)
 }
 
 // TestGetOrder_NotFound tests retrieval of a non-existent order.
-func (s *OrdersServiceSuite) TestGetOrder_NotFound() {
+func TestGetOrder_NotFound(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
 	)
 
 	// Mock expectation
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(nil, model.ErrOrderNotFound)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(nil, model.ErrOrderNotFound)
 
 	// Test
-	result, err := s.ordersService.GetOrder(ctx, orderUUID)
+	result, err := ordersService.GetOrder(ctx, orderUUID)
 
 	// Verify
-	s.Error(err)
-	s.Nil(result)
-	s.Equal(model.ErrOrderNotFound, err)
-	s.ordersRepository.AssertExpectations(s.T())
+	require.Error(t, err)
+	require.Nil(t, result)
+	require.Equal(t, model.ErrOrderNotFound, err)
+	ordersRepository.AssertExpectations(t)
 }
 
 // TestGetOrder_RepositoryError tests error handling during order retrieval.
-func (s *OrdersServiceSuite) TestGetOrder_RepositoryError() {
+func TestGetOrder_RepositoryError(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
-		repoError = model.ErrOrderNotFound
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
+		repoError        = model.ErrOrderNotFound
 	)
 
 	// Mock expectation
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(nil, repoError)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(nil, repoError)
 
 	// Test
-	result, err := s.ordersService.GetOrder(ctx, orderUUID)
+	result, err := ordersService.GetOrder(ctx, orderUUID)
 
 	// Verify
-	s.Error(err)
-	s.Nil(result)
-	s.Equal(repoError, err)
-	s.ordersRepository.AssertExpectations(s.T())
+	require.Error(t, err)
+	require.Nil(t, result)
+	require.Equal(t, repoError, err)
+	ordersRepository.AssertExpectations(t)
 }

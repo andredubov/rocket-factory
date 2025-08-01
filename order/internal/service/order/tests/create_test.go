@@ -2,16 +2,24 @@ package tests
 
 import (
 	"context"
+	"testing"
 
 	"github.com/dvln/testify/mock"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/order/internal/service/mocks"
+	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
 )
 
 // TestCreateOrder_Success tests the successful order creation scenario.
-func (s *OrdersServiceSuite) TestCreateOrder_Success() {
+func TestCreateOrder_Success(t *testing.T) {
 	var (
+		ordersRepository   = mocks.NewOrdersRepository(t)
+		paymentClient      = mocks.NewPaymentClient(t)
+		inventoryClient    = mocks.NewInventoryClient(t)
+		ordersService      = orders.NewService(ordersRepository, paymentClient, inventoryClient)
 		ctx                = context.Background()
 		userUUID           = uuid.New()
 		partUUIDs          = []uuid.UUID{uuid.New(), uuid.New()}
@@ -28,33 +36,38 @@ func (s *OrdersServiceSuite) TestCreateOrder_Success() {
 	)
 
 	// Mock expectations
-	s.inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
-	s.ordersRepository.On("AddOrder", ctx, mock.Anything).Return(nil)
+	inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
+	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(nil)
 
 	// Test
-	err := s.ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, order)
 
 	// Verify
-	s.NoError(err)
-	s.inventoryClient.AssertExpectations(s.T())
-	s.ordersRepository.AssertExpectations(s.T())
+	require.NoError(t, err)
+	inventoryClient.AssertExpectations(t)
+	ordersRepository.AssertExpectations(t)
 
 	// Проверка аргументов AddOrder
-	if len(s.ordersRepository.Calls) > 0 {
-		args := s.ordersRepository.Calls[0].Arguments
+	if len(ordersRepository.Calls) > 0 {
+		args := ordersRepository.Calls[0].Arguments
 		addedOrder := args.Get(1).(model.Order)
-		s.Equal(userUUID, addedOrder.UserUUID)
-		s.Equal(partUUIDs, addedOrder.PartUUIDs)
-		s.Equal(model.OrderStatusPending, addedOrder.Status)
-		s.Equal(expectedTotalPrice, addedOrder.TotalPrice)
-		s.NotEqual(uuid.Nil, addedOrder.OrderUUID)
+		require.Equal(t, userUUID, addedOrder.UserUUID)
+		require.Equal(t, partUUIDs, addedOrder.PartUUIDs)
+		require.Equal(t, model.OrderStatusPending, addedOrder.Status)
+		require.Equal(t, expectedTotalPrice, addedOrder.TotalPrice)
+		require.NotEqual(t, uuid.Nil, addedOrder.OrderUUID)
 	}
 }
 
 // TestCreateOrder_EmptyParts tests order creation with empty parts list.
-func (s *OrdersServiceSuite) TestCreateOrder_EmptyParts() {
+func TestCreateOrder_EmptyParts(t *testing.T) {
 	var (
-		ctx   = context.Background()
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+
 		order = model.Order{
 			UserUUID:  uuid.New(),
 			PartUUIDs: []uuid.UUID{},
@@ -62,20 +75,25 @@ func (s *OrdersServiceSuite) TestCreateOrder_EmptyParts() {
 	)
 
 	// Test
-	err := s.ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, order)
 
 	// Verify
-	s.Error(err)
-	s.Equal(err, model.ErrOrderHasNoParts)
-	s.ordersRepository.AssertNotCalled(s.T(), "AddOrder")
+	require.Error(t, err)
+	require.Equal(t, err, model.ErrOrderHasNoParts)
+	ordersRepository.AssertNotCalled(t, "AddOrder")
 }
 
 // TestCreateOrder_InventoryClientError tests order creation when inventory service fails.
-func (s *OrdersServiceSuite) TestCreateOrder_InventoryClientError() {
+func TestCreateOrder_InventoryClientError(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		partUUIDs = []uuid.UUID{uuid.New(), uuid.New()}
-		order     = model.Order{
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		partUUIDs        = []uuid.UUID{uuid.New(), uuid.New()}
+
+		order = model.Order{
 			UserUUID:  uuid.New(),
 			PartUUIDs: partUUIDs,
 		}
@@ -84,26 +102,31 @@ func (s *OrdersServiceSuite) TestCreateOrder_InventoryClientError() {
 	)
 
 	// Mock expectations
-	s.inventoryClient.On("ListParts", ctx, partFilter).Return(parts, model.ErrInvalidPartFilter)
+	inventoryClient.On("ListParts", ctx, partFilter).Return(parts, model.ErrInvalidPartFilter)
 
 	// Test
-	err := s.ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, order)
 
 	// Verify
-	s.Error(err)
-	s.ErrorIs(err, model.ErrInvalidPartFilter)
-	s.inventoryClient.AssertExpectations(s.T())
-	s.ordersRepository.AssertNotCalled(s.T(), "AddOrder")
+	require.Error(t, err)
+	require.ErrorIs(t, err, model.ErrInvalidPartFilter)
+	inventoryClient.AssertExpectations(t)
+	ordersRepository.AssertNotCalled(t, "AddOrder")
 }
 
 // TestCreateOrder_RepositoryError tests order creation when repository fails.
-func (s *OrdersServiceSuite) TestCreateOrder_RepositoryError() {
+func TestCreateOrder_RepositoryError(t *testing.T) {
 	var (
+		ordersRepository   = mocks.NewOrdersRepository(t)
+		paymentClient      = mocks.NewPaymentClient(t)
+		inventoryClient    = mocks.NewInventoryClient(t)
+		ordersService      = orders.NewService(ordersRepository, paymentClient, inventoryClient)
 		ctx                = context.Background()
 		userUUID           = uuid.New()
 		partUUIDs          = []uuid.UUID{uuid.New(), uuid.New()}
 		expectedTotalPrice = 300.0
-		order              = model.Order{
+
+		order = model.Order{
 			UserUUID:  userUUID,
 			PartUUIDs: partUUIDs,
 		}
@@ -115,27 +138,27 @@ func (s *OrdersServiceSuite) TestCreateOrder_RepositoryError() {
 	)
 
 	// Mock expectations
-	s.inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
-	s.ordersRepository.On("AddOrder", ctx, mock.Anything).Return(model.ErrOrderAlreadyExists)
+	inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
+	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(model.ErrOrderAlreadyExists)
 
 	// Test
-	err := s.ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, order)
 
 	// Verify
-	s.Error(err)
-	s.ErrorIs(err, model.ErrOrderAlreadyExists)
-	s.inventoryClient.AssertExpectations(s.T())
-	s.ordersRepository.AssertExpectations(s.T())
+	require.Error(t, err)
+	require.ErrorIs(t, err, model.ErrOrderAlreadyExists)
+	inventoryClient.AssertExpectations(t)
+	ordersRepository.AssertExpectations(t)
 
 	// Проверка аргументов, с которыми был вызван AddOrder
-	if len(s.ordersRepository.Calls) > 0 {
-		args := s.ordersRepository.Calls[0].Arguments
+	if len(ordersRepository.Calls) > 0 {
+		args := ordersRepository.Calls[0].Arguments
 		addedOrder := args.Get(1).(model.Order)
-		s.Equal(userUUID, addedOrder.UserUUID)
-		s.Equal(partUUIDs, addedOrder.PartUUIDs)
-		s.Equal(model.OrderStatusPending, addedOrder.Status)
-		s.Equal(expectedTotalPrice, addedOrder.TotalPrice)
-		s.NotEqual(uuid.Nil, addedOrder.OrderUUID)
+		require.Equal(t, userUUID, addedOrder.UserUUID)
+		require.Equal(t, partUUIDs, addedOrder.PartUUIDs)
+		require.Equal(t, model.OrderStatusPending, addedOrder.Status)
+		require.Equal(t, expectedTotalPrice, addedOrder.TotalPrice)
+		require.NotEqual(t, uuid.Nil, addedOrder.OrderUUID)
 	}
 }
 

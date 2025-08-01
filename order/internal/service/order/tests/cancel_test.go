@@ -2,19 +2,28 @@ package tests
 
 import (
 	"context"
+	"testing"
 
 	"github.com/dvln/testify/mock"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/order/internal/service/mocks"
+	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
 )
 
 // TestCancelOrder_Success tests successful order cancellation.
-func (s *OrdersServiceSuite) TestCancelOrder_Success() {
+func TestCancelOrder_Success(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
-		order     = &model.Order{
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
+
+		order = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusPending,
 		}
@@ -23,105 +32,121 @@ func (s *OrdersServiceSuite) TestCancelOrder_Success() {
 	expectedOrder.Status = model.OrderStatusCancelled
 
 	// Mock expectations
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
-	s.ordersRepository.On("UpdateOrder", ctx, expectedOrder).Return(nil)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
+	ordersRepository.On("UpdateOrder", ctx, expectedOrder).Return(nil)
 
 	// Test
-	err := s.ordersService.CancelOrder(ctx, orderUUID)
+	err := ordersService.CancelOrder(ctx, orderUUID)
 
 	// Verify
-	s.NoError(err)
-	s.ordersRepository.AssertExpectations(s.T())
+	require.NoError(t, err)
+	ordersRepository.AssertExpectations(t)
 }
 
 // TestCancelOrder_AlreadyPaid tests cancellation of already paid order.
-func (s *OrdersServiceSuite) TestCancelOrder_AlreadyPaid() {
+func TestCancelOrder_AlreadyPaid(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
-		order     = &model.Order{
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
+		order            = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusPaid,
 		}
 	)
 
 	// Mock expectations
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
 
 	// Test
-	err := s.ordersService.CancelOrder(ctx, orderUUID)
+	err := ordersService.CancelOrder(ctx, orderUUID)
 
 	// Verify
-	s.Error(err)
-	s.Equal(model.ErrOrderAlreadyPaid, err)
-	s.ordersRepository.AssertExpectations(s.T())
-	s.ordersRepository.AssertNotCalled(s.T(), "UpdateOrder")
+	require.Error(t, err)
+	require.Equal(t, model.ErrOrderAlreadyPaid, err)
+	ordersRepository.AssertExpectations(t)
+	ordersRepository.AssertNotCalled(t, "UpdateOrder")
 }
 
 // TestCancelOrder_AlreadyCancelled tests cancellation of already cancelled order
-func (s *OrdersServiceSuite) TestCancelOrder_AlreadyCancelled() {
+func TestCancelOrder_AlreadyCancelled(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
-		order     = &model.Order{
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
+		order            = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusCancelled,
 		}
 	)
 
 	// Mock expectations
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
 
 	// Test
-	err := s.ordersService.CancelOrder(ctx, orderUUID)
+	err := ordersService.CancelOrder(ctx, orderUUID)
 
 	// Verify
-	s.Error(err)
-	s.Equal(model.ErrOrderAlreadyCancelled, err)
-	s.ordersRepository.AssertExpectations(s.T())
-	s.ordersRepository.AssertNotCalled(s.T(), "UpdateOrder")
+	require.Error(t, err)
+	require.Equal(t, model.ErrOrderAlreadyCancelled, err)
+	ordersRepository.AssertExpectations(t)
+	ordersRepository.AssertNotCalled(t, "UpdateOrder")
 }
 
 // TestCancelOrder_NotFound tests cancellation of non-existent order.
-func (s *OrdersServiceSuite) TestCancelOrder_NotFound() {
+func TestCancelOrder_NotFound(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
 	)
 
 	// Mock expectations
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(nil, model.ErrOrderNotFound)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(nil, model.ErrOrderNotFound)
 
 	// Test
-	err := s.ordersService.CancelOrder(ctx, orderUUID)
+	err := ordersService.CancelOrder(ctx, orderUUID)
 
 	// Verify
-	s.Error(err)
-	s.Equal(model.ErrOrderNotFound, err)
-	s.ordersRepository.AssertExpectations(s.T())
-	s.ordersRepository.AssertNotCalled(s.T(), "UpdateOrder")
+	require.Error(t, err)
+	require.Equal(t, model.ErrOrderNotFound, err)
+	ordersRepository.AssertExpectations(t)
+	ordersRepository.AssertNotCalled(t, "UpdateOrder")
 }
 
 // TestCancelOrder_UpdateError tests failure during order update.
-func (s *OrdersServiceSuite) TestCancelOrder_UpdateError() {
+func TestCancelOrder_UpdateError(t *testing.T) {
 	var (
-		ctx       = context.Background()
-		orderUUID = uuid.New()
-		order     = &model.Order{
+		ordersRepository = mocks.NewOrdersRepository(t)
+		paymentClient    = mocks.NewPaymentClient(t)
+		inventoryClient  = mocks.NewInventoryClient(t)
+		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
+		ctx              = context.Background()
+		orderUUID        = uuid.New()
+		order            = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusPending,
 		}
 	)
 
 	// Mock expectations
-	s.ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
-	s.ordersRepository.On("UpdateOrder", ctx, mock.Anything).Return(model.ErrOrderNotFound)
+	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
+	ordersRepository.On("UpdateOrder", ctx, mock.Anything).Return(model.ErrOrderNotFound)
 
 	// Test
-	err := s.ordersService.CancelOrder(ctx, orderUUID)
+	err := ordersService.CancelOrder(ctx, orderUUID)
 
 	// Verify
-	s.Error(err)
-	s.ErrorIs(err, model.ErrOrderNotFound)
-	s.ordersRepository.AssertExpectations(s.T())
+	require.Error(t, err)
+	require.ErrorIs(t, err, model.ErrOrderNotFound)
+	ordersRepository.AssertExpectations(t)
 }
