@@ -3,21 +3,25 @@ package tests
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 )
 
 // TestGetUserOrders_ReturnsCorrectOrders verifies correct filtering of orders by user ID.
 // Tests that only orders belonging to the specified user are returned, while excluding
 // orders from other users. Validates the repository's filtering capability.
-func (s *OrdersRepositorySuite) TestGetUserOrders_ReturnsCorrectOrders() {
+func TestGetUserOrders_ReturnsCorrectOrders(t *testing.T) {
 	// Arrange
 	var (
-		ctx   = context.Background()
-		user1 = uuid.New()
-		user2 = uuid.New()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+		user1            = uuid.New()
+		user2            = uuid.New()
 	)
 
 	orders := []model.Order{
@@ -27,78 +31,84 @@ func (s *OrdersRepositorySuite) TestGetUserOrders_ReturnsCorrectOrders() {
 	}
 
 	for _, order := range orders {
-		err := s.ordersRepository.AddOrder(ctx, order)
-		s.Require().NoError(err)
+		err := ordersRepository.AddOrder(ctx, order)
+		require.NoError(t, err)
 	}
 
 	// Act
-	result, err := s.ordersRepository.GetUserOrders(ctx, user1)
+	result, err := ordersRepository.GetUserOrders(ctx, user1)
 
 	// Assert
-	s.Require().NoError(err)
-	s.Require().Len(result, 2)
+	require.NoError(t, err)
+	require.Len(t, result, 2)
 
 	for _, order := range result {
-		s.Equal(user1, order.UserUUID)
+		require.Equal(t, user1, order.UserUUID)
 	}
 }
 
 // TestGetUserOrders_ReturnsEmptyForNoOrders verifies proper handling when a user has no orders.
 // Tests that an empty slice (not nil) is returned without errors when querying
 // a user with no order history.
-func (s *OrdersRepositorySuite) TestGetUserOrders_ReturnsEmptyForNoOrders() {
+func TestGetUserOrders_ReturnsEmptyForNoOrders(t *testing.T) {
 	// Arrange
 	var (
-		ctx     = context.Background()
-		newUser = uuid.New()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+		newUser          = uuid.New()
 	)
 
 	// Act
-	result, err := s.ordersRepository.GetUserOrders(ctx, newUser)
+	result, err := ordersRepository.GetUserOrders(ctx, newUser)
 
 	// Assert
-	s.Require().NoError(err)
-	s.Require().Empty(result)
+	require.NoError(t, err)
+	require.Empty(t, result)
 }
 
 // TestGetUserOrders_ReturnsCopiesNotReferences verifies defensive copying of returned orders.
 // Tests that modifications to retrieved order objects don't affect the stored data,
 // ensuring the repository maintains data integrity.
-func (s *OrdersRepositorySuite) TestGetUserOrders_ReturnsCopiesNotReferences() {
+func TestGetUserOrders_ReturnsCopiesNotReferences(t *testing.T) {
 	// Arrange
-	ctx := context.Background()
-	user := uuid.New()
-	order := model.Order{
-		OrderUUID: uuid.New(),
-		UserUUID:  user,
-		Status:    model.OrderStatusPending,
-	}
+	var (
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
 
-	err := s.ordersRepository.AddOrder(ctx, order)
-	s.Require().NoError(err)
+		user  = uuid.New()
+		order = model.Order{
+			OrderUUID: uuid.New(),
+			UserUUID:  user,
+			Status:    model.OrderStatusPending,
+		}
+	)
+
+	err := ordersRepository.AddOrder(ctx, order)
+	require.NoError(t, err)
 
 	// Act
-	result, err := s.ordersRepository.GetUserOrders(ctx, user)
-	s.Require().NoError(err)
-	s.Require().Len(result, 1)
+	result, err := ordersRepository.GetUserOrders(ctx, user)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
 
 	// Modify the returned order
 	result[0].Status = model.OrderStatusPaid
 
 	// Assert original wasn't modified
-	storedOrder, err := s.ordersRepository.GetOrder(ctx, order.OrderUUID)
-	s.Require().NoError(err)
-	s.Require().Equal(model.OrderStatusPending, storedOrder.Status)
+	storedOrder, err := ordersRepository.GetOrder(ctx, order.OrderUUID)
+	require.NoError(t, err)
+	require.Equal(t, model.OrderStatusPending, storedOrder.Status)
 }
 
 // TestGetUserOrders_ThreadSafe verifies thread-safe behavior under high concurrency.
 // Tests that the repository correctly handles simultaneous read operations during
 // heavy write loads, maintaining data consistency across goroutines.
-func (s *OrdersRepositorySuite) TestGetUserOrders_ThreadSafe() {
+func TestGetUserOrders_ThreadSafe(t *testing.T) {
 	// Arrange
 	var (
-		ctx  = context.Background()
-		user = uuid.New()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+		user             = uuid.New()
 	)
 
 	const (
@@ -117,8 +127,8 @@ func (s *OrdersRepositorySuite) TestGetUserOrders_ThreadSafe() {
 				UserUUID:  user,
 				Status:    model.OrderStatusPending,
 			}
-			err := s.ordersRepository.AddOrder(ctx, order)
-			s.NoError(err)
+			err := ordersRepository.AddOrder(ctx, order)
+			require.NoError(t, err)
 		}()
 	}
 	wg.Wait()
@@ -130,28 +140,30 @@ func (s *OrdersRepositorySuite) TestGetUserOrders_ThreadSafe() {
 
 	go func() {
 		defer wg.Done()
-		result1, err1 = s.ordersRepository.GetUserOrders(ctx, user)
+		result1, err1 = ordersRepository.GetUserOrders(ctx, user)
 	}()
 	go func() {
 		defer wg.Done()
-		result2, err2 = s.ordersRepository.GetUserOrders(ctx, user)
+		result2, err2 = ordersRepository.GetUserOrders(ctx, user)
 	}()
 
 	wg.Wait()
 
-	s.Require().NoError(err1)
-	s.Require().NoError(err2)
-	s.Require().Len(result1, numOrders)
-	s.Require().Len(result2, numOrders)
+	require.NoError(t, err1)
+	require.NoError(t, err2)
+	require.Len(t, result1, numOrders)
+	require.Len(t, result2, numOrders)
 }
 
 // TestGetUserOrders_ReturnsCorrectOrderData verifies complete and accurate order data retrieval.
 // Tests that all order fields including nested structures (like payment info) are
 // correctly preserved and returned by the repository.
-func (s *OrdersRepositorySuite) TestGetUserOrders_ReturnsCorrectOrderData() {
+func TestGetUserOrders_ReturnsCorrectOrderData(t *testing.T) {
 	// Arrange
 	var (
-		ctx           = context.Background()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+
 		user          = uuid.New()
 		expectedOrder = model.Order{
 			OrderUUID:  uuid.New(),
@@ -166,21 +178,21 @@ func (s *OrdersRepositorySuite) TestGetUserOrders_ReturnsCorrectOrderData() {
 		}
 	)
 
-	err := s.ordersRepository.AddOrder(ctx, expectedOrder)
-	s.Require().NoError(err)
+	err := ordersRepository.AddOrder(ctx, expectedOrder)
+	require.NoError(t, err)
 
 	// Act
-	result, err := s.ordersRepository.GetUserOrders(ctx, user)
-	s.Require().NoError(err)
-	s.Require().Len(result, 1)
+	result, err := ordersRepository.GetUserOrders(ctx, user)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
 
 	// Assert
 	actualOrder := result[0]
-	s.Require().Equal(expectedOrder.OrderUUID, actualOrder.OrderUUID)
-	s.Require().Equal(expectedOrder.UserUUID, actualOrder.UserUUID)
-	s.Require().Equal(expectedOrder.PartUUIDs, actualOrder.PartUUIDs)
-	s.Require().Equal(expectedOrder.TotalPrice, actualOrder.TotalPrice)
-	s.Require().Equal(expectedOrder.Status, actualOrder.Status)
-	s.Require().Equal(expectedOrder.PaymentInfo.PaymentMethod, actualOrder.PaymentInfo.PaymentMethod)
-	s.Require().Equal(expectedOrder.PaymentInfo.TransactionUUID, actualOrder.PaymentInfo.TransactionUUID)
+	require.Equal(t, expectedOrder.OrderUUID, actualOrder.OrderUUID)
+	require.Equal(t, expectedOrder.UserUUID, actualOrder.UserUUID)
+	require.Equal(t, expectedOrder.PartUUIDs, actualOrder.PartUUIDs)
+	require.Equal(t, expectedOrder.TotalPrice, actualOrder.TotalPrice)
+	require.Equal(t, expectedOrder.Status, actualOrder.Status)
+	require.Equal(t, expectedOrder.PaymentInfo.PaymentMethod, actualOrder.PaymentInfo.PaymentMethod)
+	require.Equal(t, expectedOrder.PaymentInfo.TransactionUUID, actualOrder.PaymentInfo.TransactionUUID)
 }

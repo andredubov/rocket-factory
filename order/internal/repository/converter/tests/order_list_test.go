@@ -1,7 +1,10 @@
 package tests
 
 import (
+	"testing"
+
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
@@ -11,7 +14,7 @@ import (
 // TestOrdersToModel_EmptySlice verifies correct handling of empty order slices during conversion.
 // Tests that converting an empty repository order slice returns an empty domain model slice,
 // ensuring proper handling of zero-length inputs.
-func (s *OrdersRepoConverterSuite) TestOrdersToModel_EmptySlice() {
+func TestOrdersToModel_EmptySlice(t *testing.T) {
 	// Arrange
 	var repoOrders []repoModel.Order
 
@@ -19,13 +22,13 @@ func (s *OrdersRepoConverterSuite) TestOrdersToModel_EmptySlice() {
 	result := converter.OrdersToModel(repoOrders)
 
 	// Assert
-	s.Empty(result)
+	require.Empty(t, result)
 }
 
 // TestOrdersToModel_SingleOrder verifies accurate conversion of a single order.
 // Tests that all fields of a single repository order are correctly mapped to the
 // corresponding domain model fields, including UUID and status conversion.
-func (s *OrdersRepoConverterSuite) TestOrdersToModel_SingleOrder() {
+func TestOrdersToModel_SingleOrder(t *testing.T) {
 	// Arrange
 	repoOrders := []repoModel.Order{
 		{
@@ -39,15 +42,15 @@ func (s *OrdersRepoConverterSuite) TestOrdersToModel_SingleOrder() {
 	result := converter.OrdersToModel(repoOrders)
 
 	// Assert
-	s.Len(result, 1)
-	s.Equal(repoOrders[0].OrderUUID, result[0].OrderUUID)
-	s.Equal(model.OrderStatus(repoOrders[0].Status), result[0].Status)
+	require.Len(t, result, 1)
+	require.Equal(t, repoOrders[0].OrderUUID, result[0].OrderUUID)
+	require.Equal(t, model.OrderStatus(repoOrders[0].Status), result[0].Status)
 }
 
 // TestOrdersToModel_MultipleOrders verifies batch conversion of multiple orders with different states.
 // Tests comprehensive conversion of an order slice containing various statuses and
 // payment information, validating field-level mapping for each order in the collection.
-func (s *OrdersRepoConverterSuite) TestOrdersToModel_MultipleOrders() {
+func TestOrdersToModel_MultipleOrders(t *testing.T) {
 	// Arrange
 	repoOrders := []repoModel.Order{
 		{
@@ -71,20 +74,20 @@ func (s *OrdersRepoConverterSuite) TestOrdersToModel_MultipleOrders() {
 	result := converter.OrdersToModel(repoOrders)
 
 	// Assert
-	s.Len(result, 3)
+	require.Len(t, result, 3)
 
 	// Verify first order
-	s.Equal(repoOrders[0].OrderUUID, result[0].OrderUUID)
-	s.Equal(model.OrderStatusPending, result[0].Status)
-	s.Nil(result[0].PaymentInfo)
+	require.Equal(t, repoOrders[0].OrderUUID, result[0].OrderUUID)
+	require.Equal(t, model.OrderStatusPending, result[0].Status)
+	require.Nil(t, result[0].PaymentInfo)
 
 	// Verify second order
-	s.Equal(repoOrders[1].OrderUUID, result[1].OrderUUID)
-	s.Equal(model.OrderStatusPaid, result[1].Status)
-	s.NotNil(result[1].PaymentInfo)
-	s.Equal(model.PaymentMethodCard, result[1].PaymentInfo.PaymentMethod)
+	require.Equal(t, repoOrders[1].OrderUUID, result[1].OrderUUID)
+	require.Equal(t, model.OrderStatusPaid, result[1].Status)
+	require.NotNil(t, result[1].PaymentInfo)
+	require.Equal(t, model.PaymentMethodCard, result[1].PaymentInfo.PaymentMethod)
 
 	// Verify third order
-	s.Equal(repoOrders[2].OrderUUID, result[2].OrderUUID)
-	s.Equal(model.OrderStatusCancelled, result[2].Status)
+	require.Equal(t, repoOrders[2].OrderUUID, result[2].OrderUUID)
+	require.Equal(t, model.OrderStatusCancelled, result[2].Status)
 }

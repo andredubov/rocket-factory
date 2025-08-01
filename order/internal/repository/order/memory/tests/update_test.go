@@ -3,21 +3,25 @@ package tests
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository"
+	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 )
 
 // TestUpdateOrder_Success verifies successful order updates in the repository.
 // Tests the complete flow: adding an order, updating its status and payment info,
 // and verifying the changes persist. Validates field-level updates includin status transitions and payment information.
-func (s *OrdersRepositorySuite) TestUpdateOrder_Success() {
+func TestUpdateOrder_Success(t *testing.T) {
 	// Setup
 	var (
-		ctx           = context.Background()
-		originalOrder = model.Order{
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+		originalOrder    = model.Order{
 			OrderUUID:  uuid.New(),
 			UserUUID:   uuid.New(),
 			Status:     model.OrderStatusPending,
@@ -26,8 +30,8 @@ func (s *OrdersRepositorySuite) TestUpdateOrder_Success() {
 	)
 
 	// Add initial order
-	err := s.ordersRepository.AddOrder(ctx, originalOrder)
-	s.Require().NoError(err)
+	err := ordersRepository.AddOrder(ctx, originalOrder)
+	require.NoError(t, err)
 
 	// Prepare update
 	updatedOrder := originalOrder
@@ -39,44 +43,49 @@ func (s *OrdersRepositorySuite) TestUpdateOrder_Success() {
 	}
 
 	// Test
-	err = s.ordersRepository.UpdateOrder(ctx, updatedOrder)
+	err = ordersRepository.UpdateOrder(ctx, updatedOrder)
 
 	// Verify
-	s.NoError(err)
+	require.NoError(t, err)
 
 	// Verify changes were applied
-	retrieved, err := s.ordersRepository.GetOrder(ctx, originalOrder.OrderUUID)
-	s.Require().NoError(err)
-	s.Require().Equal(updatedOrder.Status, retrieved.Status)
-	s.Require().Equal(updatedOrder.TotalPrice, retrieved.TotalPrice)
-	s.Require().Equal(updatedOrder.PaymentInfo.PaymentMethod, retrieved.PaymentInfo.PaymentMethod)
+	retrieved, err := ordersRepository.GetOrder(ctx, originalOrder.OrderUUID)
+	require.NoError(t, err)
+	require.Equal(t, updatedOrder.Status, retrieved.Status)
+	require.Equal(t, updatedOrder.TotalPrice, retrieved.TotalPrice)
+	require.Equal(t, updatedOrder.PaymentInfo.PaymentMethod, retrieved.PaymentInfo.PaymentMethod)
 }
 
 // TestUpdateOrder_NotFound verifies proper handling of update attempts for non-existent orders.
 // Tests that the repository returns ErrOrderNotFound when attempting to update
 // an order that doesn't exist, ensuring data integrity.
-func (s *OrdersRepositorySuite) TestUpdateOrder_NotFound() {
+func TestUpdateOrder_NotFound(t *testing.T) {
 	// Setup
-	ctx := context.Background()
-	nonExistentOrder := model.Order{
-		OrderUUID: uuid.New(),
-		Status:    model.OrderStatusPending,
-	}
+	var (
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+		nonExistentOrder = model.Order{
+			OrderUUID: uuid.New(),
+			Status:    model.OrderStatusPending,
+		}
+	)
 
 	// Test
-	err := s.ordersRepository.UpdateOrder(ctx, nonExistentOrder)
+	err := ordersRepository.UpdateOrder(ctx, nonExistentOrder)
 
 	// Verify
-	s.Require().Equal(err, repository.ErrOrderNotFoundWith(nonExistentOrder.OrderUUID))
+	require.Equal(t, err, repository.ErrOrderNotFoundWith(nonExistentOrder.OrderUUID))
 }
 
 // TestUpdateOrder_ConcurrentAccess verifies thread-safe update behavior under race conditions.
 // Tests that concurrent updates to the same order are handled correctly, with
 // the repository applying one of the updates while maintaining data consistency.
-func (s *OrdersRepositorySuite) TestUpdateOrder_ConcurrentAccess() {
+func TestUpdateOrder_ConcurrentAccess(t *testing.T) {
 	// Setup
 	var (
-		ctx           = context.Background()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+
 		originalOrder = model.Order{
 			OrderUUID:   uuid.New(),
 			Status:      model.OrderStatusPending,
@@ -85,8 +94,8 @@ func (s *OrdersRepositorySuite) TestUpdateOrder_ConcurrentAccess() {
 	)
 
 	// Add initial order
-	err := s.ordersRepository.AddOrder(ctx, originalOrder)
-	s.Require().NoError(err)
+	err := ordersRepository.AddOrder(ctx, originalOrder)
+	require.NoError(t, err)
 
 	// Prepare updates
 	update1 := originalOrder
@@ -102,26 +111,26 @@ func (s *OrdersRepositorySuite) TestUpdateOrder_ConcurrentAccess() {
 	var err1, err2 error
 	go func() {
 		defer wg.Done()
-		err1 = s.ordersRepository.UpdateOrder(ctx, update1)
+		err1 = ordersRepository.UpdateOrder(ctx, update1)
 	}()
 	go func() {
 		defer wg.Done()
-		err2 = s.ordersRepository.UpdateOrder(ctx, update2)
+		err2 = ordersRepository.UpdateOrder(ctx, update2)
 	}()
 
 	wg.Wait()
 
 	// Verify both succeeded
-	s.Require().True((err1 == nil && err2 == nil))
+	require.True(t, (err1 == nil && err2 == nil))
 
 	// Verify order was updated
-	retrieved, err := s.ordersRepository.GetOrder(ctx, originalOrder.OrderUUID)
-	s.NoError(err)
+	retrieved, err := ordersRepository.GetOrder(ctx, originalOrder.OrderUUID)
+	require.NoError(t, err)
 
 	// Check which update was applied
 	if err1 == nil {
-		s.Require().Equal(update1.Status, retrieved.Status)
+		require.Equal(t, update1.Status, retrieved.Status)
 	} else {
-		s.Require().Equal(update2.TotalPrice, retrieved.TotalPrice)
+		require.Equal(t, update2.TotalPrice, retrieved.TotalPrice)
 	}
 }

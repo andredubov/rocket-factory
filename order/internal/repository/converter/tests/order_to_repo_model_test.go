@@ -1,7 +1,10 @@
 package tests
 
 import (
+	"testing"
+
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
@@ -9,9 +12,7 @@ import (
 )
 
 // TestOrderToRepoModel_FullConversion verifies complete conversion of a domain order to repository model.
-// Tests that all fields including nested payment information are correctly mapped,
-// validating the complete transformation of complex order structures.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_FullConversion() {
+func TestOrderToRepoModel_FullConversion(t *testing.T) {
 	// Arrange
 	order := model.Order{
 		OrderUUID:  uuid.New(),
@@ -29,21 +30,19 @@ func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_FullConversion() {
 	result := converter.OrderToRepoModel(order)
 
 	// Assert
-	s.Require().Equal(order.OrderUUID, result.OrderUUID)
-	s.Require().Equal(order.UserUUID, result.UserUUID)
-	s.Require().Equal(order.PartUUIDs, result.PartUUIDs)
-	s.Require().Equal(order.TotalPrice, result.TotalPrice)
-	s.Require().Equal(repoModel.OrderStatus(order.Status), result.Status)
+	require.Equal(t, order.OrderUUID, result.OrderUUID)
+	require.Equal(t, order.UserUUID, result.UserUUID)
+	require.Equal(t, order.PartUUIDs, result.PartUUIDs)
+	require.Equal(t, order.TotalPrice, result.TotalPrice)
+	require.Equal(t, repoModel.OrderStatus(order.Status), result.Status)
 
-	s.Require().NotNil(result.PaymentInfo)
-	s.Require().Equal(order.PaymentInfo.TransactionUUID, result.PaymentInfo.TransactionUUID)
-	s.Require().Equal(repoModel.PaymentMethod(order.PaymentInfo.PaymentMethod), result.PaymentInfo.PaymentMethod)
+	require.NotNil(t, result.PaymentInfo)
+	require.Equal(t, order.PaymentInfo.TransactionUUID, result.PaymentInfo.TransactionUUID)
+	require.Equal(t, repoModel.PaymentMethod(order.PaymentInfo.PaymentMethod), result.PaymentInfo.PaymentMethod)
 }
 
 // TestOrderToRepoModel_NoPaymentInfo verifies proper handling of orders without payment information.
-// Tests that nil payment info in the domain model correctly converts to nil
-// in the repository model, ensuring proper handling of optional fields.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_NoPaymentInfo() {
+func TestOrderToRepoModel_NoPaymentInfo(t *testing.T) {
 	// Arrange
 	order := model.Order{
 		OrderUUID: uuid.New(),
@@ -55,15 +54,13 @@ func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_NoPaymentInfo() {
 	result := converter.OrderToRepoModel(order)
 
 	// Assert
-	s.Require().Equal(order.OrderUUID, result.OrderUUID)
-	s.Require().Equal(repoModel.OrderStatus(order.Status), result.Status)
-	s.Require().Nil(result.PaymentInfo)
+	require.Equal(t, order.OrderUUID, result.OrderUUID)
+	require.Equal(t, repoModel.OrderStatus(order.Status), result.Status)
+	require.Nil(t, result.PaymentInfo)
 }
 
 // TestOrderToRepoModel_EmptyPartUUIDs verifies correct conversion of orders with empty part lists.
-// Tests that empty part UUID slices are properly preserved during conversion,
-// maintaining data structure integrity between layers.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_EmptyPartUUIDs() {
+func TestOrderToRepoModel_EmptyPartUUIDs(t *testing.T) {
 	// Arrange
 	order := model.Order{
 		OrderUUID: uuid.New(),
@@ -75,14 +72,12 @@ func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_EmptyPartUUIDs() {
 	result := converter.OrderToRepoModel(order)
 
 	// Assert
-	s.Require().Empty(result.PartUUIDs)
-	s.Require().Equal(repoModel.OrderStatusCancelled, result.Status)
+	require.Empty(t, result.PartUUIDs)
+	require.Equal(t, repoModel.OrderStatusCancelled, result.Status)
 }
 
 // TestOrderToRepoModel_AllStatuses verifies comprehensive status enum conversion.
-// Tests all possible order status values to ensure complete and correct mapping
-// between domain and repository status representations.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_AllStatuses() {
+func TestOrderToRepoModel_AllStatuses(t *testing.T) {
 	// Test all possible order status values
 	testCases := []struct {
 		name   string
@@ -102,82 +97,99 @@ func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_AllStatuses() {
 		// Act
 		result := converter.OrderToRepoModel(order)
 		// Assert
-		s.Require().Equal(repoModel.OrderStatus(tc.status), result.Status)
+		require.Equal(t, repoModel.OrderStatus(tc.status), result.Status)
 	}
 }
 
 // testStatusConversion is a helper function for testing status enum conversions.
 // Provides consistent testing of domain-to-repository status value mapping
 // for different order status values.
-func (s *OrdersRepoConverterSuite) testStatusConversion(status model.OrderStatus) {
+func testStatusConversion(status model.OrderStatus) repoModel.Order {
 	order := model.Order{
 		OrderUUID: uuid.New(),
 		Status:    status,
 	}
-	result := converter.OrderToRepoModel(order)
-	s.Require().Equal(repoModel.OrderStatus(status), result.Status)
+	return converter.OrderToRepoModel(order)
 }
 
 // TestOrderToRepoModel_StatusPending verifies Pending status conversion.
 // Tests specific mapping of domain's Pending status to repository model equivalent.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_StatusPending() {
-	s.testStatusConversion(model.OrderStatusPending)
+func TestOrderToRepoModel_StatusPending(t *testing.T) {
+	status := model.OrderStatusPending
+	result := testStatusConversion(status)
+	require.Equal(t, repoModel.OrderStatus(status), result.Status)
 }
 
 // TestOrderToRepoModel_StatusPaid verifies Paid status conversion.
 // Tests specific mapping of domain's Paid status to repository model equivalent.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_StatusPaid() {
-	s.testStatusConversion(model.OrderStatusPaid)
+func TestOrderToRepoModel_StatusPaid(t *testing.T) {
+	status := model.OrderStatusPaid
+	result := testStatusConversion(status)
+	require.Equal(t, repoModel.OrderStatus(status), result.Status)
 }
 
 // TestOrderToRepoModel_StatusCancelled verifies Cancelled status conversion.
 // Tests specific mapping of domain's Cancelled status to repository model equivalent.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_StatusCancelled() {
-	s.testStatusConversion(model.OrderStatusCancelled)
+func TestOrderToRepoModel_StatusCancelled(t *testing.T) {
+	status := model.OrderStatusCancelled
+	result := testStatusConversion(status)
+	require.Equal(t, repoModel.OrderStatus(status), result.Status)
 }
 
 // testPaymentMethodConversion is a helper for payment method enum tests.
 // Provides consistent testing of payment method value conversions between
 // domain and repository models.
-func (s *OrdersRepoConverterSuite) testPaymentMethodConversion(paymentMethod model.PaymentMethod) {
+func testPaymentMethodConversion(paymentMethod model.PaymentMethod) repoModel.Order {
 	order := model.Order{
 		OrderUUID: uuid.New(),
 		PaymentInfo: &model.PaymentInfo{
 			PaymentMethod: paymentMethod,
 		},
 	}
-
-	result := converter.OrderToRepoModel(order)
-	s.Require().NotNil(result.PaymentInfo)
-	s.Require().Equal(repoModel.PaymentMethod(paymentMethod), result.PaymentInfo.PaymentMethod)
+	return converter.OrderToRepoModel(order)
 }
 
 // TestOrderToRepoModel_PaymentMethodUnknown verifies Unknown payment method conversion.
 // Tests specific mapping of domain's Unknown payment method to repository model.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_PaymentMethodUnknown() {
-	s.testPaymentMethodConversion(model.PaymentMethodUnknown)
+func TestOrderToRepoModel_PaymentMethodUnknown(t *testing.T) {
+	paymentMethod := model.PaymentMethodUnknown
+	result := testPaymentMethodConversion(paymentMethod)
+	require.NotNil(t, result.PaymentInfo)
+	require.Equal(t, repoModel.PaymentMethod(paymentMethod), result.PaymentInfo.PaymentMethod)
 }
 
 // TestOrderToRepoModel_PaymentMethodCard verifies Card payment method conversion.
 // Tests specific mapping of domain's Card payment method to repository model
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_PaymentMethodCard() {
-	s.testPaymentMethodConversion(model.PaymentMethodCard)
+func TestOrderToRepoModel_PaymentMethodCard(t *testing.T) {
+	paymentMethod := model.PaymentMethodCard
+	result := testPaymentMethodConversion(paymentMethod)
+	require.NotNil(t, result.PaymentInfo)
+	require.Equal(t, repoModel.PaymentMethod(paymentMethod), result.PaymentInfo.PaymentMethod)
 }
 
 // TestOrderToRepoModel_PaymentMethodSBP verifies SBP payment method conversion.
 // Tests specific mapping of domain's SBP payment method to repository model.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_PaymentMethodSBP() {
-	s.testPaymentMethodConversion(model.PaymentMethodSBP)
+func TestOrderToRepoModel_PaymentMethodSBP(t *testing.T) {
+	paymentMethod := model.PaymentMethodSBP
+	result := testPaymentMethodConversion(paymentMethod)
+	require.NotNil(t, result.PaymentInfo)
+	require.Equal(t, repoModel.PaymentMethod(paymentMethod), result.PaymentInfo.PaymentMethod)
 }
 
 // TestOrderToRepoModel_PaymentMethodCreditCard verifies Credit Card payment method conversion.
 // Tests specific mapping of domain's Credit Card payment method to repository model.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_PaymentMethodCreditCard() {
-	s.testPaymentMethodConversion(model.PaymentMethodCreditCard)
+func TestOrderToRepoModel_PaymentMethodCreditCard(t *testing.T) {
+	paymentMethod := model.PaymentMethodCreditCard
+	result := testPaymentMethodConversion(paymentMethod)
+	require.NotNil(t, result.PaymentInfo)
+	require.Equal(t, repoModel.PaymentMethod(paymentMethod), result.PaymentInfo.PaymentMethod)
 }
 
 // TestOrderToRepoModel_PaymentMethodInvestorMoney verifies Investor Money payment method conversion.
 // Tests specific mapping of domain's Investor Money payment method to repository model.
-func (s *OrdersRepoConverterSuite) TestOrderToRepoModel_PaymentMethodInvestorMoney() {
-	s.testPaymentMethodConversion(model.PaymentMethodInvestorMoney)
+func TestOrderToRepoModel_PaymentMethodInvestorMoney(t *testing.T) {
+	paymentMethod := model.PaymentMethodInvestorMoney
+	result := testPaymentMethodConversion(paymentMethod)
+	require.NotNil(t, result.PaymentInfo)
+	require.Equal(t, repoModel.PaymentMethod(paymentMethod), result.PaymentInfo.PaymentMethod)
 }

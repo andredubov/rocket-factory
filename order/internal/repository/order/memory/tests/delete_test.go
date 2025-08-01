@@ -3,20 +3,25 @@ package tests
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository"
+	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 )
 
 // TestDeleteOrder_Success verifies successful deletion of an existing order from the repository.
 // Tests the complete flow: adding an order, deleting it, and verifying it can no longer be retrieved.
 // Validates the repository's ability to permanently remove order records.
-func (s *OrdersRepositorySuite) TestDeleteOrder_Success() {
+func TestDeleteOrder_Success(t *testing.T) {
 	// Setup
 	var (
-		ctx   = context.Background()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+
 		order = model.Order{
 			OrderUUID: uuid.New(),
 			Status:    model.OrderStatusPending,
@@ -24,44 +29,47 @@ func (s *OrdersRepositorySuite) TestDeleteOrder_Success() {
 	)
 
 	// Add order first
-	err := s.ordersRepository.AddOrder(ctx, order)
-	s.Require().NoError(err)
+	err := ordersRepository.AddOrder(ctx, order)
+	require.NoError(t, err)
 
 	// Test
-	err = s.ordersRepository.DeleteOrder(ctx, order.OrderUUID)
+	err = ordersRepository.DeleteOrder(ctx, order.OrderUUID)
 
 	// Verify
-	s.NoError(err)
+	require.NoError(t, err)
 
 	// Verify order was actually deleted
-	_, err = s.ordersRepository.GetOrder(ctx, order.OrderUUID)
-	s.Require().Equal(err, repository.ErrOrderNotFoundWith(order.OrderUUID))
+	_, err = ordersRepository.GetOrder(ctx, order.OrderUUID)
+	require.Equal(t, err, repository.ErrOrderNotFoundWith(order.OrderUUID))
 }
 
 // TestDeleteOrder_NotFound verifies proper handling of delete attempts for non-existent orders.
 // Tests that the repository returns ErrOrderNotFound when attempting to delete
 // an order that doesn't exist, rather than silently succeeding.
-func (s *OrdersRepositorySuite) TestDeleteOrder_NotFound() {
+func TestDeleteOrder_NotFound(t *testing.T) {
 	// Setup
 	var (
-		ctx             = context.Background()
-		nonExistentUUID = uuid.New()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+		nonExistentUUID  = uuid.New()
 	)
 
 	// Test
-	err := s.ordersRepository.DeleteOrder(ctx, nonExistentUUID)
+	err := ordersRepository.DeleteOrder(ctx, nonExistentUUID)
 
 	// Verify
-	s.Require().Equal(err, repository.ErrOrderNotFoundWith(nonExistentUUID))
+	require.Equal(t, err, repository.ErrOrderNotFoundWith(nonExistentUUID))
 }
 
 // TestDeleteOrder_ConcurrentAccess verifies thread-safe deletion behavior under race conditions.
 // Tests that concurrent delete operations for the same order result in exactly one
 // successful deletion, maintaining data consistency.
-func (s *OrdersRepositorySuite) TestDeleteOrder_ConcurrentAccess() {
+func TestDeleteOrder_ConcurrentAccess(t *testing.T) {
 	// Setup
 	var (
-		ctx   = context.Background()
+		ordersRepository = memory.NewOrderRepository()
+		ctx              = context.Background()
+
 		order = model.Order{
 			OrderUUID: uuid.New(),
 			Status:    model.OrderStatusPaid,
@@ -69,8 +77,8 @@ func (s *OrdersRepositorySuite) TestDeleteOrder_ConcurrentAccess() {
 	)
 
 	// Add order first
-	err := s.ordersRepository.AddOrder(ctx, order)
-	s.Require().NoError(err)
+	err := ordersRepository.AddOrder(ctx, order)
+	require.NoError(t, err)
 
 	// Test concurrent deletes
 	var wg sync.WaitGroup
@@ -79,19 +87,19 @@ func (s *OrdersRepositorySuite) TestDeleteOrder_ConcurrentAccess() {
 	var err1, err2 error
 	go func() {
 		defer wg.Done()
-		err1 = s.ordersRepository.DeleteOrder(ctx, order.OrderUUID)
+		err1 = ordersRepository.DeleteOrder(ctx, order.OrderUUID)
 	}()
 	go func() {
 		defer wg.Done()
-		err2 = s.ordersRepository.DeleteOrder(ctx, order.OrderUUID)
+		err2 = ordersRepository.DeleteOrder(ctx, order.OrderUUID)
 	}()
 
 	wg.Wait()
 
 	// Verify only one succeeded
-	s.True((err1 == nil && err2 != nil) || (err1 != nil && err2 == nil), "Exactly one DeleteOrder should succeed")
+	require.True(t, (err1 == nil && err2 != nil) || (err1 != nil && err2 == nil), "Exactly one DeleteOrder should succeed")
 
 	// Verify order was deleted
-	_, err = s.ordersRepository.GetOrder(ctx, order.OrderUUID)
-	s.Require().Equal(err, repository.ErrOrderNotFoundWith(order.OrderUUID))
+	_, err = ordersRepository.GetOrder(ctx, order.OrderUUID)
+	require.Equal(t, err, repository.ErrOrderNotFoundWith(order.OrderUUID))
 }
