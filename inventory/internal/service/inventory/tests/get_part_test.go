@@ -2,23 +2,29 @@ package tests
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/mocks"
 )
 
 // TestGetPart_Success verifies successful retrieval of a part through the service layer.
-// Tests that a valid UUID returns the corresponding part with all fields properly converted
-// from the repository model to the domain model. Validates correct data transformation.
-func (s *InventoryServiceSuite) TestGetPart_Success() {
+func TestGetPart_Success(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx  = context.Background()
 		uuid = gofakeit.UUID()
 
-		part = &model.Part{
+		expectedPart = &model.Part{
 			Uuid:          uuid,
 			Name:          gofakeit.Word(),
 			Description:   gofakeit.Sentence(10),
@@ -43,60 +49,77 @@ func (s *InventoryServiceSuite) TestGetPart_Success() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPart", ctx, uuid).Return(part, nil)
+	inventoryRepository.On("GetPart", ctx, uuid).Return(expectedPart, nil).Once()
 
 	// Test
-	retrievedPart, err := s.inventoryService.GetPart(ctx, uuid)
+	retrievedPart, err := inventoryService.GetPart(ctx, uuid)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().NotNil(part)
-	s.Require().Equal(uuid, part.Uuid)
-	s.Require().Equal(*retrievedPart, *part)
+	require.NoError(t, err)
+	require.NotNil(t, retrievedPart)
+	assert.Equal(t, expectedPart, retrievedPart)
+	assert.Equal(t, uuid, retrievedPart.Uuid)
+	assert.NotEqual(t, "", retrievedPart.Name)
+	assert.NotEqual(t, "", retrievedPart.Description)
+	assert.True(t, retrievedPart.Price > 0)
+	assert.True(t, retrievedPart.StockQuantity > 0)
+	assert.True(t, len(retrievedPart.Tags) > 0)
+	assert.NotNil(t, retrievedPart.Dimensions)
+	assert.NotNil(t, retrievedPart.Manufacturer)
+
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestGetPart_NotFoundError verifies proper error handling when requesting a non-existent part.
-// Tests that the repository's ErrPartNotFound error is correctly propagated through
-// the service layer while maintaining the original error type.
-func (s *InventoryServiceSuite) TestGetPart_NotFoundError() {
+func TestGetPart_NotFoundError(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx         = context.Background()
 		uuid        = gofakeit.UUID()
 		expectedErr = model.ErrPartNotFound
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPart", ctx, uuid).Return(nil, expectedErr)
+	inventoryRepository.On("GetPart", ctx, uuid).Return(nil, expectedErr).Once()
 
 	// Test
-	part, err := s.inventoryService.GetPart(ctx, uuid)
+	retrievedPart, err := inventoryService.GetPart(ctx, uuid)
 
 	// Verify
-	s.Require().Error(err)
-	s.Require().Equal(err, expectedErr)
-	s.Require().Nil(part)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, expectedErr)
+	require.Nil(t, retrievedPart)
+
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestGetPart_EmptyUUID verifies the service handles empty UUID values appropriately.
-// Tests that attempting to retrieve a part with an empty UUID returns the expected
-// ErrPartNotFound error, validating input sanitization at the service boundary.
-func (s *InventoryServiceSuite) TestGetPart_EmptyUUID() {
+func TestGetPart_EmptyUUID(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx         = context.Background()
 		emptyUUID   = ""
 		expectedErr = model.ErrPartNotFound
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPart", ctx, emptyUUID).Return(nil, expectedErr)
+	inventoryRepository.On("GetPart", ctx, emptyUUID).Return(nil, expectedErr).Once()
 
 	// Test
-	part, err := s.inventoryService.GetPart(ctx, emptyUUID)
+	part, err := inventoryService.GetPart(ctx, emptyUUID)
 
 	// Verify
-	s.Nil(part)
-	s.Error(err)
-	s.Require().Equal(err, expectedErr)
+	require.Nil(t, part)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, expectedErr)
+
+	// Ensure repository was never called
+	inventoryRepository.AssertNotCalled(t, "GetPart")
+	inventoryRepository.AssertExpectations(t)
 }

@@ -2,72 +2,85 @@ package tests
 
 import (
 	"context"
+	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/mocks"
 )
 
 // TestDeletePart_Success verifies that a part can be successfully deleted when it exists.
-// Tests the happy path scenario where the repository successfully deletes the part
-// and no error is returned to the caller.
-func (s *InventoryServiceSuite) TestDeletePart_Success() {
+func TestDeletePart_Success(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx  = context.Background()
 		uuid = gofakeit.UUID()
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("DeletePart", ctx, uuid).Return(nil)
+	inventoryRepository.On("DeletePart", ctx, uuid).Return(nil).Once()
 
 	// Test
-	err := s.inventoryService.DeletePart(ctx, uuid)
+	err := inventoryService.DeletePart(ctx, uuid)
 
 	// Verify
-	s.Require().NoError(err)
+	require.NoError(t, err)
+	inventoryRepository.AssertExpectations(t)
+	inventoryRepository.AssertCalled(t, "DeletePart", ctx, uuid)
+	inventoryRepository.AssertNumberOfCalls(t, "DeletePart", 1)
 }
 
 // TestDeletePart_NotFoundError verifies the service properly handles cases where
-// the part to be deleted doesn't exist. Tests that the repository's ErrPartNotFound
-// error is correctly propagated through the service layer.
-func (s *InventoryServiceSuite) TestDeletePart_NotFoundError() {
+func TestDeletePart_NotFoundError(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx         = context.Background()
 		uuid        = gofakeit.UUID()
 		expectedErr = model.ErrPartNotFound
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("DeletePart", ctx, uuid).Return(expectedErr)
+	inventoryRepository.On("DeletePart", ctx, uuid).Return(expectedErr).Once()
 
 	// Test
-	err := s.inventoryService.DeletePart(ctx, uuid)
+	err := inventoryService.DeletePart(ctx, uuid)
 
 	// Verify
-	s.Require().NotNil(err)
-	s.Require().Equal(err, expectedErr)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, expectedErr)
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestDeletePart_EmptyUUID verifies the service handles empty UUID values correctly.
-// Tests that attempting to delete a part with an empty UUID returns the expected
-// ErrPartNotFound error, validating input sanitization.
-func (s *InventoryServiceSuite) TestDeletePart_EmptyUUID() {
+func TestDeletePart_EmptyUUID(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx         = context.Background()
 		emptyUUID   = ""
 		expectedErr = model.ErrPartNotFound
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("DeletePart", ctx, emptyUUID).Return(expectedErr)
+	inventoryRepository.On("DeletePart", ctx, emptyUUID).Return(expectedErr).Once()
 
 	// Test
-	err := s.inventoryService.DeletePart(ctx, emptyUUID)
+	err := inventoryService.DeletePart(ctx, emptyUUID)
 
 	// Verify
-	s.Require().Error(err)
-	s.Require().Equal(err, expectedErr)
+	require.Error(t, err)
+	require.Equal(t, err, expectedErr)
+	inventoryRepository.AssertExpectations(t)
 }

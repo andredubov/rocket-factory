@@ -2,19 +2,25 @@ package tests
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/mocks"
 )
 
 // TestUpdatePart_Success verifies that a valid part can be successfully updated through the service layer.
-// Tests the happy path scenario where all part fields are properly populated and the repository
-// accepts the update without errors. Verifies proper model conversion and successful update flow.
-func (s *InventoryServiceSuite) TestUpdatePart_Success() {
+func TestUpdatePart_Success(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid:          gofakeit.UUID(),
@@ -41,21 +47,23 @@ func (s *InventoryServiceSuite) TestUpdatePart_Success() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("UpdatePart", ctx, part).Return(nil)
+	inventoryRepository.On("UpdatePart", ctx, part).Return(nil).Once()
 
 	// Test
-	err := s.inventoryService.UpdatePart(ctx, part)
+	err := inventoryService.UpdatePart(ctx, part)
 
 	// Verify
-	s.Require().NoError(err)
+	require.NoError(t, err)
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestUpdatePart_NotFoundError verifies proper error handling when attempting to update
-// a non-existent part. Tests that the repository's ErrPartNotFound error is correctly
-// propagated through the service layer with its original error type preserved.
-func (s *InventoryServiceSuite) TestUpdatePart_NotFoundError() {
+func TestUpdatePart_NotFoundError(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid: gofakeit.UUID(),
@@ -65,22 +73,24 @@ func (s *InventoryServiceSuite) TestUpdatePart_NotFoundError() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("UpdatePart", ctx, part).Return(expectedErr)
+	inventoryRepository.On("UpdatePart", ctx, part).Return(expectedErr)
 
 	// Test
-	err := s.inventoryService.UpdatePart(ctx, part)
+	err := inventoryService.UpdatePart(ctx, part)
 
 	// Verify
-	s.Require().Error(err)
-	s.Require().Equal(err, expectedErr)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, expectedErr)
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestUpdatePart_InvalidPart verifies the service properly rejects invalid part updates.
-// Tests error cases where the part data fails validation (empty UUID, invalid category)
-// before reaching the repository layer. Validates business logic enforcement.
-func (s *InventoryServiceSuite) TestUpdatePart_InvalidPart() {
+func TestUpdatePart_InvalidPart(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx         = context.Background()
 		invalidPart = model.Part{
 			Uuid:     "",                      // Empty UUID is invalid
@@ -90,12 +100,14 @@ func (s *InventoryServiceSuite) TestUpdatePart_InvalidPart() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("UpdatePart", ctx, invalidPart).Return(expectedErr)
+	inventoryRepository.On("UpdatePart", ctx, invalidPart).Return(expectedErr).Once()
 
 	// Test
-	err := s.inventoryService.UpdatePart(ctx, invalidPart)
+	err := inventoryService.UpdatePart(ctx, invalidPart)
 
 	// Verify
-	s.Require().Error(err)
-	s.Require().Equal(err, expectedErr)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, expectedErr)
+	inventoryRepository.AssertNotCalled(t, "UpdatePart")
+	inventoryRepository.AssertExpectations(t)
 }

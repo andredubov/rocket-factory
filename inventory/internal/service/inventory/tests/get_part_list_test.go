@@ -2,18 +2,24 @@ package tests
 
 import (
 	"context"
+	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/mocks"
 )
 
 // TestGetPartList_Success verifies successful retrieval of filtered parts through the service layer.
-// Tests that parts matching the filter criteria (UUIDs and categories) are properly returned
-// after conversion from repository to domain models. Validates correct filtering and data transformation.
-func (s *InventoryServiceSuite) TestGetPartList_Success() {
+func TestGetPartList_Success(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx    = context.Background()
 		filter = model.PartFilter{
 			UUIDs: []string{gofakeit.UUID()},
@@ -44,24 +50,25 @@ func (s *InventoryServiceSuite) TestGetPartList_Success() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil)
+	inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil).Once()
 
 	// Test
-	retrivedParts, err := s.inventoryService.GetPartList(ctx, filter)
+	retrivedParts, err := inventoryService.GetPartList(ctx, filter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Len(retrivedParts, 2)
-	s.Require().Equal(retrivedParts[0], parts[0])
-	s.Require().Equal(retrivedParts[1], parts[1])
+	require.NoError(t, err)
+	require.Len(t, retrivedParts, len(parts))
+	assert.Equal(t, retrivedParts, parts)
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestGetPartList_EmptyFilter verifies behavior when querying with an empty filter.
-// Tests that the service returns all available parts when no filter criteria is specified,
-// validating default behavior for unfiltered requests.
-func (s *InventoryServiceSuite) TestGetPartList_EmptyFilter() {
+func TestGetPartList_EmptyFilter(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx    = context.Background()
 		filter = model.PartFilter{} // Empty filter
 		parts  = []model.Part{
@@ -73,23 +80,25 @@ func (s *InventoryServiceSuite) TestGetPartList_EmptyFilter() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil)
+	inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil)
 
 	// Test
-	retrivedParts, err := s.inventoryService.GetPartList(ctx, filter)
+	retrivedParts, err := inventoryService.GetPartList(ctx, filter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Len(parts, 1)
-	s.Require().Equal(retrivedParts[0], parts[0])
+	require.NoError(t, err)
+	require.Len(t, retrivedParts, len(parts))
+	assert.Equal(t, retrivedParts, parts)
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestGetPartList_RepositoryError verifies proper error propagation from the repository.
-// Tests that repository-level errors (like ErrPartNotFound) are correctly propagated
-// through the service layer while maintaining the original error type.
-func (s *InventoryServiceSuite) TestGetPartList_RepositoryError() {
+func TestGetPartList_RepositoryError(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx    = context.Background()
 		filter = model.PartFilter{
 			UUIDs: []string{gofakeit.UUID()},
@@ -98,23 +107,24 @@ func (s *InventoryServiceSuite) TestGetPartList_RepositoryError() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPartList", ctx, filter).Return(nil, expectedErr)
+	inventoryRepository.On("GetPartList", ctx, filter).Return(nil, expectedErr)
 
 	// Test
-	parts, err := s.inventoryService.GetPartList(ctx, filter)
+	parts, err := inventoryService.GetPartList(ctx, filter)
 
 	// Verify
-	s.Require().Nil(parts)
-	s.Require().Error(err)
-	s.Require().Equal(err, expectedErr)
+	require.Nil(t, parts)
+	require.Error(t, err)
+	require.Equal(t, err, expectedErr)
 }
 
 // TestGetPartList_EmptyResult verifies correct handling of empty result sets.
-// Tests that the service properly returns an empty slice (not nil) when no parts
-// match the filter criteria, without returning an error.
-func (s *InventoryServiceSuite) TestGetPartList_EmptyResult() {
+func TestGetPartList_EmptyResult(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+
 		ctx    = context.Background()
 		filter = model.PartFilter{
 			Tags: []string{"non-existent-tag"},
@@ -122,12 +132,13 @@ func (s *InventoryServiceSuite) TestGetPartList_EmptyResult() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("GetPartList", ctx, filter).Return([]model.Part{}, nil)
+	inventoryRepository.On("GetPartList", ctx, filter).Return([]model.Part{}, nil)
 
 	// Test
-	parts, err := s.inventoryService.GetPartList(ctx, filter)
+	retrievedParts, err := inventoryService.GetPartList(ctx, filter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Empty(parts)
+	require.NoError(t, err)
+	assert.Empty(t, retrievedParts)
+	inventoryRepository.AssertExpectations(t)
 }

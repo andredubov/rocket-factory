@@ -2,21 +2,26 @@ package tests
 
 import (
 	"context"
-	"errors"
+	"testing"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/mocks"
 )
 
 // TestAddPart_Success verifies that a valid part can be successfully added through the service layer.
-// Tests the happy path scenario where all part fields are properly populated and the repository
-// accepts the part without errors. Verifies proper conversion and error handling.
-func (s *InventoryServiceSuite) TestAddPart_Success() {
+func TestAddPart_Success(t *testing.T) {
 	// Setup
 	var (
-		ctx  = context.Background()
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+		ctx                 = context.Background()
+
 		part = model.Part{
 			Uuid:          gofakeit.UUID(),
 			Name:          gofakeit.Word(),
@@ -42,23 +47,24 @@ func (s *InventoryServiceSuite) TestAddPart_Success() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("AddPart", ctx, part).Return(nil)
+	inventoryRepository.On("AddPart", ctx, part).Return(nil).Once()
 
 	// Test
-	err := s.inventoryService.AddPart(ctx, part)
+	err := inventoryService.AddPart(ctx, part)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	require.NoError(t, err)
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestAddPart_RepositoryError verifies proper error propagation when the repository fails.
-// Tests that repository-level errors (like duplicate parts) are properly propagated up
-// through the service layer to the caller with their original error type preserved.
-func (s *InventoryServiceSuite) TestAddPart_RepositoryError() {
+func TestAddPart_RepositoryError(t *testing.T) {
 	// Setup
 	var (
-		ctx  = context.Background()
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+		ctx                 = context.Background()
+
 		part = model.Part{
 			Uuid: gofakeit.UUID(),
 			Name: gofakeit.Word(),
@@ -67,32 +73,40 @@ func (s *InventoryServiceSuite) TestAddPart_RepositoryError() {
 	)
 
 	// Mock expectations
-	s.inventoryRepository.On("AddPart", ctx, part).Return(expectedErr)
+	inventoryRepository.On("AddPart", ctx, part).Return(expectedErr).Once()
 
 	// Test
-	err := s.inventoryService.AddPart(ctx, part)
+	err := inventoryService.AddPart(ctx, part)
 
 	// Verify
-	s.Require().NotNil(err)
-	s.Require().Equal(err, expectedErr)
+	require.NotNil(t, err)
+	assert.ErrorIs(t, err, expectedErr)
+	inventoryRepository.AssertExpectations(t)
 }
 
 // TestAddPart_InvalidPart verifies the service handles invalid part data correctly.
-// Tests error cases where the part fails business logic validation before reaching
-// the repository layer, such as with invalid category values.
-func (s *InventoryServiceSuite) TestAddPart_InvalidPart() {
+func TestAddPart_InvalidPart(t *testing.T) {
 	// Setup
-	ctx := context.Background()
-	invalidPart := model.Part{
-		Category: model.PartCategory(999), // Invalid category
-	}
+	var (
+		inventoryRepository = mocks.NewInventoryRepository(t)
+		inventoryService    = inventory.NewService(inventoryRepository)
+		ctx                 = context.Background()
+
+		invalidPart = model.Part{
+			Category: model.PartCategory(999), // Invalid category
+		}
+		expcetedError = model.ErrUnknownPartCategory
+	)
 
 	// Mock expectations
-	s.inventoryRepository.On("AddPart", ctx, invalidPart).Return(errors.New("Some error"))
+	inventoryRepository.On("AddPart", ctx, invalidPart).Return(expcetedError).Once()
 
 	// Test
-	err := s.inventoryService.AddPart(ctx, invalidPart)
+	err := inventoryService.AddPart(ctx, invalidPart)
 
 	// Verify
-	s.Require().Error(err)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, expcetedError)
+	inventoryRepository.AssertNotCalled(t, "AddPart")
+	inventoryRepository.AssertExpectations(t)
 }
