@@ -20,10 +20,10 @@ func (i *InventoryImplementation) GetPart(ctx context.Context, req *inventory_v1
 	// Fetch part from service
 	part, err := i.inventoryService.GetPart(ctx, uuid)
 	if err != nil {
-		if errors.Is(err, model.ErrPartNotFound) {
-			log.Printf("part with UUID %s not found", uuid)
-			return nil, status.Errorf(codes.NotFound, "part with UUID %s not found", uuid)
-		}
+		// if errors.Is(err, model.ErrPartNotFound) {
+		// 	log.Printf("part with UUID %s not found", uuid)
+		// 	return nil, status.Errorf(codes.NotFound, "part with UUID %s not found", uuid)
+		// }
 		return nil, err
 	}
 

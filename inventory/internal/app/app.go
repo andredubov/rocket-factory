@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/andredubov/rocket-factory/shared/pkg/interceptors"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
@@ -85,6 +86,7 @@ func (a *App) initServiceProvider(_ context.Context) error {
 func (a *App) initGRPCServer(ctx context.Context) error {
 	opts := []grpc.ServerOption{
 		grpc.Creds(insecure.NewCredentials()), // Disabled security (development only)
+		grpc.UnaryInterceptor(interceptors.UnaryErrorInterceptor()),
 	}
 
 	a.grpcServer = grpc.NewServer(opts...)
