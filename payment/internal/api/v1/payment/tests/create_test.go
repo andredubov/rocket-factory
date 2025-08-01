@@ -2,18 +2,24 @@ package test
 
 import (
 	"context"
+	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/require"
 
+	api "github.com/andredubov/rocket-factory/payment/internal/api/v1/payment"
+	"github.com/andredubov/rocket-factory/payment/internal/api/v1/payment/mocks"
 	"github.com/andredubov/rocket-factory/payment/internal/converter"
 	"github.com/andredubov/rocket-factory/payment/internal/model"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
-func (s *APISuite) TestCreateSuccess() {
+func TestCreateSuccess(t *testing.T) {
 	var (
-		ctx          = context.Background()
-		expectedUuid = gofakeit.UUID()
+		paymentService = mocks.NewPaymentService(t)
+		grpcServer     = api.NewPaymentImplementation(paymentService)
+		ctx            = context.Background()
+		expectedUuid   = gofakeit.UUID()
 
 		payment = model.Payment{
 			OrderUuid:     gofakeit.UUID(),
@@ -28,10 +34,9 @@ func (s *APISuite) TestCreateSuccess() {
 		}
 	)
 
-	s.paymentService.On("Create", ctx, converter.PaymentFromRequest(req)).Return(expectedUuid, nil)
+	paymentService.On("Create", ctx, converter.PaymentFromRequest(req)).Return(expectedUuid, nil)
 
-	res, err := s.grpcServer.PayOrder(ctx, req)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
-	s.Require().Equal(expectedUuid, res.TransactionUuid)
+	res, err := grpcServer.PayOrder(ctx, req)
+	require.NoError(t, err)
+	require.Equal(t, expectedUuid, res.TransactionUuid)
 }
