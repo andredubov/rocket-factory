@@ -2,26 +2,29 @@ package tests
 
 import (
 	"context"
+	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/payment/internal/model"
+	"github.com/andredubov/rocket-factory/payment/internal/service/payment"
 )
 
-func (s *PaymentServiceSuite) TestCreateSuccess() {
+func TestCreateSuccess(t *testing.T) {
 	var (
-		ctx = context.Background()
-
-		payment = model.Payment{
+		paymentService = payment.NewService()
+		ctx            = context.Background()
+		payment        = model.Payment{
 			UserUuid:      gofakeit.UUID(),
 			OrderUuid:     gofakeit.UUID(),
 			PaymentMethod: model.PaymentMethodCard,
 		}
 	)
 
-	uuid, err := s.paymentService.Create(ctx, payment)
+	uuid, err := paymentService.Create(ctx, payment)
 
-	s.Require().NoError(err)
-	s.Require().Nil(err)
-	s.Require().NotEmpty(uuid)
+	require.NoError(t, err)
+	require.Nil(t, err)
+	require.NotEmpty(t, uuid)
 }
