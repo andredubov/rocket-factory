@@ -1,9 +1,11 @@
 package tests
 
 import (
+	"testing"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
@@ -30,7 +32,7 @@ func boolPtr(b bool) *bool {
 // TestPartToRepoModel_CompleteConversion verifies the complete conversion from domain model
 // to repository model with all fields populated. Tests that all field values including nested
 // structures, metadata, and timestamps are correctly mapped.
-func (s *InventoryRepoConverterSuite) TestPartToRepoModel_CompleteConversion() {
+func TestPartToRepoModel_CompleteConversion(t *testing.T) {
 	// Setup
 	now := time.Now()
 	source := model.Part{
@@ -66,43 +68,43 @@ func (s *InventoryRepoConverterSuite) TestPartToRepoModel_CompleteConversion() {
 	result := converter.PartToRepoModel(source)
 
 	// Verify
-	s.Require().Equal(source.Uuid, result.Uuid)
-	s.Require().Equal(source.Name, result.Name)
-	s.Require().Equal(source.Description, result.Description)
-	s.Require().Equal(source.Price, result.Price)
-	s.Require().Equal(source.StockQuantity, result.StockQuantity)
-	s.Require().Equal(repoModel.PartCategory(source.Category), result.Category)
+	require.Equal(t, source.Uuid, result.Uuid)
+	require.Equal(t, source.Name, result.Name)
+	require.Equal(t, source.Description, result.Description)
+	require.Equal(t, source.Price, result.Price)
+	require.Equal(t, source.StockQuantity, result.StockQuantity)
+	require.Equal(t, repoModel.PartCategory(source.Category), result.Category)
 
 	// Dimensions
-	s.Require().Equal(source.Dimensions.Length, result.Dimensions.Length)
-	s.Require().Equal(source.Dimensions.Width, result.Dimensions.Width)
-	s.Require().Equal(source.Dimensions.Height, result.Dimensions.Height)
-	s.Require().Equal(source.Dimensions.Weight, result.Dimensions.Weight)
+	require.Equal(t, source.Dimensions.Length, result.Dimensions.Length)
+	require.Equal(t, source.Dimensions.Width, result.Dimensions.Width)
+	require.Equal(t, source.Dimensions.Height, result.Dimensions.Height)
+	require.Equal(t, source.Dimensions.Weight, result.Dimensions.Weight)
 
 	// Manufacturer
-	s.Require().Equal(source.Manufacturer.Name, result.Manufacturer.Name)
-	s.Require().Equal(source.Manufacturer.Country, result.Manufacturer.Country)
-	s.Require().Equal(source.Manufacturer.Website, result.Manufacturer.Website)
+	require.Equal(t, source.Manufacturer.Name, result.Manufacturer.Name)
+	require.Equal(t, source.Manufacturer.Country, result.Manufacturer.Country)
+	require.Equal(t, source.Manufacturer.Website, result.Manufacturer.Website)
 
 	// Tags
-	s.Require().Equal(source.Tags, result.Tags)
+	require.Equal(t, source.Tags, result.Tags)
 
 	// Metadata
-	s.Require().NotNil(result.Metadata)
-	s.Require().Equal("value", *result.Metadata["string"].StringValue)
-	s.Require().Equal(int64(42), *result.Metadata["int"].Int64Value)
-	s.Require().Equal(3.14, *result.Metadata["float"].DoubleValue)
-	s.Require().Equal(true, *result.Metadata["boolean"].BoolValue)
+	require.NotNil(t, result.Metadata)
+	require.Equal(t, "value", *result.Metadata["string"].StringValue)
+	require.Equal(t, int64(42), *result.Metadata["int"].Int64Value)
+	require.Equal(t, 3.14, *result.Metadata["float"].DoubleValue)
+	require.Equal(t, true, *result.Metadata["boolean"].BoolValue)
 
 	// Timestamps
-	s.Require().Equal(source.CreatedAt, result.CreatedAt)
-	s.Require().Equal(source.UpdatedAt, result.UpdatedAt)
+	require.Equal(t, source.CreatedAt, result.CreatedAt)
+	require.Equal(t, source.UpdatedAt, result.UpdatedAt)
 }
 
 // TestPartToRepoModel_EmptyFields verifies the conversion handles empty/zero values correctly.
 // Tests that empty strings, zero values, nil slices, and empty nested structures are properly
 // converted without errors.
-func (s *InventoryRepoConverterSuite) TestPartToRepoModel_EmptyFields() {
+func TestPartToRepoModel_EmptyFields(t *testing.T) {
 	// Setup
 	source := model.Part{
 		Uuid:          "",
@@ -123,29 +125,29 @@ func (s *InventoryRepoConverterSuite) TestPartToRepoModel_EmptyFields() {
 	result := converter.PartToRepoModel(source)
 
 	// Verify
-	s.Require().Equal(source.Uuid, result.Uuid)
-	s.Require().Equal(source.Name, result.Name)
-	s.Require().Equal(source.Description, result.Description)
-	s.Require().Equal(source.Price, result.Price)
-	s.Require().Equal(source.StockQuantity, result.StockQuantity)
-	s.Require().Equal(repoModel.PartCategory(source.Category), result.Category)
-	s.Require().Equal(source.Dimensions.Length, result.Dimensions.Length)
-	s.Require().Equal(source.Dimensions.Width, result.Dimensions.Width)
-	s.Require().Equal(source.Dimensions.Height, result.Dimensions.Height)
-	s.Require().Equal(source.Dimensions.Weight, result.Dimensions.Weight)
-	s.Require().Equal(source.Manufacturer.Name, result.Manufacturer.Name)
-	s.Require().Equal(source.Manufacturer.Country, result.Manufacturer.Country)
-	s.Require().Equal(source.Manufacturer.Website, result.Manufacturer.Website)
-	s.Require().Nil(result.Tags)
-	s.Require().Nil(result.Metadata)
-	s.Require().Equal(source.CreatedAt, result.CreatedAt)
-	s.Require().Equal(source.UpdatedAt, result.UpdatedAt)
+	require.Equal(t, source.Uuid, result.Uuid)
+	require.Equal(t, source.Name, result.Name)
+	require.Equal(t, source.Description, result.Description)
+	require.Equal(t, source.Price, result.Price)
+	require.Equal(t, source.StockQuantity, result.StockQuantity)
+	require.Equal(t, repoModel.PartCategory(source.Category), result.Category)
+	require.Equal(t, source.Dimensions.Length, result.Dimensions.Length)
+	require.Equal(t, source.Dimensions.Width, result.Dimensions.Width)
+	require.Equal(t, source.Dimensions.Height, result.Dimensions.Height)
+	require.Equal(t, source.Dimensions.Weight, result.Dimensions.Weight)
+	require.Equal(t, source.Manufacturer.Name, result.Manufacturer.Name)
+	require.Equal(t, source.Manufacturer.Country, result.Manufacturer.Country)
+	require.Equal(t, source.Manufacturer.Website, result.Manufacturer.Website)
+	require.Nil(t, result.Tags)
+	require.Nil(t, result.Metadata)
+	require.Equal(t, source.CreatedAt, result.CreatedAt)
+	require.Equal(t, source.UpdatedAt, result.UpdatedAt)
 }
 
 // TestPartToRepoModel_PartialMetadata verifies metadata conversion handles partial/null values.
 // Tests that metadata fields with some nil values are correctly converted while maintaining
 // the structure of non-nil values.
-func (s *InventoryRepoConverterSuite) TestPartToRepoModel_PartialMetadata() {
+func TestPartToRepoModel_PartialMetadata(t *testing.T) {
 	// Setup
 	source := model.Part{
 		Metadata: map[string]model.Value{
@@ -158,19 +160,19 @@ func (s *InventoryRepoConverterSuite) TestPartToRepoModel_PartialMetadata() {
 	result := converter.PartToRepoModel(source)
 
 	// Verify
-	s.Require().NotNil(result.Metadata)
-	s.Require().Equal("test", *result.Metadata["string"].StringValue)
-	s.Require().Nil(result.Metadata["string"].Int64Value)
-	s.Require().Nil(result.Metadata["string"].DoubleValue)
-	s.Require().Nil(result.Metadata["string"].BoolValue)
-	s.Require().Nil(result.Metadata["int"].StringValue)
-	s.Require().Nil(result.Metadata["int"].Int64Value)
+	require.NotNil(t, result.Metadata)
+	require.Equal(t, "test", *result.Metadata["string"].StringValue)
+	require.Nil(t, result.Metadata["string"].Int64Value)
+	require.Nil(t, result.Metadata["string"].DoubleValue)
+	require.Nil(t, result.Metadata["string"].BoolValue)
+	require.Nil(t, result.Metadata["int"].StringValue)
+	require.Nil(t, result.Metadata["int"].Int64Value)
 }
 
 // TestPartToModel_CompleteConversion verifies the complete conversion from repository model
 // to domain model with all fields populated. Tests the reverse mapping of all field values
 // including nested structures and metadata.
-func (s *InventoryRepoConverterSuite) TestPartToModel_CompleteConversion() {
+func TestPartToModel_CompleteConversion(t *testing.T) {
 	// Setup
 	now := time.Now()
 	source := repoModel.Part{
@@ -206,42 +208,42 @@ func (s *InventoryRepoConverterSuite) TestPartToModel_CompleteConversion() {
 	result := converter.PartToModel(source)
 
 	// Verify
-	s.Require().Equal(source.Uuid, result.Uuid)
-	s.Require().Equal(source.Name, result.Name)
-	s.Require().Equal(source.Description, result.Description)
-	s.Require().Equal(source.Price, result.Price)
-	s.Require().Equal(source.StockQuantity, result.StockQuantity)
-	s.Require().Equal(model.PartCategory(source.Category), result.Category)
+	require.Equal(t, source.Uuid, result.Uuid)
+	require.Equal(t, source.Name, result.Name)
+	require.Equal(t, source.Description, result.Description)
+	require.Equal(t, source.Price, result.Price)
+	require.Equal(t, source.StockQuantity, result.StockQuantity)
+	require.Equal(t, model.PartCategory(source.Category), result.Category)
 
 	// Dimensions
-	s.Require().Equal(source.Dimensions.Length, result.Dimensions.Length)
-	s.Require().Equal(source.Dimensions.Width, result.Dimensions.Width)
-	s.Require().Equal(source.Dimensions.Height, result.Dimensions.Height)
-	s.Require().Equal(source.Dimensions.Weight, result.Dimensions.Weight)
+	require.Equal(t, source.Dimensions.Length, result.Dimensions.Length)
+	require.Equal(t, source.Dimensions.Width, result.Dimensions.Width)
+	require.Equal(t, source.Dimensions.Height, result.Dimensions.Height)
+	require.Equal(t, source.Dimensions.Weight, result.Dimensions.Weight)
 
 	// Manufacturer
-	s.Require().Equal(source.Manufacturer.Name, result.Manufacturer.Name)
-	s.Require().Equal(source.Manufacturer.Country, result.Manufacturer.Country)
-	s.Require().Equal(source.Manufacturer.Website, result.Manufacturer.Website)
+	require.Equal(t, source.Manufacturer.Name, result.Manufacturer.Name)
+	require.Equal(t, source.Manufacturer.Country, result.Manufacturer.Country)
+	require.Equal(t, source.Manufacturer.Website, result.Manufacturer.Website)
 
 	// Tags
-	s.Require().Equal(source.Tags, result.Tags)
+	require.Equal(t, source.Tags, result.Tags)
 
 	// Metadata
-	s.Require().NotNil(result.Metadata)
-	s.Require().Equal("value", *result.Metadata["string"].StringValue)
-	s.Require().Equal(int64(42), *result.Metadata["int"].Int64Value)
-	s.Require().Equal(3.14, *result.Metadata["float"].DoubleValue)
-	s.Require().Equal(true, *result.Metadata["boolean"].BoolValue)
+	require.NotNil(t, result.Metadata)
+	require.Equal(t, "value", *result.Metadata["string"].StringValue)
+	require.Equal(t, int64(42), *result.Metadata["int"].Int64Value)
+	require.Equal(t, 3.14, *result.Metadata["float"].DoubleValue)
+	require.Equal(t, true, *result.Metadata["boolean"].BoolValue)
 
 	// Timestamps
-	s.Require().Equal(source.CreatedAt, result.CreatedAt)
-	s.Require().Equal(source.UpdatedAt, result.UpdatedAt)
+	require.Equal(t, source.CreatedAt, result.CreatedAt)
+	require.Equal(t, source.UpdatedAt, result.UpdatedAt)
 }
 
 // TestPartToModel_EmptyFields verifies the reverse conversion handles empty/zero values correctly.
 // Ensures empty repository model fields are properly converted to their domain model equivalents.
-func (s *InventoryRepoConverterSuite) TestPartToModel_EmptyFields() {
+func TestPartToModel_EmptyFields(t *testing.T) {
 	// Setup
 	source := repoModel.Part{
 		Uuid:          "",
@@ -262,28 +264,28 @@ func (s *InventoryRepoConverterSuite) TestPartToModel_EmptyFields() {
 	result := converter.PartToModel(source)
 
 	// Verify
-	s.Require().Equal(source.Uuid, result.Uuid)
-	s.Require().Equal(source.Name, result.Name)
-	s.Require().Equal(source.Description, result.Description)
-	s.Require().Equal(source.Price, result.Price)
-	s.Require().Equal(source.StockQuantity, result.StockQuantity)
-	s.Require().Equal(model.PartCategory(source.Category), result.Category)
-	s.Require().Equal(source.Dimensions.Length, result.Dimensions.Length)
-	s.Require().Equal(source.Dimensions.Width, result.Dimensions.Width)
-	s.Require().Equal(source.Dimensions.Height, result.Dimensions.Height)
-	s.Require().Equal(source.Dimensions.Weight, result.Dimensions.Weight)
-	s.Require().Equal(source.Manufacturer.Name, result.Manufacturer.Name)
-	s.Require().Equal(source.Manufacturer.Country, result.Manufacturer.Country)
-	s.Require().Equal(source.Manufacturer.Website, result.Manufacturer.Website)
-	s.Require().Nil(result.Tags)
-	s.Require().Nil(result.Metadata)
-	s.Require().Equal(source.CreatedAt, result.CreatedAt)
-	s.Require().Equal(source.UpdatedAt, result.UpdatedAt)
+	require.Equal(t, source.Uuid, result.Uuid)
+	require.Equal(t, source.Name, result.Name)
+	require.Equal(t, source.Description, result.Description)
+	require.Equal(t, source.Price, result.Price)
+	require.Equal(t, source.StockQuantity, result.StockQuantity)
+	require.Equal(t, model.PartCategory(source.Category), result.Category)
+	require.Equal(t, source.Dimensions.Length, result.Dimensions.Length)
+	require.Equal(t, source.Dimensions.Width, result.Dimensions.Width)
+	require.Equal(t, source.Dimensions.Height, result.Dimensions.Height)
+	require.Equal(t, source.Dimensions.Weight, result.Dimensions.Weight)
+	require.Equal(t, source.Manufacturer.Name, result.Manufacturer.Name)
+	require.Equal(t, source.Manufacturer.Country, result.Manufacturer.Country)
+	require.Equal(t, source.Manufacturer.Website, result.Manufacturer.Website)
+	require.Nil(t, result.Tags)
+	require.Nil(t, result.Metadata)
+	require.Equal(t, source.CreatedAt, result.CreatedAt)
+	require.Equal(t, source.UpdatedAt, result.UpdatedAt)
 }
 
 // TestPartToModel_PartialMetadata verifies reverse metadata conversion handles partial values.
 // Tests that repository metadata with some nil values converts correctly to domain model metadata.
-func (s *InventoryRepoConverterSuite) TestPartToModel_PartialMetadata() {
+func TestPartToModel_PartialMetadata(t *testing.T) {
 	// Setup
 	source := repoModel.Part{
 		Metadata: map[string]repoModel.Value{
@@ -296,18 +298,18 @@ func (s *InventoryRepoConverterSuite) TestPartToModel_PartialMetadata() {
 	result := converter.PartToModel(source)
 
 	// Verify
-	s.Require().NotNil(result.Metadata)
-	s.Require().Equal("test", *result.Metadata["string"].StringValue)
-	s.Require().Nil(result.Metadata["string"].Int64Value)
-	s.Require().Nil(result.Metadata["string"].DoubleValue)
-	s.Require().Nil(result.Metadata["string"].BoolValue)
-	s.Require().Nil(result.Metadata["int"].StringValue)
-	s.Require().Nil(result.Metadata["int"].Int64Value)
+	require.NotNil(t, result.Metadata)
+	require.Equal(t, "test", *result.Metadata["string"].StringValue)
+	require.Nil(t, result.Metadata["string"].Int64Value)
+	require.Nil(t, result.Metadata["string"].DoubleValue)
+	require.Nil(t, result.Metadata["string"].BoolValue)
+	require.Nil(t, result.Metadata["int"].StringValue)
+	require.Nil(t, result.Metadata["int"].Int64Value)
 }
 
 // TestPartToModel_CategoryConversion specifically tests the category enum conversion between
 // repository and domain models. Verifies all valid category values are correctly mapped.
-func (s *InventoryRepoConverterSuite) TestPartToModel_CategoryConversion() {
+func TestPartToModel_CategoryConversion(t *testing.T) {
 	// Test all valid category values
 	categories := []repoModel.PartCategory{
 		repoModel.PartCategoryUnknown,
@@ -320,6 +322,6 @@ func (s *InventoryRepoConverterSuite) TestPartToModel_CategoryConversion() {
 	for _, category := range categories {
 		source := repoModel.Part{Category: category}
 		result := converter.PartToModel(source)
-		s.Equal(model.PartCategory(category), result.Category)
+		require.Equal(t, model.PartCategory(category), result.Category)
 	}
 }

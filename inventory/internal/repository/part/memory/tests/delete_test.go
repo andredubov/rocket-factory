@@ -3,18 +3,23 @@ package tests
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
+	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
 // TestDeletePart_Success verifies that an existing part can be successfully deleted from the repository.
-// It first adds a test part, then deletes it, and finally verifies the part no longer exists.
-func (s *InventoryRepositorySuite) TestDeletePart_Success() {
+func TestDeletePart_Success(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid:          gofakeit.UUID(),
@@ -40,46 +45,44 @@ func (s *InventoryRepositorySuite) TestDeletePart_Success() {
 		}
 	)
 
-	err := s.inventoryRepository.AddPart(ctx, part)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err := inventoryRepository.AddPart(ctx, part)
+	require.NoError(t, err)
+	require.Nil(t, err)
 
 	// Test
-	err = s.inventoryRepository.DeletePart(ctx, part.Uuid)
+	err = inventoryRepository.DeletePart(ctx, part.Uuid)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Nil(err)
-
-	retrived, err := s.inventoryRepository.GetPart(ctx, part.Uuid)
-	s.Require().Error(err)
-	s.Require().Equal(err, repository.ErrPartWithUUIDNotFound(part.Uuid))
-	s.Require().Nil(retrived)
+	require.NoError(t, err)
+	retrived, err := inventoryRepository.GetPart(ctx, part.Uuid)
+	require.Error(t, err)
+	require.Equal(t, err, repository.ErrPartWithUUIDNotFound(part.Uuid))
+	require.Nil(t, retrived)
 }
 
 // TestDeletePart_NotFound verifies that attempting to delete a non-existent part
-// returns the expected ErrPartWithUUIDNotFound error. Tests error handling for missing parts.
-func (s *InventoryRepositorySuite) TestDeletePart_NotFound() {
+func TestDeletePart_NotFound(t *testing.T) {
 	// Setup
 	var (
-		ctx             = context.Background()
-		nonExistentUUID = gofakeit.UUID()
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		nonExistentUUID     = gofakeit.UUID()
 	)
 
 	// Test
-	err := s.inventoryRepository.DeletePart(ctx, nonExistentUUID)
+	err := inventoryRepository.DeletePart(ctx, nonExistentUUID)
 
 	// Verify
-	s.Require().Error(err)
-	s.Require().Equal(err, repository.ErrPartWithUUIDNotFound(nonExistentUUID))
+	require.Error(t, err)
+	require.Equal(t, err, repository.ErrPartWithUUIDNotFound(nonExistentUUID))
 }
 
 // TestDeletePart_Concurrent verifies thread-safe deletion behavior by attempting to delete
-// the same part concurrently from multiple goroutines. Ensures only one deletion succeeds
-// while others receive appropriate not-found errors, maintaining data consistency.
-func (s *InventoryRepositorySuite) TestDeletePart_Concurrent() {
+func TestDeletePart_Concurrent(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid:          gofakeit.UUID(),
@@ -105,9 +108,8 @@ func (s *InventoryRepositorySuite) TestDeletePart_Concurrent() {
 		}
 	)
 
-	err := s.inventoryRepository.AddPart(ctx, part)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err := inventoryRepository.AddPart(ctx, part)
+	require.NoError(t, err)
 
 	// Test
 	var wg sync.WaitGroup
@@ -116,30 +118,29 @@ func (s *InventoryRepositorySuite) TestDeletePart_Concurrent() {
 	var err1, err2 error
 	go func() {
 		defer wg.Done()
-		err1 = s.inventoryRepository.DeletePart(context.Background(), part.Uuid)
+		err1 = inventoryRepository.DeletePart(context.Background(), part.Uuid)
 	}()
 
 	go func() {
 		defer wg.Done()
-		err2 = s.inventoryRepository.DeletePart(context.Background(), part.Uuid)
+		err2 = inventoryRepository.DeletePart(context.Background(), part.Uuid)
 	}()
 
 	wg.Wait()
 
 	// Verify
-	s.Assert().True((err1 == nil && err2 != nil) || (err1 != nil && err2 == nil),
-		"Exactly one deletion should succeed")
+	assert.True(t, (err1 == nil && err2 != nil) || (err1 != nil && err2 == nil), "Exactly one deletion should succeed")
 
 	if err1 == nil {
-		s.Require().Error(err2)
-		s.Require().Equal(err2, repository.ErrPartWithUUIDNotFound(part.Uuid))
+		require.Error(t, err2)
+		require.Equal(t, err2, repository.ErrPartWithUUIDNotFound(part.Uuid))
 	} else {
-		s.Require().Error(err1)
-		s.Require().Equal(err1, repository.ErrPartWithUUIDNotFound(part.Uuid))
+		require.Error(t, err1)
+		require.Equal(t, err1, repository.ErrPartWithUUIDNotFound(part.Uuid))
 	}
 
-	retrived, err := s.inventoryRepository.GetPart(ctx, part.Uuid)
-	s.Require().Error(err)
-	s.Require().Equal(err, repository.ErrPartWithUUIDNotFound(part.Uuid))
-	s.Require().Nil(retrived)
+	retrived, err := inventoryRepository.GetPart(ctx, part.Uuid)
+	require.Error(t, err)
+	require.Equal(t, err, repository.ErrPartWithUUIDNotFound(part.Uuid))
+	require.Nil(t, retrived)
 }

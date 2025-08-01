@@ -3,180 +3,413 @@ package tests
 import (
 	"context"
 	"sync"
+	"testing"
+
+	"github.com/brianvoe/gofakeit/v7"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
 // TestGetPartList_NoFilter verifies that GetPartList returns all parts when no filter is applied.
-// It checks that the correct number of parts is returned and no error occurs.
-func (s *InventoryRepositorySuite) TestGetPartList_NoFilter() {
+func TestGetPartList_NoFilter(t *testing.T) {
+	// Setup
+	var (
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		parts               = []model.Part{
+			{
+				Uuid:          gofakeit.UUID(),
+				Name:          "Part 1",
+				Description:   "description 1",
+				Price:         123.45,
+				StockQuantity: 12,
+				Category:      model.PartCategoryEngine,
+			},
+			{
+				Uuid:          gofakeit.UUID(),
+				Name:          "Part 2",
+				Description:   "description 2",
+				Price:         123.45,
+				StockQuantity: 12,
+				Category:      model.PartCategoryWing,
+			},
+		}
+	)
+
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
 	// Test
-
-	ctx := context.Background()
-
-	result, err := s.inventoryRepository.GetPartList(ctx, model.PartFilter{})
+	expectedParts, err := inventoryRepository.GetPartList(ctx, model.PartFilter{})
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Len(result, 20)
+	require.NoError(t, err)
+	require.Equal(t, len(expectedParts), len(parts))
+	for _, part := range parts {
+		require.Contains(t, expectedParts, part)
+	}
 }
 
 // TestGetPartList_FilterByUUIDs verifies filtering parts by UUIDs works correctly.
-// Tests that only parts with matching UUIDs are returned, and non-existent UUIDs are ignored.
-func (s *InventoryRepositorySuite) TestGetPartList_FilterByUUIDs() {
+func TestGetPartList_FilterByUUIDs(t *testing.T) {
 	// Setup
 	var (
-		ctx   = context.Background()
-		uuids = []string{s.parts[0].Uuid, s.parts[1].Uuid, "non-existent-uuid"}
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		uuidOne             = uuid.New().String()
+		uuidTwo             = uuid.New().String()
+
+		parts = []model.Part{
+			{
+				Uuid:        uuidOne,
+				Name:        "Part 1",
+				Description: "description 1",
+			},
+			{
+				Uuid:        uuidTwo,
+				Name:        "Part 2",
+				Description: "description 2",
+			},
+		}
+
+		partFilter = model.PartFilter{
+			UUIDs: []string{
+				uuidOne,
+				uuidTwo,
+				"non-existent-uuid",
+			},
+		}
 	)
 
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
 	// Test
-	result, err := s.inventoryRepository.GetPartList(ctx, model.PartFilter{UUIDs: uuids})
+	expectedParts, err := inventoryRepository.GetPartList(ctx, partFilter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Len(result, 2)
-	s.Require().Contains([]string{result[0].Uuid, result[1].Uuid}, s.parts[0].Uuid)
-	s.Require().Contains([]string{result[0].Uuid, result[1].Uuid}, s.parts[1].Uuid)
+	require.NoError(t, err)
+	require.Equal(t, len(expectedParts), len(parts))
+	for _, part := range parts {
+		require.Contains(t, expectedParts, part)
+	}
 }
 
 // TestGetPartList_FilterByNames verifies filtering parts by names functions properly.
-// Ensures the repository returns all parts matching the provided names and ignores non-existent names.
-func (s *InventoryRepositorySuite) TestGetPartList_FilterByNames() {
+func TestGetPartList_FilterByNames(t *testing.T) {
 	// Setup
 	var (
-		ctx   = context.Background()
-		names = []string{s.parts[0].Name, s.parts[1].Name, "non-existent-name"}
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		partNameOne         = "Part 1"
+		partNameTwo         = "Part 2"
+
+		parts = []model.Part{
+			{
+				Uuid:        gofakeit.UUID(),
+				Name:        partNameOne,
+				Description: "description 1",
+			},
+			{
+				Uuid:        gofakeit.UUID(),
+				Name:        partNameTwo,
+				Description: "description 2",
+			},
+		}
+
+		partFilter = model.PartFilter{
+			Names: []string{
+				partNameOne,
+				partNameTwo,
+				"non-existent-name",
+			},
+		}
 	)
 
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
 	// Test
-	result, err := s.inventoryRepository.GetPartList(ctx, model.PartFilter{Names: names})
+	expectedParts, err := inventoryRepository.GetPartList(ctx, partFilter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().True(len(result) >= 2) // At least the two we filtered for
-	for _, part := range result {
-		s.Require().Contains(names[:2], part.Name)
+	require.NoError(t, err)
+	require.Equal(t, len(expectedParts), len(parts))
+	for _, part := range parts {
+		require.Contains(t, expectedParts, part)
 	}
 }
 
 // TestGetPartList_FilterByCategories verifies filtering by part categories works as expected.
-// Checks that only parts belonging to the specified categories are returned.
-func (s *InventoryRepositorySuite) TestGetPartList_FilterByCategories() {
+func TestGetPartList_FilterByCategories(t *testing.T) {
 	// Setup
 	var (
-		ctx        = context.Background()
-		categories = []model.PartCategory{model.PartCategoryEngine, model.PartCategoryFuel}
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		partCategoryOne     = model.PartCategoryEngine
+		partCategoryTwo     = model.PartCategoryWing
+
+		parts = []model.Part{
+			{
+				Uuid:          gofakeit.UUID(),
+				Name:          "Part 1",
+				Description:   "description 1",
+				Price:         123.45,
+				StockQuantity: 12,
+				Category:      partCategoryOne,
+			},
+			{
+				Uuid:          gofakeit.UUID(),
+				Name:          "Part 2",
+				Description:   "description 2",
+				Price:         123.45,
+				StockQuantity: 12,
+				Category:      partCategoryTwo,
+			},
+		}
+
+		partFilter = model.PartFilter{
+			Categories: []model.PartCategory{
+				partCategoryOne,
+				partCategoryTwo,
+				model.PartCategoryUnknown,
+			},
+		}
 	)
 
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
 	// Test
-	result, err := s.inventoryRepository.GetPartList(ctx, model.PartFilter{Categories: categories})
+	expectedParts, err := inventoryRepository.GetPartList(ctx, partFilter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().True(len(result) > 0)
-	for _, part := range result {
-		s.Require().Contains(categories, part.Category)
+	require.NoError(t, err)
+	require.Equal(t, len(expectedParts), len(parts))
+	for _, part := range parts {
+		require.Contains(t, expectedParts, part)
 	}
 }
 
 // TestGetPartList_FilterByCountries verifies filtering by manufacturer countries functions correctly.
-// Tests that only parts manufactured in the specified countries are returned.
-func (s *InventoryRepositorySuite) TestGetPartList_FilterByCountries() {
+func TestGetPartList_FilterByCountries(t *testing.T) {
 	// Setup
 	var (
-		ctx       = context.Background()
-		countries = []string{"USA", "Germany"}
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		countryOne          = "Russia"
+		countryTwo          = "USA"
+
+		parts = []model.Part{
+			{
+				Uuid:         gofakeit.UUID(),
+				Name:         "Part 1",
+				Description:  "description 1",
+				Manufacturer: model.Manufacturer{Country: countryOne},
+			},
+			{
+				Uuid:         gofakeit.UUID(),
+				Name:         "Part 2",
+				Description:  "description 2",
+				Manufacturer: model.Manufacturer{Country: countryTwo},
+			},
+		}
+
+		partFilter = model.PartFilter{ManufacturerCountries: []string{
+			countryOne,
+			countryTwo,
+			"unknowm country",
+		}}
 	)
 
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
 	// Test
-	result, err := s.inventoryRepository.GetPartList(ctx, model.PartFilter{ManufacturerCountries: countries})
+	expectedParts, err := inventoryRepository.GetPartList(ctx, partFilter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().True(len(result) > 0)
-	for _, part := range result {
-		s.Require().Contains(countries, part.Manufacturer.Country)
+	require.NoError(t, err)
+	require.Equal(t, len(expectedParts), len(parts))
+	for _, part := range parts {
+		require.Contains(t, expectedParts, part)
 	}
 }
 
 // TestGetPartList_FilterByTags verifies filtering by tags works properly.
-// Ensures parts are correctly filtered when they contain any of the specified tags.
-func (s *InventoryRepositorySuite) TestGetPartList_FilterByTags() {
+func TestGetPartList_FilterByTags(t *testing.T) {
 	// Setup
 	var (
-		ctx  = context.Background()
-		tags = []string{s.parts[0].Tags[0], s.parts[1].Tags[1]}
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		tagOne              = "tagOne"
+		tagTwo              = "tagTwo"
+		tagTen              = "tagThree"
+
+		parts = []model.Part{
+			{
+				Uuid:        gofakeit.UUID(),
+				Name:        "Part 1",
+				Description: "description 1",
+				Tags:        []string{tagOne, tagTwo},
+			},
+			{
+				Uuid:        gofakeit.UUID(),
+				Name:        "Part 2",
+				Description: "description 2",
+				Tags:        []string{tagOne, tagTen},
+			},
+		}
+
+		partFilter = model.PartFilter{Tags: []string{
+			tagTwo,
+			tagTen,
+			tagOne,
+			"unknowm tag",
+		}}
 	)
 
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
 	// Test
-	result, err := s.inventoryRepository.GetPartList(ctx, model.PartFilter{Tags: tags})
+	expectedParts, err := inventoryRepository.GetPartList(ctx, partFilter)
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().True(len(result) > 0)
-	for _, part := range result {
-		hasMatchingTag := false
-		for _, tag := range tags {
-			for _, partTag := range part.Tags {
-				if tag == partTag {
-					hasMatchingTag = true
-					break
-				}
-			}
-			if hasMatchingTag {
-				break
-			}
-		}
-		s.Require().True(hasMatchingTag)
+	require.NoError(t, err)
+	require.Equal(t, len(expectedParts), len(parts))
+	for _, part := range parts {
+		require.Contains(t, expectedParts, part)
 	}
 }
 
 // TestGetPartList_CombinedFilters verifies that multiple filters can be combined.
-// Tests that the repository correctly applies all specified filters simultaneously.
-func (s *InventoryRepositorySuite) TestGetPartList_CombinedFilters() {
+func TestGetPartList_CombinedFilters(t *testing.T) {
 	// Setup
 	var (
-		ctx    = context.Background()
-		filter = model.PartFilter{
-			Categories:            []model.PartCategory{model.PartCategoryEngine},
-			ManufacturerCountries: []string{"USA"},
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		countryOne          = "Russia"
+		countryTwo          = "USA"
+		partCategoryOne     = model.PartCategoryEngine
+		partCategoryTwo     = model.PartCategoryWing
+
+		parts = []model.Part{
+			{
+				Uuid:         gofakeit.UUID(),
+				Name:         "Part 1",
+				Description:  "description 1",
+				Manufacturer: model.Manufacturer{Country: countryOne},
+				Category:     partCategoryOne,
+			},
+			{
+				Uuid:         gofakeit.UUID(),
+				Name:         "Part 2",
+				Description:  "description 2",
+				Manufacturer: model.Manufacturer{Country: countryTwo},
+				Category:     partCategoryTwo,
+			},
+		}
+
+		partFilter = model.PartFilter{
+			ManufacturerCountries: []string{countryOne, countryTwo, "unknowm country"},
+			Categories:            []model.PartCategory{partCategoryOne, partCategoryTwo, model.PartCategoryUnknown},
 		}
 	)
 
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
 	// Test
-	result, err := s.inventoryRepository.GetPartList(ctx, filter)
+	expcetedParts, err := inventoryRepository.GetPartList(ctx, partFilter)
 
 	// Verify
-	s.Require().NoError(err)
-	for _, part := range result {
-		s.Require().Equal(model.PartCategoryEngine, part.Category)
-		s.Require().Equal("USA", part.Manufacturer.Country)
+	require.NoError(t, err)
+	for _, part := range expcetedParts {
+		require.Contains(t, expcetedParts, part)
 	}
 }
 
 // TestGetPartList_ConcurrentAccess verifies thread-safe behavior during concurrent access.
-// Ensures the repository can handle multiple simultaneous read operations without errors.
-func (s *InventoryRepositorySuite) TestGetPartList_ConcurrentAccess() {
+func TestGetPartList_ConcurrentAccess(t *testing.T) {
 	// Test
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		wg      sync.WaitGroup
 		ctx     = context.Background()
 		results = make(chan []model.Part, 5)
 		errs    = make(chan error, 5)
+
+		countryOne      = "Russia"
+		countryTwo      = "USA"
+		partCategoryOne = model.PartCategoryEngine
+		partCategoryTwo = model.PartCategoryWing
+
+		parts = []model.Part{
+			{
+				Uuid:         gofakeit.UUID(),
+				Name:         "Part 1",
+				Description:  "description 1",
+				Manufacturer: model.Manufacturer{Country: countryOne},
+				Category:     partCategoryOne,
+			},
+			{
+				Uuid:         gofakeit.UUID(),
+				Name:         "Part 2",
+				Description:  "description 2",
+				Manufacturer: model.Manufacturer{Country: countryTwo},
+				Category:     partCategoryTwo,
+			},
+		}
+
+		partFilter = model.PartFilter{
+			ManufacturerCountries: []string{countryOne, countryTwo, "unknowm country"},
+			Categories:            []model.PartCategory{partCategoryOne, partCategoryTwo, model.PartCategoryUnknown},
+		}
 	)
 
+	// Insert data into Inventory repository
+	for _, part := range parts {
+		err := inventoryRepository.AddPart(ctx, part)
+		require.NoError(t, err)
+	}
+
+	// Test
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res, err := s.inventoryRepository.GetPartList(ctx, model.PartFilter{})
+			retrivedParts, err := inventoryRepository.GetPartList(ctx, partFilter)
 			if err != nil {
 				errs <- err
 				return
 			}
-			results <- res
+			results <- retrivedParts
 		}()
 	}
 
@@ -186,16 +419,15 @@ func (s *InventoryRepositorySuite) TestGetPartList_ConcurrentAccess() {
 
 	// Verify
 	for res := range results {
-		s.Require().Len(res, 20)
+		require.Equal(t, len(res), len(parts))
 	}
 	for err := range errs {
-		s.Require().NoError(err)
+		require.NoError(t, err)
 	}
 }
 
 // TestGetPartList_EmptyRepository verifies behavior when querying an empty repository.
-// Checks that an empty result is returned without errors when no parts exist.
-func (s *InventoryRepositorySuite) TestGetPartList_EmptyRepository() {
+func TestGetPartList_EmptyRepository(t *testing.T) {
 	// Setup
 	var (
 		ctx       = context.Background()
@@ -206,6 +438,6 @@ func (s *InventoryRepositorySuite) TestGetPartList_EmptyRepository() {
 	result, err := emptyRepo.GetPartList(ctx, model.PartFilter{})
 
 	// Verify
-	s.Require().NoError(err)
-	s.Require().Empty(result)
+	require.NoError(t, err)
+	require.Empty(t, result)
 }

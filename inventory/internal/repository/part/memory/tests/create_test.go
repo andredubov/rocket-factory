@@ -2,20 +2,24 @@ package tests
 
 import (
 	"context"
+	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/dvln/testify/assert"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
+	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
 // TestAddPart_Success verifies that a valid part can be successfully added to the repository.
-func (s *InventoryRepositorySuite) TestAddPart_Success() {
-	// Generate a random part using gofakeit
+func TestAddPart_Success(t *testing.T) {
+	// Setup
 	var (
-		ctx  = context.Background()
-		part = model.Part{
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		part                = model.Part{
 			Uuid:          gofakeit.UUID(),
 			Name:          gofakeit.Name(),
 			Description:   gofakeit.Sentence(10),
@@ -39,21 +43,21 @@ func (s *InventoryRepositorySuite) TestAddPart_Success() {
 	)
 
 	// Add the part
-	err := s.inventoryRepository.AddPart(ctx, part)
+	err := inventoryRepository.AddPart(ctx, part)
 
 	// Verify no error and part exists
-	s.Require().NoError(err)
-	s.Require().Nil(err)
-	retrieved, err := s.inventoryRepository.GetPart(ctx, part.Uuid)
-	s.Require().NoError(err)
-	s.Require().Equal(part, *retrieved)
+	require.NoError(t, err)
+	retrieved, err := inventoryRepository.GetPart(ctx, part.Uuid)
+	require.NoError(t, err)
+	require.Equal(t, part, *retrieved)
 }
 
 // TestAddPart_DuplicateUUID tests that attempting to add a part with an existing UUID
-// returns the expected error (ErrPartWithUUIDExists). Verifies duplicate detection
-func (s *InventoryRepositorySuite) TestAddPart_DuplicateUUID() {
-	// Create a test part
+func TestAddPart_DuplicateUUID(t *testing.T) {
+	// Setup
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid:          gofakeit.UUID(),
@@ -64,23 +68,25 @@ func (s *InventoryRepositorySuite) TestAddPart_DuplicateUUID() {
 	)
 
 	// Add the part first time (should succeed)
-	err := s.inventoryRepository.AddPart(ctx, part)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err := inventoryRepository.AddPart(ctx, part)
+	require.NoError(t, err)
+	require.Nil(t, err)
 
 	// Try to add again with same UUID
-	err = s.inventoryRepository.AddPart(ctx, part)
+	err = inventoryRepository.AddPart(ctx, part)
 
 	// Verify we get the expected error
-	s.Require().Error(err)
-	s.Require().Equal(repository.ErrPartWithUUIDExists(part.Uuid), err)
+	require.Error(t, err)
+	require.Equal(t, repository.ErrPartWithUUIDExists(part.Uuid), err)
 }
 
 // TestAddPart_EmptyPart verifies that a minimal valid part (with only required fields)
 // can be successfully added to the repository. Tests minimal valid input case.
-func (s *InventoryRepositorySuite) TestAddPart_EmptyPart() {
-	// Test with minimal valid part
+func TestAddPart_EmptyPart(t *testing.T) {
+	// Setup
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid:     gofakeit.UUID(),
@@ -89,16 +95,21 @@ func (s *InventoryRepositorySuite) TestAddPart_EmptyPart() {
 		}
 	)
 
-	err := s.inventoryRepository.AddPart(ctx, part)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	// Test
+	err := inventoryRepository.AddPart(ctx, part)
+
+	// Verify
+	require.NoError(t, err)
+	require.Nil(t, err)
 }
 
 // TestAddPart_ZeroValues verifies that a part with zero values for optional fields
 // can be successfully added. Tests default/empty values handling.
-func (s *InventoryRepositorySuite) TestAddPart_ZeroValues() {
-	// Test with zero values
+func TestAddPart_ZeroValues(t *testing.T) {
+	// Setup
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid:          gofakeit.UUID(),
@@ -114,17 +125,19 @@ func (s *InventoryRepositorySuite) TestAddPart_ZeroValues() {
 		}
 	)
 
-	err := s.inventoryRepository.AddPart(ctx, part)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	// Test
+	err := inventoryRepository.AddPart(ctx, part)
+
+	// Verify
+	require.NoError(t, err)
 }
 
 // TestAddPart_ConcurrentAccess verifies thread-safe behavior by attempting to add
-// the same part concurrently from multiple goroutines. Ensures only one succeeds
-// and others get duplicate error, while maintaining data consistency.
-func (s *InventoryRepositorySuite) TestAddPart_ConcurrentAccess() {
-	// This test verifies the mutex protection
+func TestAddPart_ConcurrentAccess(t *testing.T) {
+	// Setup
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		ctx  = context.Background()
 		part = model.Part{
 			Uuid:          gofakeit.UUID(),
@@ -139,9 +152,9 @@ func (s *InventoryRepositorySuite) TestAddPart_ConcurrentAccess() {
 
 	for i := 0; i < numWorkers; i++ {
 		go func() {
-			err := s.inventoryRepository.AddPart(ctx, part)
+			err := inventoryRepository.AddPart(ctx, part)
 			if err != nil {
-				assert.Equal(s.T(), repository.ErrPartWithUUIDExists(part.Uuid), err)
+				assert.Equal(t, repository.ErrPartWithUUIDExists(part.Uuid), err)
 			}
 			done <- true
 		}()
@@ -153,7 +166,7 @@ func (s *InventoryRepositorySuite) TestAddPart_ConcurrentAccess() {
 	}
 
 	// Verify part was added exactly once
-	retrieved, err := s.inventoryRepository.GetPart(ctx, part.Uuid)
-	s.Require().NoError(err)
-	s.Require().Equal(part, *retrieved)
+	retrievedPart, err := inventoryRepository.GetPart(ctx, part.Uuid)
+	require.NoError(t, err)
+	require.Equal(t, part, *retrievedPart)
 }

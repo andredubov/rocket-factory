@@ -3,17 +3,22 @@ package tests
 import (
 	"context"
 	"sync"
+	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
+	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
 // TestUpdatePart_Success verifies that an existing part can be successfully updated in the repository.
-func (s *InventoryRepositorySuite) TestUpdatePart_Success() {
+func TestUpdatePart_Success(t *testing.T) {
 	// Setup
 	var (
+		inventoryRepository = memory.NewInventoryRepository()
+
 		ctx          = context.Background()
 		originalPart = model.Part{
 			Uuid:          gofakeit.UUID(),
@@ -39,9 +44,8 @@ func (s *InventoryRepositorySuite) TestUpdatePart_Success() {
 		}
 	)
 
-	err := s.inventoryRepository.AddPart(ctx, originalPart)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err := inventoryRepository.AddPart(ctx, originalPart)
+	require.NoError(t, err)
 
 	// Create updated version of the part
 	updatedPart := originalPart
@@ -51,81 +55,85 @@ func (s *InventoryRepositorySuite) TestUpdatePart_Success() {
 	updatedPart.StockQuantity = int64(gofakeit.IntRange(101, 200))
 
 	// Test
-	err = s.inventoryRepository.UpdatePart(ctx, updatedPart)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err = inventoryRepository.UpdatePart(ctx, updatedPart)
+	require.NoError(t, err)
 
 	// Verify
-	retrievedPart, err := s.inventoryRepository.GetPart(ctx, originalPart.Uuid)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
-	s.Require().Equal(updatedPart, *retrievedPart)
-	s.Require().NotEqual(originalPart.Name, retrievedPart.Name)
-	s.Require().NotEqual(originalPart.Description, retrievedPart.Description)
-	s.Require().NotEqual(originalPart.Price, retrievedPart.Price)
-	s.Require().NotEqual(originalPart.StockQuantity, retrievedPart.StockQuantity)
+	retrievedPart, err := inventoryRepository.GetPart(ctx, originalPart.Uuid)
+	require.NoError(t, err)
+	require.Equal(t, updatedPart, *retrievedPart)
+	require.NotEqual(t, originalPart.Name, retrievedPart.Name)
+	require.NotEqual(t, originalPart.Description, retrievedPart.Description)
+	require.NotEqual(t, originalPart.Price, retrievedPart.Price)
+	require.NotEqual(t, originalPart.StockQuantity, retrievedPart.StockQuantity)
 }
 
 // TestUpdatePart_NotFound verifies that attempting to update a non-existent part
-// returns the expected ErrPartWithUUIDNotFound error.
-func (s *InventoryRepositorySuite) TestUpdatePart_NotFound() {
+func TestUpdatePart_NotFound(t *testing.T) {
 	// Setup
-	ctx := context.Background()
-	nonExistentPart := model.Part{
-		Uuid:          gofakeit.UUID(),
-		Name:          gofakeit.Word(),
-		Description:   gofakeit.Sentence(10),
-		Price:         gofakeit.Float64Range(1, 1000),
-		StockQuantity: int64(gofakeit.IntRange(1, 100)),
-		Category:      model.PartCategory(gofakeit.IntRange(1, 4)),
-	}
+	var (
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		nonExistentPart     = model.Part{
+			Uuid:          gofakeit.UUID(),
+			Name:          gofakeit.Word(),
+			Description:   gofakeit.Sentence(10),
+			Price:         gofakeit.Float64Range(1, 1000),
+			StockQuantity: int64(gofakeit.IntRange(1, 100)),
+			Category:      model.PartCategory(gofakeit.IntRange(1, 4)),
+		}
+	)
 
 	// Test
-	err := s.inventoryRepository.UpdatePart(ctx, nonExistentPart)
+	err := inventoryRepository.UpdatePart(ctx, nonExistentPart)
 
 	// Verify
-	s.Require().Error(err)
-	s.Require().Equal(repository.ErrPartWithUUIDNotFound(nonExistentPart.Uuid), err)
+	require.Error(t, err)
+	require.Equal(t, repository.ErrPartWithUUIDNotFound(nonExistentPart.Uuid), err)
 }
 
 // TestUpdatePart_EmptyUUID verifies the repository correctly handles update attempts
-// with empty UUID strings by returning ErrPartWithUUIDNotFound.
-func (s *InventoryRepositorySuite) TestUpdatePart_EmptyUUID() {
+func TestUpdatePart_EmptyUUID(t *testing.T) {
 	// Setup
-	ctx := context.Background()
-	partWithEmptyUUID := model.Part{
-		Uuid:          "",
-		Name:          gofakeit.Word(),
-		Description:   gofakeit.Sentence(10),
-		Price:         gofakeit.Float64Range(1, 1000),
-		StockQuantity: int64(gofakeit.IntRange(1, 100)),
-	}
+	var (
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		partWithEmptyUUID   = model.Part{
+			Uuid:          "",
+			Name:          gofakeit.Word(),
+			Description:   gofakeit.Sentence(10),
+			Price:         gofakeit.Float64Range(1, 1000),
+			StockQuantity: int64(gofakeit.IntRange(1, 100)),
+		}
+	)
 
 	// Test
-	err := s.inventoryRepository.UpdatePart(ctx, partWithEmptyUUID)
+	err := inventoryRepository.UpdatePart(ctx, partWithEmptyUUID)
 
 	// Verify
-	s.Require().Error(err)
-	s.Require().Equal(repository.ErrPartWithUUIDNotFound(""), err)
+	require.Error(t, err)
+	require.Equal(t, repository.ErrPartWithUUIDNotFound(""), err)
 }
 
 // TestUpdatePart_ConcurrentAccess verifies thread-safe update behavior by performing
 // concurrent updates to the same part from multiple goroutines.
-func (s *InventoryRepositorySuite) TestUpdatePart_ConcurrentAccess() {
+func TestUpdatePart_ConcurrentAccess(t *testing.T) {
 	// Setup
-	ctx := context.Background()
-	originalPart := model.Part{
-		Uuid:          gofakeit.UUID(),
-		Name:          gofakeit.Word(),
-		Description:   gofakeit.Sentence(10),
-		Price:         gofakeit.Float64Range(1, 1000),
-		StockQuantity: int64(gofakeit.IntRange(1, 100)),
-		Category:      model.PartCategory(gofakeit.IntRange(1, 4)),
-	}
+	var (
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		originalPart        = model.Part{
+			Uuid:          gofakeit.UUID(),
+			Name:          gofakeit.Word(),
+			Description:   gofakeit.Sentence(10),
+			Price:         gofakeit.Float64Range(1, 1000),
+			StockQuantity: int64(gofakeit.IntRange(1, 100)),
+			Category:      model.PartCategory(gofakeit.IntRange(1, 4)),
+		}
+	)
 
-	err := s.inventoryRepository.AddPart(ctx, originalPart)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err := inventoryRepository.AddPart(ctx, originalPart)
+	require.NoError(t, err)
 
 	// Test
 	var wg sync.WaitGroup
@@ -138,55 +146,52 @@ func (s *InventoryRepositorySuite) TestUpdatePart_ConcurrentAccess() {
 			updatedPart := originalPart
 			updatedPart.Name = gofakeit.Word()
 			updatedPart.StockQuantity = int64(iteration + 1)
-			err := s.inventoryRepository.UpdatePart(ctx, updatedPart)
-			s.Require().NoError(err)
+			err := inventoryRepository.UpdatePart(ctx, updatedPart)
+			require.NoError(t, err)
 		}(i)
 	}
 
 	wg.Wait()
 
 	// Verify
-	finalPart, err := s.inventoryRepository.GetPart(ctx, originalPart.Uuid)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
-	s.Require().NotEqual(originalPart.Name, finalPart.Name)
-	s.Require().NotEqual(originalPart.StockQuantity, finalPart.StockQuantity)
+	finalPart, err := inventoryRepository.GetPart(ctx, originalPart.Uuid)
+	require.NoError(t, err)
+	require.NotEqual(t, originalPart.Name, finalPart.Name)
+	require.NotEqual(t, originalPart.StockQuantity, finalPart.StockQuantity)
 }
 
 // TestUpdatePart_DefensiveCopy verifies the repository makes defensive copies of parts
-// during updates. Tests that modifications to the local part variable after update
-// don't affect the stored version, ensuring data integrity.
-func (s *InventoryRepositorySuite) TestUpdatePart_DefensiveCopy() {
+func TestUpdatePart_DefensiveCopy(t *testing.T) {
 	// Setup
-	ctx := context.Background()
-	originalPart := model.Part{
-		Uuid:          gofakeit.UUID(),
-		Name:          gofakeit.Word(),
-		Description:   gofakeit.Sentence(10),
-		Price:         gofakeit.Float64Range(1, 1000),
-		StockQuantity: int64(gofakeit.IntRange(1, 100)),
-	}
+	var (
+		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
+		originalPart        = model.Part{
+			Uuid:          gofakeit.UUID(),
+			Name:          gofakeit.Word(),
+			Description:   gofakeit.Sentence(10),
+			Price:         gofakeit.Float64Range(1, 1000),
+			StockQuantity: int64(gofakeit.IntRange(1, 100)),
+		}
+	)
 
-	err := s.inventoryRepository.AddPart(ctx, originalPart)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err := inventoryRepository.AddPart(ctx, originalPart)
+	require.NoError(t, err)
 
 	// Create updated part and modify it after update
 	updatedPart := originalPart
 	updatedPart.Name = "New Name"
 
 	// Test
-	err = s.inventoryRepository.UpdatePart(ctx, updatedPart)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
+	err = inventoryRepository.UpdatePart(ctx, updatedPart)
+	require.NoError(t, err)
 
 	// Modify the local copy after update
 	updatedPart.Name = "Modified After Update"
 
 	// Verify the repository copy wasn't affected
-	retrievedPart, err := s.inventoryRepository.GetPart(ctx, originalPart.Uuid)
-	s.Require().NoError(err)
-	s.Require().Nil(err)
-	s.Require().Equal("New Name", retrievedPart.Name)
-	s.Require().NotEqual(updatedPart.Name, retrievedPart.Name)
+	retrievedPart, err := inventoryRepository.GetPart(ctx, originalPart.Uuid)
+	require.NoError(t, err)
+	require.Equal(t, "New Name", retrievedPart.Name)
+	require.NotEqual(t, updatedPart.Name, retrievedPart.Name)
 }
