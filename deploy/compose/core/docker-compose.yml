@@ -1,0 +1,19 @@
+services:
+  placeholder:
+    image: alpine:3.22.1
+    command:
+      ["sh", "-c", "echo 'This is a placeholder service' && sleep infinity"]
+    networks:
+      - rocketfactory-net
+
+networks:
+  rocketfactory-net:
+    name: rocketfactory-net
+    external: false
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.19.0.0/16
+          gateway: 172.19.0.1
+    # ВАЖНО: здесь мы создаём сеть с именем rocketfactory-net
+    # Другие docker-compose файлы будут к ней подключаться с external: true

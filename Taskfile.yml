@@ -39,6 +39,8 @@ vars:
   
   COVERAGE_DIR: '{{.ROOT_DIR}}/coverage'
   COVERAGE_FILE: total.out
+  ORDER_MIGRATIONS_DIR: './order/migrations'
+  POSTGRES_DSN: 'postgres://order-service-user:order-service-password@localhost:5432/order-service?sslmode=disable'
 
   MODULES: inventory order payment
 
@@ -601,39 +603,76 @@ tasks:
       - go build -o ./bin/order ./order/cmd/main.go
       - ./bin/order -config-path ./order/config/.env
 
-  docker-compose:generate-env:
-    desc: "Generate root .env file from service configs"
-    deps: [docker-compose:check-env-files]
+  up-core:
+    desc: Поднять core контейнеры
+    dir: deploy/compose/core
     cmds:
-      - |
-        echo "Generating {{.ENV_FILE}}..."
-        echo "INVENTORY_GRPC_HOST=$(grep 'GRPC_HOST=' ./inventory/config/.env | cut -d '=' -f2)" > {{.ENV_FILE}}
-        echo "INVENTORY_GRPC_PORT=$(grep 'GRPC_PORT=' ./inventory/config/.env | cut -d '=' -f2)" >> {{.ENV_FILE}}
-        echo "PAYMENT_GRPC_HOST=$(grep 'GRPC_HOST=' ./payment/config/.env | cut -d '=' -f2)" >> {{.ENV_FILE}}
-        echo "PAYMENT_GRPC_PORT=$(grep 'GRPC_PORT=' ./payment/config/.env | cut -d '=' -f2)" >> {{.ENV_FILE}}
-        echo "File {{.ENV_FILE}} created successfully!"
-    silent: false
-    vars:
-      ENV_FILE: .env
+      - echo "[task] 🚀 Поднимаем core контейнеры"
+      - docker compose build --no-cache
+      - docker compose up --detach --force-recreate
 
-  docker-compose:check-env-files:
-    desc: "Verify required .env files exist"
+  down-core:
+    desc: Остановить и удалить core контейнеры
+    dir: deploy/compose/core
     cmds:
-      - |
-        test -f ./inventory/config/.env || (echo "Error: ./inventory/config/.env not found" && exit 1)
-        test -f ./payment/config/.env || (echo "Error: ./payment/config/.env not found" && exit 1)
-    silent: true
+      - echo "[task] 🛑 Останавливаем core контейнеры"
+      - docker compose down --volumes
+  
+  up-inventory:
+    desc: Поднять Inventory сервис и все его зависимости
+    dir: deploy/compose/inventory
+    cmds:
+      - echo "[task] 📦 Поднимаем Inventory с зависимостями"
+      - docker compose --env-file=../../../inventory/config/.env build --no-cache 
+      - docker compose --env-file=../../../inventory/config/.env up --detach --force-recreate
+  
+  down-inventory:
+    desc: Остановить и удалить Inventory сервис и все его зависимости
+    dir: deploy/compose/inventory
+    cmds:
+      - echo "[task] 🛑 Останавливаем Inventory с зависимостями"
+      - docker compose down --volumes
 
-  docker-compose:local:down:
+  up-order:
+    desc: Поднять Order сервис и все его зависимости
+    dir: deploy/compose/order
     cmds:
-      - task: docker-compose:check-env-files
-      - task: docker-compose:generate-env
-      - docker compose --env-file .env down --remove-orphans 
-      - rm .env
+      - echo "[task] 📦 Поднимаем Order с зависимостями"
+      - docker compose --env-file=../../../order/config/.env build --no-cache
+      - docker compose --env-file=../../../order/config/.env up --detach --force-recreate
 
-  docker-compose:local:up:
+  down-order:
+    desc: Остановить и удалить Order сервис и все его зависимости
+    dir: deploy/compose/order
     cmds:
-      - task: docker-compose:check-env-files
-      - task: docker-compose:generate-env
-      - docker compose --env-file .env up --build -d
-      - rm .env
+      - echo "[task] 🛑 Останавливаем Order с зависимостями"
+      - docker compose down --volumes
+
+  up-payment:
+    desc: Поднять Payment сервис и все его зависимости
+    dir: deploy/compose/payment
+    cmds:
+      - echo "[task] 📦 Поднимаем Payment с зависимостями"
+      - docker compose --env-file=../../../payment/config/.env build --no-cache
+      - docker compose --env-file=../../../payment/config/.env up --detach --force-recreate
+
+  down-payment:
+    desc: Остановить и удалить Payment сервис и все его зависимости
+    dir: deploy/compose/payment
+    cmds:
+      - echo "[task] 🛑 Останавливаем Payment с зависимостями"
+      - docker compose down --volumes
+
+  up-all:
+    desc: Поднять все сервисы по очереди вместе с зависимостями
+    cmds:
+      - task up-core
+      - task up-inventory
+      - task up-order
+
+  down-all:
+    desc: Остановить и удалить все сервисы по очереди вместе с зависимостями
+    cmds:
+      - task down-core
+      - task down-inventory
+      - task down-order

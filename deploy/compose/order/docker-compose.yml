@@ -1,0 +1,59 @@
+services: # Раздел, описывающий контейнеры, которые требуются для работы Order-сервиса
+  order-service:
+    image: order-service
+    container_name: order_service
+    build:
+      context: .
+      dockerfile: ../../../order/Dockerfile
+    env_file:
+      - ../../../order/config/.env
+    ports:
+      - ${HTTP_PORT}:${HTTP_PORT}
+    depends_on:
+      order-postgres:
+        condition: service_healthy
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.3
+
+  order-postgres: # Контейнер с PostgreSQL, используемый для хранения данных заказов
+    image: postgres:17.0-alpine3.20
+    # Используем официальный образ PostgreSQL версии 17 на базе Alpine Linux
+    # Это лёгкая и быстрая сборка, которая экономит ресурсы
+    container_name: order_postgres
+    environment: # Переменные окружения, используемые при запуске контейнера
+      POSTGRES_DB: ${PG_DB} # Имя базы данных, которая будет создана при запуске
+      POSTGRES_USER: ${PG_USER} # Имя пользователя, создаваемого в базе
+      POSTGRES_PASSWORD: ${PG_PASSWORD} # Пароль для указанного пользователя
+    volumes:
+      - order_postgres_volume:/var/lib/postgresql/data
+      # Определяем том, который будет использоваться для хранения данных PostgreSQL
+      # Он сохраняет данные между перезапусками контейнера
+    ports:
+      - "${PG_PORT_OUT}:${PG_PORT}"
+      # Пробрасываем внутренний порт PostgreSQL (${PG_PORT}) на порт хоста (${PG_PORT_OUT})
+      # Это нужно, чтобы другие сервисы или инструменты могли подключиться к базе
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}" ]
+      # Настраиваем проверку готовности контейнера — pg_isready проверяет, принимает ли база подключения
+      interval: 10s  # Интервал между проверками — каждые 10 секунд
+      timeout: 5s    # Время ожидания ответа от проверки
+      retries: 5     # После 5 неудачных попыток подряд контейнер считается "unhealthy"
+    restart: unless-stopped
+    # Автоматически перезапускаем контейнер, если он аварийно завершился
+    # Если контейнер был остановлен вручную — не перезапускаем
+    networks:
+      - rocketfactory-net
+      # Подключаемся к общей сети, чтобы другие микросервисы (например, Order-сервис) могли найти этот контейнер по имени "postgres-order"
+     
+volumes: # Раздел с томами — определяем, какие дисковые ресурсы создаёт и использует Docker
+  order_postgres_volume:
+  # Именованный том для хранения данных Order-сервиса в PostgreSQL
+  # Позволяет сохранять состояние базы даже после перезапуска контейнера
+
+networks: # Сетевые настройки
+  rocketfactory-net:
+    external: true
+    ipv4_address: 172.19.0.3
+    # Мы не создаём новую сеть, а подключаемся к уже существующей общей сети "rocketfactory-net"
+    # Эта сеть создаётся один раз в docker-compose.yml или вручную через docker network create
