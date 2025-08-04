@@ -7,17 +7,19 @@ import (
 	"github.com/andredubov/golibs/pkg/config"
 	"github.com/andredubov/golibs/pkg/config/env"
 
-	server "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
+	api "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
+	"github.com/andredubov/rocket-factory/inventory/internal/service"
+	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
 )
 
 // serviceProvider implements the dependency container pattern
 // It provides lazy initialization of application components
 type serviceProvider struct {
-	inventoryRepository  repository.Inventory            // Inventory data access layer
-	grpcConfig           config.GRPCConfig               // GRPC server configuration
-	serverImplementation *server.InventoryImplementation // GRPC service implementation
+	inventoryRepository  service.InventoryRepository
+	inventoryService     api.InventoryService
+	grpcConfig           config.GRPCConfig            // GRPC server configuration
+	serverImplementation *api.InventoryImplementation // GRPC service implementation
 }
 
 // newServiceProvider creates a new service provider instance
@@ -41,7 +43,7 @@ func (s *serviceProvider) GRPCConfig() config.GRPCConfig {
 
 // InventoryRepository provides access to inventory data
 // Uses in-memory implementation and singleton pattern
-func (s *serviceProvider) InventoryRepository(ctx context.Context) repository.Inventory {
+func (s *serviceProvider) InventoryRepository(ctx context.Context) service.InventoryRepository {
 	if s.inventoryRepository == nil {
 		s.inventoryRepository = memory.NewInventoryRepository()
 	}
@@ -49,12 +51,23 @@ func (s *serviceProvider) InventoryRepository(ctx context.Context) repository.In
 	return s.inventoryRepository
 }
 
+// InventoryService provides access to inventory service layer
+func (s *serviceProvider) InventoryService(ctx context.Context) api.InventoryService {
+	if s.inventoryService == nil {
+		s.inventoryService = inventory.NewService(
+			s.InventoryRepository(ctx),
+		)
+	}
+
+	return s.inventoryService
+}
+
 // ServerImplementation creates GRPC service handler
-// Initializes all required dependencies (repository)
-func (s *serviceProvider) ServerImplementation(ctx context.Context) *server.InventoryImplementation {
+// Initializes all required dependencies (service)
+func (s *serviceProvider) ServerImplementation(ctx context.Context) *api.InventoryImplementation {
 	if s.serverImplementation == nil {
-		inventoryRepository := s.InventoryRepository(ctx)
-		s.serverImplementation = server.NewInventoryImplementation(inventoryRepository)
+		inventoryService := s.InventoryService(ctx)
+		s.serverImplementation = api.NewInventoryImplementation(inventoryService)
 	}
 
 	return s.serverImplementation

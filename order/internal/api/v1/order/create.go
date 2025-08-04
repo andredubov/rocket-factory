@@ -6,64 +6,40 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/uuid"
-	"github.com/shopspring/decimal"
-
-	"github.com/andredubov/rocket-factory/order/internal/repository"
-	"github.com/andredubov/rocket-factory/order/internal/repository/model"
+	"github.com/andredubov/rocket-factory/order/internal/converter"
+	"github.com/andredubov/rocket-factory/order/internal/model"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
-	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
 // CreateOrder обрабатывает запрос на создание нового заказа.
 func (i *OrderImplementation) CreateOrder(ctx context.Context, req *order_v1.CreateOrderRequest) (order_v1.CreateOrderRes, error) {
-	// Валидация
-	if len(req.GetPartUuids()) == 0 {
-		return &order_v1.BadRequestError{
-			Code:    http.StatusBadRequest,
-			Message: "at least one part required",
-		}, nil
-	}
+	order := converter.OrderFromCreateOrderRequest(req)
 
-	order := model.Order{
-		UserUUID:  req.GetUserUUID(),
-		PartUUIDs: req.GetPartUuids(),
-		Status:    model.OrderStatusPending,
-		OrderUUID: uuid.New(),
-	}
-
-	// Проверка наличия деталей и расчет стоимости
-	total := decimal.NewFromFloat(0)
-	for _, partUuid := range order.PartUUIDs {
-		inventoryRequest := inventory_v1.GetPartRequest{Uuid: partUuid.String()}
-		inventoryResponse, err := i.inventoryClient.GetPart(ctx, &inventoryRequest)
-		if err != nil {
+	err := i.ordersService.CreateOrder(ctx, order)
+	if err != nil {
+		if errors.Is(err, model.ErrOrderHasNoParts) {
 			return &order_v1.BadRequestError{
 				Code:    http.StatusBadRequest,
-				Message: fmt.Sprintf("invalid part %s: %v", partUuid, err),
+				Message: "at least one part required",
 			}, nil
 		}
 
-		total = total.Add(decimal.NewFromFloat(inventoryResponse.GetPart().GetPrice()))
-	}
+		if errors.Is(err, model.ErrInvalidPartFilter) {
+			return &order_v1.BadRequestError{
+				Code:    http.StatusBadRequest,
+				Message: fmt.Sprintf("invalid part %v", err),
+			}, nil
+		}
 
-	order.TotalPrice, _ = total.Round(2).Float64()
-
-	// Сохранение
-	if err := i.ordersRepository.AddOrder(ctx, order); err != nil {
-		if errors.Is(err, repository.ErrOrderAlreadyExists) {
+		if errors.Is(err, model.ErrOrderAlreadyExists) {
 			return &order_v1.ConflictError{
 				Code:    http.StatusConflict,
 				Message: "order already exists",
 			}, nil
 		}
-		return nil, fmt.Errorf("failed to save order: %w", err)
+
+		return nil, fmt.Errorf("failed to create order: %w", err)
 	}
 
-	res := &order_v1.CreateOrderResponse{
-		OrderUUID:  order_v1.NewOptUUID(order.OrderUUID),
-		TotalPrice: order_v1.NewOptFloat64(order.TotalPrice),
-	}
-
-	return res, nil
+	return converter.OrderToCreateOrderResponse(order), nil
 }

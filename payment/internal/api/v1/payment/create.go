@@ -1,4 +1,4 @@
-package server
+package api
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/andredubov/rocket-factory/payment/internal/service/converter"
+	"github.com/andredubov/rocket-factory/payment/internal/converter"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
@@ -27,7 +27,5 @@ func (i *PaymentImplementation) PayOrder(ctx context.Context, req *payment_v1.Pa
 	log.Printf("Оплата прошла успешно, transaction_uuid: %s\n", uuid)
 
 	// Return response with transaction ID
-	return &payment_v1.PayOrderResponse{
-		TransactionUuid: uuid,
-	}, nil
+	return converter.TransactionUuidToResponse(uuid), nil
 }

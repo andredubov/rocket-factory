@@ -1,6 +1,6 @@
 package payment
 
-import "github.com/andredubov/rocket-factory/payment/internal/service"
+import api "github.com/andredubov/rocket-factory/payment/internal/api/v1/payment"
 
 // paymentService is the internal implementation of the Payments interface.
 // It handles core payment processing logic and acts as the main entry point
@@ -8,6 +8,6 @@ import "github.com/andredubov/rocket-factory/payment/internal/service"
 type paymentService struct{}
 
 // NewService creates and returns a new instance of the payment service.
-func NewService() service.Payments {
+func NewService() api.PaymentService {
 	return &paymentService{}
 }

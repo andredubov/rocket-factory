@@ -1,65 +1,117 @@
 package converter
 
 import (
-	"google.golang.org/protobuf/types/known/timestamppb"
-
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/model"
-	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
+	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
-// PartFromRequest converts a gRPC GetPartRequest to a domain Part
-func PartFromRequest(request *inventory_v1.GetPartRequest) model.Part {
-	return model.Part{
-		Uuid: request.GetUuid(),
+// PartToRepoModel converts a domain model (repo.Part) to a repository model (repoModel.Part).
+func PartToRepoModel(part model.Part) repoModel.Part {
+	return repoModel.Part{
+		Uuid:          part.Uuid,
+		Name:          part.Name,
+		Description:   part.Description,
+		Price:         part.Price,
+		StockQuantity: part.StockQuantity,
+		Category:      repoModel.PartCategory(part.Category),
+		Dimensions: repoModel.Dimensions{
+			Length: part.Dimensions.Length,
+			Width:  part.Dimensions.Width,
+			Height: part.Dimensions.Height,
+			Weight: part.Dimensions.Weight,
+		},
+		Manufacturer: repoModel.Manufacturer{
+			Name:    part.Manufacturer.Name,
+			Country: part.Manufacturer.Country,
+			Website: part.Manufacturer.Website,
+		},
+		Tags:      part.Tags,
+		Metadata:  convertMetadataToRepo(part.Metadata),
+		CreatedAt: part.CreatedAt,
+		UpdatedAt: part.UpdatedAt,
 	}
 }
 
-// PartToResponse converts a domain Part to a gRPC GetPartResponse
-func PartToResponse(part *model.Part) *inventory_v1.GetPartResponse {
-	// Convert metadata map from domain Value to protobuf Value
-	metadata := make(map[string]*inventory_v1.Value)
-	for k, v := range part.Metadata {
-		value := &inventory_v1.Value{}
+// PartToModel converts a repository model (repoModel.Part) to a domain model (model.Part).
+func PartToModel(part repoModel.Part) model.Part {
+	return model.Part{
+		Uuid:          part.Uuid,
+		Name:          part.Name,
+		Description:   part.Description,
+		Price:         part.Price,
+		StockQuantity: part.StockQuantity,
+		Category:      model.PartCategory(part.Category),
+		Dimensions: model.Dimensions{
+			Length: part.Dimensions.Length,
+			Width:  part.Dimensions.Width,
+			Height: part.Dimensions.Height,
+			Weight: part.Dimensions.Weight,
+		},
+		Manufacturer: model.Manufacturer{
+			Name:    part.Manufacturer.Name,
+			Country: part.Manufacturer.Country,
+			Website: part.Manufacturer.Website,
+		},
+		Tags:      part.Tags,
+		Metadata:  convertMetadataToModel(part.Metadata),
+		CreatedAt: part.CreatedAt,
+		UpdatedAt: part.UpdatedAt,
+	}
+}
 
-		// Handle each possible value type in the oneof
-		switch {
-		case v.StringValue != nil:
-			value.Kind = &inventory_v1.Value_StringValue{StringValue: *v.StringValue}
-		case v.Int64Value != nil:
-			value.Kind = &inventory_v1.Value_Int64Value{Int64Value: *v.Int64Value}
-		case v.DoubleValue != nil:
-			value.Kind = &inventory_v1.Value_DoubleValue{DoubleValue: *v.DoubleValue}
-		case v.BoolValue != nil:
-			value.Kind = &inventory_v1.Value_BoolValue{BoolValue: *v.BoolValue}
+// convertMetadataToRepo converts metadata values from domain model format to repository model format.
+func convertMetadataToRepo(metadata map[string]model.Value) map[string]repoModel.Value {
+	if metadata == nil {
+		return nil
+	}
+
+	result := make(map[string]repoModel.Value)
+	for k, v := range metadata {
+		var repoValue repoModel.Value
+
+		if v.StringValue != nil {
+			repoValue.StringValue = v.StringValue
+		}
+		if v.Int64Value != nil {
+			repoValue.Int64Value = v.Int64Value
+		}
+		if v.DoubleValue != nil {
+			repoValue.DoubleValue = v.DoubleValue
+		}
+		if v.BoolValue != nil {
+			repoValue.BoolValue = v.BoolValue
 		}
 
-		metadata[k] = value
+		result[k] = repoValue
+	}
+	return result
+}
+
+// convertMetadataToModel converts metadata values from repository model format to domain model format.
+func convertMetadataToModel(metadata map[string]repoModel.Value) map[string]model.Value {
+	if metadata == nil {
+		return nil
 	}
 
-	// Build and return the complete response with all converted fields
-	return &inventory_v1.GetPartResponse{
-		Part: &inventory_v1.Part{
-			Uuid:          part.Uuid,
-			Name:          part.Name,
-			Description:   part.Description,
-			Price:         part.Price,
-			StockQuantity: part.StockQuantity,
-			Dimensions: &inventory_v1.Dimensions{
-				Length: part.Dimensions.Length,
-				Width:  part.Dimensions.Width,
-				Height: part.Dimensions.Height,
-				Weight: part.Dimensions.Weight,
-			},
-			Category: inventory_v1.Category(part.Category),
-			Manufacturer: &inventory_v1.Manufacturer{
-				Name:    part.Manufacturer.Name,
-				Country: part.Manufacturer.Country,
-				Website: part.Manufacturer.Website,
-			},
-			Metadata:  metadata,
-			Tags:      part.Tags,
-			CreatedAt: timestamppb.New(part.CreatedAt), // Convert time.Time to Timestamp
-			UpdatedAt: timestamppb.New(part.UpdatedAt), // Convert time.Time to Timestamp
-		},
+	result := make(map[string]model.Value)
+	for k, v := range metadata {
+		var modelValue model.Value
+
+		if v.StringValue != nil {
+			modelValue.StringValue = v.StringValue
+		}
+		if v.Int64Value != nil {
+			modelValue.Int64Value = v.Int64Value
+		}
+		if v.DoubleValue != nil {
+			modelValue.DoubleValue = v.DoubleValue
+		}
+		if v.BoolValue != nil {
+			modelValue.BoolValue = v.BoolValue
+		}
+
+		result[k] = modelValue
 	}
+
+	return result
 }

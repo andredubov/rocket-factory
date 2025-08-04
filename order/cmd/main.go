@@ -17,7 +17,11 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
+	"github.com/andredubov/rocket-factory/order/internal/client/grpc/inventory/v1"
+	"github.com/andredubov/rocket-factory/order/internal/client/grpc/payment/v1"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
+	"github.com/andredubov/rocket-factory/order/internal/service"
+	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
@@ -35,7 +39,8 @@ func main() {
 	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
 	inventoryServiceClient := newInventoryServiceClient(inventoryServiceAddress)
 	ordersRepository := memory.NewOrderRepository()
-	ordersHandler := handler.NewOrderHandler(ordersRepository, paymentServiceClient, inventoryServiceClient)
+	ordersService := orders.NewService(ordersRepository, paymentServiceClient, inventoryServiceClient)
+	ordersHandler := handler.NewOrderHandler(ordersService, paymentServiceClient, inventoryServiceClient)
 
 	orderServer, err := order_v1.NewServer(ordersHandler)
 	if err != nil {
@@ -77,7 +82,7 @@ func main() {
 	log.Println("server stopped")
 }
 
-func newPaymentServiceClient(serviceAddress string) payment_v1.PaymentServiceClient {
+func newPaymentServiceClient(serviceAddress string) service.PaymentClient {
 	dialOptions := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -92,10 +97,10 @@ func newPaymentServiceClient(serviceAddress string) payment_v1.PaymentServiceCli
 		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
 	}
 
-	return client
+	return payment.NewClient(client)
 }
 
-func newInventoryServiceClient(serviceAddress string) inventory_v1.InventoryServiceClient {
+func newInventoryServiceClient(serviceAddress string) service.InventoryClient {
 	dialOptions := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
@@ -110,5 +115,5 @@ func newInventoryServiceClient(serviceAddress string) inventory_v1.InventoryServ
 		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
 	}
 
-	return client
+	return inventory.NewClient(client)
 }
