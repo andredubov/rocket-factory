@@ -631,7 +631,7 @@ tasks:
     dir: deploy/compose/inventory
     cmds:
       - echo "[task] 🛑 Останавливаем Inventory с зависимостями"
-      - docker compose down --volumes
+      - docker compose --env-file=../../../inventory/config/.env down --volumes
 
   up-order:
     desc: Поднять Order сервис и все его зависимости
@@ -646,7 +646,7 @@ tasks:
     dir: deploy/compose/order
     cmds:
       - echo "[task] 🛑 Останавливаем Order с зависимостями"
-      - docker compose down --volumes
+      - docker compose --env-file=../../../order/config/.env down --volumes
 
   up-payment:
     desc: Поднять Payment сервис и все его зависимости
@@ -661,7 +661,7 @@ tasks:
     dir: deploy/compose/payment
     cmds:
       - echo "[task] 🛑 Останавливаем Payment с зависимостями"
-      - docker compose down --volumes
+      - docker compose --env-file=../../../payment/config/.env down --volumes
 
   up-all:
     desc: Поднять все сервисы по очереди вместе с зависимостями
@@ -669,10 +669,12 @@ tasks:
       - task up-core
       - task up-inventory
       - task up-order
+      - task up-payment
 
   down-all:
     desc: Остановить и удалить все сервисы по очереди вместе с зависимостями
     cmds:
-      - task down-core
       - task down-inventory
       - task down-order
+      - task down-payment
+      - task down-core
