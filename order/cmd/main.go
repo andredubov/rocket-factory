@@ -43,12 +43,12 @@ func main() {
 
 	httpConfig, err := env.NewHTTPConfig()
 	if err != nil {
-		log.Printf("failed to create http server config: %v", err)
+		log.Printf("failed to create http server config: %v\n", err)
 	}
 
 	dbConfig, err := env.NewPostgresConfig()
 	if err != nil {
-		log.Printf("failed to create postgres config: %v", err)
+		log.Printf("failed to create postgres config: %v\n", err)
 	}
 
 	ctx := context.Background()
@@ -81,7 +81,7 @@ func main() {
 
 	orderServer, err := order_v1.NewServer(ordersHandler)
 	if err != nil {
-		log.Printf("failed to create order server: %v", err)
+		log.Printf("failed to create order server: %v\n", err)
 		return
 	}
 
@@ -98,10 +98,10 @@ func main() {
 	}
 
 	go func() {
-		log.Println("server started")
+		log.Printf("http server started on %s\n", httpConfig.Address())
 		err = server.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("failed to start server: %v", err)
+			log.Printf("failed to start http server: %v\n", err)
 			return
 		}
 	}()
@@ -115,11 +115,11 @@ func main() {
 
 	err = server.Shutdown(ctx)
 	if err != nil {
-		log.Printf("failed to shutdown server: %v", err)
+		log.Printf("failed to shutdown http server: %v\n", err)
 		return
 	}
 
-	log.Println("server stopped")
+	log.Printf("http server stopped on %s\n", httpConfig.Address())
 }
 
 func newPaymentServiceClient(serviceAddress string) service.PaymentClient {
@@ -129,12 +129,12 @@ func newPaymentServiceClient(serviceAddress string) service.PaymentClient {
 
 	conn, err := grpc.NewClient(serviceAddress, dialOptions...)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Payment: %v\n", err)
 	}
 
 	client := payment_v1.NewPaymentServiceClient(conn)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Payment: %v\n", err)
 	}
 
 	return payment.NewClient(client)
@@ -147,12 +147,12 @@ func newInventoryServiceClient(serviceAddress string) service.InventoryClient {
 
 	conn, err := grpc.NewClient(serviceAddress, dialOptions...)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v\n", err)
 	}
 
 	client := inventory_v1.NewInventoryServiceClient(conn)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v\n", err)
 	}
 
 	return inventory.NewClient(client)

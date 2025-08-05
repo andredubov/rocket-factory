@@ -10,5 +10,6 @@ FROM alpine:3.22.1
 
 WORKDIR /root/
 COPY --from=builder /github.com/andredubov/rocket-factory/bin/order .
+COPY --from=builder /github.com/andredubov/rocket-factory/order/migrations/*.sql ./migrations/
 
 CMD ["./order"]
