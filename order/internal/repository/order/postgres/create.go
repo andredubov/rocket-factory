@@ -27,14 +27,14 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 		}
 	}()
 
-	orderBuilderInsert := sq.Insert(ordersTable).
+	orderBuilderInsert := sq.Insert(OrdersTable).
 		PlaceholderFormat(sq.Dollar).
 		Columns(
-			userUUIDTableColumn,
-			totalPriceTableColumn,
-			transactionUUIDTableColumn,
-			paymentMethodTableColumn,
-			statusTableColumn,
+			UserUUIDTableColumn,
+			TotalPriceTableColumn,
+			TransactionUUIDTableColumn,
+			PaymentMethodTableColumn,
+			StatusTableColumn,
 		).
 		Values(
 			repoOrder.UserUUID,
@@ -54,9 +54,9 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 	}
 
 	for _, partUUID := range order.PartUUIDs {
-		orderPartsBuilderInsert := sq.Insert(orderPartsTable).
+		orderPartsBuilderInsert := sq.Insert(OrderPartsTable).
 			PlaceholderFormat(sq.Dollar).
-			Columns(orderUUIDTableColumn, partUUIDTableColumn).
+			Columns(OrderUUIDTableColumn, PartUUIDTableColumn).
 			Values(repoOrder.OrderUUID, partUUID)
 
 		orderPartsQuery, orderPartsQueryArgs, err := orderPartsBuilderInsert.ToSql()

@@ -61,19 +61,19 @@ func (r *ordersRepository) GetUserOrders(ctx context.Context, userUUID uuid.UUID
 // getUserOrderDetails получает основную информацию о заказах пользователя.
 func (r *ordersRepository) getUserOrderDetails(ctx context.Context, tx pgx.Tx, userUUID uuid.UUID) ([]model.Order, []uuid.UUID, error) {
 	query, args, err := sq.Select(
-		uuidTableColumn,
-		userUUIDTableColumn,
-		totalPriceTableColumn,
-		transactionUUIDTableColumn,
-		paymentMethodTableColumn,
-		statusTableColumn,
-		createdAtTableColumn,
-		updatedAtTableColumn,
+		UUIDTableColumn,
+		UserUUIDTableColumn,
+		TotalPriceTableColumn,
+		TransactionUUIDTableColumn,
+		PaymentMethodTableColumn,
+		StatusTableColumn,
+		CreatedAtTableColumn,
+		UpdatedAtTableColumn,
 	).
-		From(ordersTable).
-		Where(sq.Eq{userUUIDTableColumn: userUUID}).
+		From(OrdersTable).
+		Where(sq.Eq{UserUUIDTableColumn: userUUID}).
 		PlaceholderFormat(sq.Dollar).
-		OrderBy(createdAtTableColumn + " DESC").
+		OrderBy(CreatedAtTableColumn + " DESC").
 		ToSql()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build orders query: %w", err)
@@ -171,11 +171,11 @@ func (r *ordersRepository) createPaymentInfo(transactionUUID *uuid.UUID, payment
 // getOrderPartsMap получает все части для списка заказов одним запросом.
 func (r *ordersRepository) getOrderPartsMap(ctx context.Context, tx pgx.Tx, orderUUIDs []uuid.UUID) (map[uuid.UUID][]uuid.UUID, error) {
 	partsQuery, partsArgs, err := sq.Select(
-		orderUUIDTableColumn,
-		partUUIDTableColumn,
+		OrderUUIDTableColumn,
+		PartUUIDTableColumn,
 	).
-		From(orderPartsTable).
-		Where(sq.Eq{orderUUIDTableColumn: orderUUIDs}).
+		From(OrderPartsTable).
+		Where(sq.Eq{OrderUUIDTableColumn: orderUUIDs}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

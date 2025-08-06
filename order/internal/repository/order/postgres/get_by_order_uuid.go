@@ -55,17 +55,17 @@ func (r *ordersRepository) GetOrder(ctx context.Context, orderUUID uuid.UUID) (*
 // getOrderDetails получает основную информацию о заказе из БД
 func (r *ordersRepository) getOrderDetails(ctx context.Context, tx pgx.Tx, orderUUID uuid.UUID) (*model.Order, error) {
 	query, args, err := sq.Select(
-		uuidTableColumn,
-		userUUIDTableColumn,
-		totalPriceTableColumn,
-		transactionUUIDTableColumn,
-		paymentMethodTableColumn,
-		statusTableColumn,
-		createdAtTableColumn,
-		updatedAtTableColumn,
+		UUIDTableColumn,
+		UserUUIDTableColumn,
+		TotalPriceTableColumn,
+		TransactionUUIDTableColumn,
+		PaymentMethodTableColumn,
+		StatusTableColumn,
+		CreatedAtTableColumn,
+		UpdatedAtTableColumn,
 	).
-		From(ordersTable).
-		Where(sq.Eq{uuidTableColumn: orderUUID}).
+		From(OrdersTable).
+		Where(sq.Eq{UUIDTableColumn: orderUUID}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
@@ -105,9 +105,9 @@ func (r *ordersRepository) getOrderDetails(ctx context.Context, tx pgx.Tx, order
 
 // getOrderParts получает список UUID частей для указанного заказа
 func (r *ordersRepository) getOrderParts(ctx context.Context, tx pgx.Tx, orderUUID uuid.UUID) ([]uuid.UUID, error) {
-	query, args, err := sq.Select(partUUIDTableColumn).
-		From(orderPartsTable).
-		Where(sq.Eq{orderUUIDTableColumn: orderUUID}).
+	query, args, err := sq.Select(PartUUIDTableColumn).
+		From(OrderPartsTable).
+		Where(sq.Eq{OrderUUIDTableColumn: orderUUID}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {

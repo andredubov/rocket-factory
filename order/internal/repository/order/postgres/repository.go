@@ -1,35 +1,45 @@
 package postgres
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
+	"context"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/andredubov/rocket-factory/order/internal/service"
 )
 
 const (
-	orderPartsTable      = "order_parts"
-	orderUUIDTableColumn = "order_uuid"
-	partUUIDTableColumn  = "part_uuid"
+	OrderPartsTable      = "order_parts"
+	OrderUUIDTableColumn = "order_uuid"
+	PartUUIDTableColumn  = "part_uuid"
 
-	ordersTable                = "orders"
-	uuidTableColumn            = "uuid"
-	userUUIDTableColumn        = "user_uuid"
-	totalPriceTableColumn      = "total_price"
-	transactionUUIDTableColumn = "transaction_uuid"
-	paymentMethodTableColumn   = "payment_method"
-	statusTableColumn          = "status"
-	createdAtTableColumn       = "created_at"
-	updatedAtTableColumn       = "updated_at"
+	OrdersTable                = "orders"
+	UUIDTableColumn            = "uuid"
+	UserUUIDTableColumn        = "user_uuid"
+	TotalPriceTableColumn      = "total_price"
+	TransactionUUIDTableColumn = "transaction_uuid"
+	PaymentMethodTableColumn   = "payment_method"
+	StatusTableColumn          = "status"
+	CreatedAtTableColumn       = "created_at"
+	UpdatedAtTableColumn       = "updated_at"
 )
+
+// PgxPool
+type PgxPool interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+	Begin(ctx context.Context) (pgx.Tx, error)
+}
 
 // ordersRepository is postgres implementation of the Orders repository.
 type ordersRepository struct {
-	pool *pgxpool.Pool
+	pool PgxPool
 }
 
 // NewOrderRepository creates a new instance of an postgres order repository.
-// Returns an implementation of the repository.Orders interface.
-func NewOrderRepository(pool *pgxpool.Pool) service.OrdersRepository {
+func NewOrderRepository(pool PgxPool) service.OrdersRepository {
 	return &ordersRepository{
 		pool: pool,
 	}

@@ -28,20 +28,20 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) e
 	}()
 
 	// 1. Обновляем основную информацию о заказе
-	updateBuilder := sq.Update(ordersTable).
+	updateBuilder := sq.Update(OrdersTable).
 		PlaceholderFormat(sq.Dollar).
-		Set(totalPriceTableColumn, order.TotalPrice).
-		Set(statusTableColumn, string(order.Status)).
-		Where(sq.Eq{uuidTableColumn: order.OrderUUID})
+		Set(TotalPriceTableColumn, order.TotalPrice).
+		Set(StatusTableColumn, string(order.Status)).
+		Where(sq.Eq{UUIDTableColumn: order.OrderUUID})
 
 	// Добавляем обновление платежной информации, если она есть
 	if order.PaymentInfo != nil {
 		updateBuilder = updateBuilder.
-			Set(transactionUUIDTableColumn, order.PaymentInfo.TransactionUUID).
-			Set(paymentMethodTableColumn, string(order.PaymentInfo.PaymentMethod))
+			Set(TransactionUUIDTableColumn, order.PaymentInfo.TransactionUUID).
+			Set(PaymentMethodTableColumn, string(order.PaymentInfo.PaymentMethod))
 	}
 
-	updateBuilder = updateBuilder.Set(updatedAtTableColumn, time.Now())
+	updateBuilder = updateBuilder.Set(UpdatedAtTableColumn, time.Now())
 
 	updateQuery, updateArgs, err := updateBuilder.ToSql()
 	if err != nil {
@@ -59,8 +59,8 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) e
 
 	// 2. Обновляем состав заказа (части)
 	// Сначала удаляем все существующие части заказа
-	deletePartsQuery, deletePartsArgs, err := sq.Delete(orderPartsTable).
-		Where(sq.Eq{orderUUIDTableColumn: order.OrderUUID}).
+	deletePartsQuery, deletePartsArgs, err := sq.Delete(OrderPartsTable).
+		Where(sq.Eq{OrderUUIDTableColumn: order.OrderUUID}).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
@@ -73,8 +73,8 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) e
 
 	// Затем добавляем новые части заказа
 	if len(order.PartUUIDs) > 0 {
-		insertPartsBuilder := sq.Insert(orderPartsTable).
-			Columns(orderUUIDTableColumn, partUUIDTableColumn).
+		insertPartsBuilder := sq.Insert(OrderPartsTable).
+			Columns(OrderUUIDTableColumn, PartUUIDTableColumn).
 			PlaceholderFormat(sq.Dollar)
 
 		for _, partUUID := range order.PartUUIDs {

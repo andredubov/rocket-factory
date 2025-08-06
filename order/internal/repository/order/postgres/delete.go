@@ -24,9 +24,9 @@ func (r *ordersRepository) DeleteOrder(ctx context.Context, uuid uuid.UUID) erro
 		}
 	}()
 
-	deleteBuilder := sq.Delete(ordersTable).
+	deleteBuilder := sq.Delete(OrdersTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{orderUUIDTableColumn: uuid})
+		Where(sq.Eq{OrderUUIDTableColumn: uuid})
 
 	query, args, err := deleteBuilder.ToSql()
 	if err != nil {
