@@ -1,8 +1,12 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"log"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +20,15 @@ import (
 	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
 )
+
+// Helper function to capture log output
+func captureLogOutput(f func()) string {
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	f()
+	log.SetOutput(os.Stderr)
+	return buf.String()
+}
 
 func TestGetOrderByOrderUUID_Success(t *testing.T) {
 	// Setup
@@ -451,4 +464,71 @@ func TestGetOrder_CommitError(t *testing.T) {
 	require.Nil(t, order, "Order should be nil")
 	require.Contains(t, err.Error(), "failed to commit transaction")
 	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetOrderByOrderUUID_RollbackOnError(t *testing.T) {
+	// Setup
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err, "Failed to create mock pool")
+	defer mock.Close()
+
+	repo := postgres.NewOrderRepository(mock)
+
+	orderUUID := uuid.New()
+
+	// Expectations
+	mock.ExpectBegin()
+
+	// Simulate error in order details query
+	mock.ExpectQuery(`SELECT .* FROM orders`).
+		WithArgs(orderUUID.String()).
+		WillReturnError(fmt.Errorf("database error"))
+
+	// We expect rollback to be called
+	mock.ExpectRollback()
+
+	// Test
+	order, err := repo.GetOrder(context.Background(), orderUUID)
+
+	// Verify
+	require.Error(t, err, "Should return error")
+	require.Nil(t, order, "Should not return order")
+	require.NoError(t, mock.ExpectationsWereMet(), "Should meet all expectations")
+}
+
+func TestGetOrderByOrderUUID_RollbackFailure(t *testing.T) {
+	// Setup
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err, "Failed to create mock pool")
+	defer mock.Close()
+
+	repo := postgres.NewOrderRepository(mock)
+
+	orderUUID := uuid.New()
+
+	// Expectations
+	mock.ExpectBegin()
+
+	// Simulate error in order details query
+	mock.ExpectQuery(`SELECT .* FROM orders`).
+		WithArgs(orderUUID.String()).
+		WillReturnError(fmt.Errorf("database error"))
+
+	// Simulate rollback failure
+	mock.ExpectRollback().
+		WillReturnError(fmt.Errorf("rollback failed"))
+
+	// Capture log output
+	logOutput := captureLogOutput(func() {
+		// Test
+		order, err := repo.GetOrder(context.Background(), orderUUID)
+
+		// Verify
+		require.Error(t, err, "Should return error")
+		require.Nil(t, order, "Should not return order")
+	})
+
+	// Verify rollback error was logged
+	require.Contains(t, logOutput, "failed to rollback transaction", "Should log rollback error")
+	require.NoError(t, mock.ExpectationsWereMet(), "Should meet all expectations")
 }
