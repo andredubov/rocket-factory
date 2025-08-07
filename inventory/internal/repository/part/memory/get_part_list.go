@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
@@ -18,16 +17,16 @@ import (
 // Returns:
 // - Slice of matching parts
 // - nil error if successful
-func (i *inventoryRepository) GetPartList(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
-	i.mu.RLock()         // Acquire read lock
-	defer i.mu.RUnlock() // Ensure lock is released
+func (r *inventoryRepository) GetPartList(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+	r.mu.RLock()         // Acquire read lock
+	defer r.mu.RUnlock() // Ensure lock is released
 
 	repoFilter := converter.PartFilterToRepoModel(filter)
 
 	// Return all parts if no filters specified
 	if isEmptyFilter(repoFilter) {
-		parts := make([]model.Part, 0, len(i.parts))
-		for _, repoPart := range i.parts {
+		parts := make([]model.Part, 0, len(r.parts))
+		for _, repoPart := range r.parts {
 			part := converter.PartToModel(*repoPart)
 			parts = append(parts, part)
 		}
@@ -39,13 +38,13 @@ func (i *inventoryRepository) GetPartList(ctx context.Context, filter model.Part
 	// First filter pass - by UUIDs (OR logic)
 	if len(repoFilter.UUIDs) > 0 {
 		for _, uuid := range repoFilter.UUIDs {
-			if repoPart, exists := i.parts[uuid]; exists {
+			if repoPart, exists := r.parts[uuid]; exists {
 				repoPartList = append(repoPartList, *repoPart)
 			}
 		}
 	} else {
 		// If no UUID filter, start with all parts
-		for _, repoPart := range i.parts {
+		for _, repoPart := range r.parts {
 			repoPartList = append(repoPartList, *repoPart)
 		}
 	}
@@ -70,22 +69,4 @@ func (i *inventoryRepository) GetPartList(ctx context.Context, filter model.Part
 	}
 
 	return partList, nil
-}
-
-// GetPart retrieves a single part by UUID
-// Thread-safe read operation using RWMutex
-// Returns:
-// - Part if found
-// - error if part doesn't exist
-func (i *inventoryRepository) GetPart(ctx context.Context, uuid string) (*model.Part, error) {
-	i.mu.RLock()         // Acquire read lock
-	defer i.mu.RUnlock() // Ensure lock is released
-
-	repoPart, exists := i.parts[uuid]
-	if !exists {
-		return nil, repository.ErrPartWithUUIDNotFound(uuid)
-	}
-
-	part := converter.PartToModel(*repoPart)
-	return &part, nil
 }
