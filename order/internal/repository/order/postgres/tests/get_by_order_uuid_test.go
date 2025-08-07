@@ -532,3 +532,115 @@ func TestGetOrderByOrderUUID_RollbackFailure(t *testing.T) {
 	require.Contains(t, logOutput, "failed to rollback transaction", "Should log rollback error")
 	require.NoError(t, mock.ExpectationsWereMet(), "Should meet all expectations")
 }
+
+func TestGetOrderByOrderUUID_PartScanError(t *testing.T) {
+	// Setup
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err, "Failed to create mock pool")
+	defer mock.Close()
+
+	repo := postgres.NewOrderRepository(mock)
+	orderUUID := uuid.New()
+	userUUID := uuid.New()
+	createdAt := time.Now()
+	orderStatus := string(model.OrderStatusPending)
+
+	columns := []string{
+		postgres.UUIDTableColumn,
+		postgres.UserUUIDTableColumn,
+		postgres.TotalPriceTableColumn,
+		postgres.TransactionUUIDTableColumn,
+		postgres.PaymentMethodTableColumn,
+		postgres.StatusTableColumn,
+		postgres.CreatedAtTableColumn,
+		postgres.UpdatedAtTableColumn,
+	}
+
+	// Expectations
+	mock.ExpectBegin()
+
+	// Expect order details
+	mock.ExpectQuery(`SELECT ` + strings.Join(columns, ", ") + ` FROM ` + postgres.OrdersTable).
+		WithArgs(orderUUID.String()).
+		WillReturnRows(
+			pgxmock.NewRows(columns).
+				AddRow(orderUUID, userUUID, 75.0, nil, nil, orderStatus, createdAt, nil),
+		)
+
+	// Expect parts query to return a row with invalid data that will cause scan to fail
+	// We'll use a string that can't be parsed as UUID
+	invalidUUID := "not-a-valid-uuid"
+	mock.ExpectQuery(`SELECT ` + postgres.PartUUIDTableColumn + ` FROM ` + postgres.OrderPartsTable).
+		WithArgs(orderUUID.String()).
+		WillReturnRows(
+			pgxmock.NewRows([]string{postgres.PartUUIDTableColumn}).AddRow(invalidUUID),
+		)
+
+	mock.ExpectRollback()
+
+	// Test
+	order, err := repo.GetOrder(context.Background(), orderUUID)
+
+	// Verify
+	require.Error(t, err, "GetOrder should return an error")
+	require.Nil(t, order, "Order should be nil")
+	require.Contains(t, err.Error(), "failed to scan part UUID", "Error should mention scan failure")
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
+func TestGetOrder_PartsRowsError(t *testing.T) {
+	// Setup
+	mock, err := pgxmock.NewPool()
+	require.NoError(t, err, "Failed to create mock pool")
+	defer mock.Close()
+
+	repo := postgres.NewOrderRepository(mock)
+	orderUUID := uuid.New()
+	userUUID := uuid.New()
+	createdAt := time.Now()
+	orderStatus := string(model.OrderStatusPending)
+
+	columns := []string{
+		postgres.UUIDTableColumn,
+		postgres.UserUUIDTableColumn,
+		postgres.TotalPriceTableColumn,
+		postgres.TransactionUUIDTableColumn,
+		postgres.PaymentMethodTableColumn,
+		postgres.StatusTableColumn,
+		postgres.CreatedAtTableColumn,
+		postgres.UpdatedAtTableColumn,
+	}
+
+	// Expectations
+	mock.ExpectBegin()
+
+	// Expect order details
+	mock.ExpectQuery(`SELECT ` + strings.Join(columns, ", ") + ` FROM ` + postgres.OrdersTable).
+		WithArgs(orderUUID.String()).
+		WillReturnRows(
+			pgxmock.NewRows(columns).
+				AddRow(orderUUID, userUUID, 75.0, nil, nil, orderStatus, createdAt, nil),
+		)
+
+	// Simulate error during rows iteration
+	expectedErr := errors.New("rows iteration error")
+	mock.ExpectQuery(`SELECT ` + postgres.PartUUIDTableColumn + ` FROM ` + postgres.OrderPartsTable).
+		WithArgs(orderUUID.String()).
+		WillReturnRows(
+			pgxmock.NewRows([]string{postgres.PartUUIDTableColumn}).
+				AddRow(uuid.New()).       // First row is fine
+				RowError(1, expectedErr), // Error on second row
+		)
+
+	mock.ExpectRollback()
+
+	// Test
+	order, err := repo.GetOrder(context.Background(), orderUUID)
+
+	// Verify
+	require.Error(t, err, "GetOrder should return an error")
+	require.Nil(t, order, "Order should be nil")
+	require.Contains(t, err.Error(), "error processing results", "Error should mention results processing")
+	require.ErrorIs(t, err, expectedErr, "Error should wrap the original rows error")
+	require.NoError(t, mock.ExpectationsWereMet())
+}
