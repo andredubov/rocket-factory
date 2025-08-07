@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -126,49 +127,78 @@ func TestUpdatePart_EmptyUUID(t *testing.T) {
 	require.Equal(t, repository.ErrPartWithUUIDNotFound(""), err)
 }
 
-// TestUpdatePart_ConcurrentAccess verifies thread-safe update behavior by performing
-// concurrent updates to the same part from multiple goroutines.
 func TestUpdatePart_ConcurrentAccess(t *testing.T) {
-	// Setup
+	// Настройка
 	var (
 		inventoryRepository = memory.NewInventoryRepository()
 		ctx                 = context.Background()
 		originalPart        = model.Part{
-			Uuid:          gofakeit.UUID(),
-			Name:          gofakeit.Word(),
-			Description:   gofakeit.Sentence(10),
-			Price:         gofakeit.Float64Range(1, 1000),
-			StockQuantity: int64(gofakeit.IntRange(1, 100)),
-			Category:      model.PartCategory(gofakeit.IntRange(1, 4)),
+			Uuid:          "concurrent-test-uuid",
+			Name:          "Исходное название",
+			Description:   "Тестовая часть для проверки конкурентного доступа",
+			Price:         100.0,
+			StockQuantity: 0, // Начинаем с 0
+			Category:      model.PartCategoryEngine,
 		}
 	)
 
+	// Добавляем оригинальную часть в репозиторий
 	err := inventoryRepository.AddPart(ctx, originalPart)
 	require.NoError(t, err)
 
-	// Test
-	var wg sync.WaitGroup
+	// Количество конкурентных обновлений
 	updateCount := 5
+	var wg sync.WaitGroup
 	wg.Add(updateCount)
 
+	// Канал для сбора результатов обновлений
+	results := make(chan int64, updateCount)
+
+	// Запускаем горутины для конкурентных обновлений
 	for i := 0; i < updateCount; i++ {
 		go func(iteration int) {
 			defer wg.Done()
 			updatedPart := originalPart
-			updatedPart.Name = gofakeit.Word()
-			updatedPart.StockQuantity = int64(iteration + 1)
+			updatedPart.Name = fmt.Sprintf("Обновлённое-имя-%d", iteration) // Устанавливаем уникальные имена
+			updatedPart.StockQuantity = int64(iteration + 1)                // Устанавливаем значения от 1 до 5
 			err := inventoryRepository.UpdatePart(ctx, updatedPart)
 			require.NoError(t, err)
+			results <- updatedPart.StockQuantity
 		}(i)
 	}
 
+	// Ждём завершения всех горутин
 	wg.Wait()
+	close(results)
 
-	// Verify
+	// Получаем финальную версию части
 	finalPart, err := inventoryRepository.GetPart(ctx, originalPart.Uuid)
 	require.NoError(t, err)
+
+	// Проверяем, что имя изменилось (должно быть одним из установленных значений)
 	require.NotEqual(t, originalPart.Name, finalPart.Name)
-	require.NotEqual(t, originalPart.StockQuantity, finalPart.StockQuantity)
+	require.Contains(t, []string{
+		"Обновлённое-имя-0",
+		"Обновлённое-имя-1",
+		"Обновлённое-имя-2",
+		"Обновлённое-имя-3",
+		"Обновлённое-имя-4",
+	}, finalPart.Name)
+
+	// Проверяем, что количество на складе соответствует одному из установленных значений
+	validValues := make(map[int64]bool)
+	for i := 1; i <= updateCount; i++ {
+		validValues[int64(i)] = true
+	}
+
+	require.True(t, validValues[finalPart.StockQuantity],
+		"StockQuantity должен быть одним из значений от 1 до %d, получено %d",
+		updateCount, finalPart.StockQuantity)
+
+	// Дополнительная проверка: все отправленные значения должны быть среди validValues
+	for quantity := range results {
+		require.True(t, validValues[quantity])
+	}
 }
 
 // TestUpdatePart_DefensiveCopy verifies the repository makes defensive copies of parts
