@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/require"
@@ -13,59 +14,69 @@ import (
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
-// TestUpdatePart_Success verifies that an existing part can be successfully updated in the repository.
 func TestUpdatePart_Success(t *testing.T) {
-	// Setup
+	// Настройка
 	var (
 		inventoryRepository = memory.NewInventoryRepository()
+		ctx                 = context.Background()
 
-		ctx          = context.Background()
+		// Создаём часть с известными значениями
 		originalPart = model.Part{
-			Uuid:          gofakeit.UUID(),
-			Name:          gofakeit.Word(),
-			Description:   gofakeit.Sentence(10),
-			Price:         gofakeit.Float64Range(1, 1000),
-			StockQuantity: int64(gofakeit.IntRange(1, 100)),
-			Category:      model.PartCategory(gofakeit.IntRange(1, 4)),
+			Uuid:          "test-uuid-123",
+			Name:          "Исходное название",
+			Description:   "Исходное описание",
+			Price:         100.50,
+			StockQuantity: 5,
+			Category:      model.PartCategoryEngine,
 			Dimensions: model.Dimensions{
-				Length: gofakeit.Float64Range(1, 100),
-				Width:  gofakeit.Float64Range(1, 100),
-				Height: gofakeit.Float64Range(1, 100),
-				Weight: gofakeit.Float64Range(1, 100),
+				Length: 10.0,
+				Width:  5.0,
+				Height: 2.0,
+				Weight: 1.5,
 			},
 			Manufacturer: model.Manufacturer{
-				Name:    gofakeit.Company(),
-				Country: gofakeit.Country(),
-				Website: gofakeit.URL(),
+				Name:    "Оригинальный производитель",
+				Country: "Россия",
+				Website: "http://example.com",
 			},
-			Tags:      []string{gofakeit.Word(), gofakeit.Word()},
-			CreatedAt: gofakeit.Date(),
-			UpdatedAt: gofakeit.Date(),
+			Tags:      []string{"тег1", "тег2"},
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
 		}
 	)
 
+	// Добавляем оригинальную часть в репозиторий
 	err := inventoryRepository.AddPart(ctx, originalPart)
 	require.NoError(t, err)
 
-	// Create updated version of the part
+	// Создаём обновлённую версию части
 	updatedPart := originalPart
-	updatedPart.Name = gofakeit.Word()
-	updatedPart.Description = gofakeit.Sentence(15)
-	updatedPart.Price = gofakeit.Float64Range(1001, 2000)
-	updatedPart.StockQuantity = int64(gofakeit.IntRange(101, 200))
+	updatedPart.Name = "Обновлённое название"
+	updatedPart.Description = "Новое подробное описание"
+	updatedPart.Price = 200.75
+	updatedPart.StockQuantity = 10
+	updatedPart.Tags = []string{"новый_тег"}
 
-	// Test
+	// Выполняем обновление
 	err = inventoryRepository.UpdatePart(ctx, updatedPart)
 	require.NoError(t, err)
 
-	// Verify
+	// Проверяем результаты
 	retrievedPart, err := inventoryRepository.GetPart(ctx, originalPart.Uuid)
 	require.NoError(t, err)
-	require.Equal(t, updatedPart, *retrievedPart)
-	require.NotEqual(t, originalPart.Name, retrievedPart.Name)
-	require.NotEqual(t, originalPart.Description, retrievedPart.Description)
-	require.NotEqual(t, originalPart.Price, retrievedPart.Price)
-	require.NotEqual(t, originalPart.StockQuantity, retrievedPart.StockQuantity)
+
+	// Проверяем обновлённые поля
+	require.Equal(t, "Обновлённое название", retrievedPart.Name)
+	require.Equal(t, "Новое подробное описание", retrievedPart.Description)
+	require.Equal(t, 200.75, retrievedPart.Price)
+	require.Equal(t, int64(10), retrievedPart.StockQuantity)
+	require.Equal(t, []string{"новый_тег"}, retrievedPart.Tags)
+
+	// Проверяем неизменившиеся поля
+	require.Equal(t, originalPart.Uuid, retrievedPart.Uuid)
+	require.Equal(t, originalPart.Category, retrievedPart.Category)
+	require.Equal(t, originalPart.Dimensions, retrievedPart.Dimensions)
+	require.Equal(t, originalPart.Manufacturer, retrievedPart.Manufacturer)
 }
 
 // TestUpdatePart_NotFound verifies that attempting to update a non-existent part
