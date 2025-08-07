@@ -5,7 +5,6 @@ go 1.24.4
 replace github.com/andredubov/rocket-factory/shared => ../shared
 
 require (
-	github.com/andredubov/golibs v0.0.0-20240902121557-ded4e7068ebd
 	github.com/andredubov/rocket-factory/shared v0.0.0-00010101000000-000000000000
 	github.com/brianvoe/gofakeit/v7 v7.3.0
 	github.com/dvln/testify v0.0.0-20161024040450-c9680faee19e
@@ -25,6 +24,7 @@ require (
 )
 
 require (
+	github.com/andredubov/golibs v0.0.0-20240902121557-ded4e7068ebd // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/net v0.40.0 // indirect
