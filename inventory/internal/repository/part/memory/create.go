@@ -12,19 +12,19 @@ import (
 // Returns:
 // - nil if part was added successfully
 // - error if part with same UUID already exists
-func (p *inventoryRepository) AddPart(ctx context.Context, part model.Part) error {
-	p.mu.Lock()         // Acquire write lock
-	defer p.mu.Unlock() // Ensure lock is released
+func (r *inventoryRepository) AddPart(ctx context.Context, part model.Part) error {
+	r.mu.Lock()         // Acquire write lock
+	defer r.mu.Unlock() // Ensure lock is released
 
 	repoPart := converter.PartToRepoModel(part)
 
 	// Check for existing part with same UUID
-	if _, exists := p.parts[part.Uuid]; exists {
+	if _, exists := r.parts[part.Uuid]; exists {
 		return repository.ErrPartWithUUIDExists(part.Uuid)
 	}
 
 	// Create defensive copy to prevent external modifications
 	newPart := repoPart
-	p.parts[part.Uuid] = &newPart
+	r.parts[part.Uuid] = &newPart
 	return nil
 }
