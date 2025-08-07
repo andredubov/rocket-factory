@@ -6,11 +6,11 @@ import (
 	"net"
 
 	"github.com/andredubov/golibs/pkg/closer"
-	"github.com/andredubov/golibs/pkg/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
+	"github.com/andredubov/rocket-factory/shared/pkg/config"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
