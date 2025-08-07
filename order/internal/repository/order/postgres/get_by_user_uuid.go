@@ -135,7 +135,10 @@ func (r *ordersRepository) scanOrderRow(rows pgx.Rows) (*model.Order, error) {
 		return nil, fmt.Errorf("invalid order status: %w", err)
 	}
 
-	paymentInfo := r.createPaymentInfo(dbTransactionUUID, dbPaymentMethod)
+	paymentInfo, err := r.createPaymentInfo(dbTransactionUUID, dbPaymentMethod)
+	if err != nil {
+		return nil, err
+	}
 
 	return &model.Order{
 		OrderUUID:   dbOrderUUID,
@@ -148,9 +151,9 @@ func (r *ordersRepository) scanOrderRow(rows pgx.Rows) (*model.Order, error) {
 }
 
 // createPaymentInfo создает структуру PaymentInfo на основе данных из БД.
-func (r *ordersRepository) createPaymentInfo(transactionUUID *uuid.UUID, paymentMethod *string) *model.PaymentInfo {
+func (r *ordersRepository) createPaymentInfo(transactionUUID *uuid.UUID, paymentMethod *string) (*model.PaymentInfo, error) {
 	if transactionUUID == nil && paymentMethod == nil {
-		return nil
+		return nil, nil
 	}
 
 	info := &model.PaymentInfo{
@@ -160,12 +163,12 @@ func (r *ordersRepository) createPaymentInfo(transactionUUID *uuid.UUID, payment
 	if paymentMethod != nil {
 		pm, err := model.NewPaymentMethod(*paymentMethod)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		info.PaymentMethod = pm
 	}
 
-	return info
+	return info, nil
 }
 
 // getOrderPartsMap получает все части для списка заказов одним запросом.
