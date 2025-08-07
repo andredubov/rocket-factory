@@ -18,6 +18,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
+	inventoryClient "github.com/andredubov/rocket-factory/order/internal/client/config/env/inventory"
+	paymentClient "github.com/andredubov/rocket-factory/order/internal/client/config/env/payment"
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/inventory/v1"
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/payment/v1"
 	"github.com/andredubov/rocket-factory/order/internal/migrator"
@@ -31,15 +33,20 @@ import (
 )
 
 const (
-	pingTimeout             = 5 * time.Second
-	shutdownTimeout         = 30 * time.Second
-	inventoryServiceAddress = "inventory-service:50051"
-	paymentServiceAddress   = "payment-service:50052"
+	pingTimeout     = 5 * time.Second
+	shutdownTimeout = 30 * time.Second
 )
 
 func main() {
-	inventoryServiceClient := newInventoryServiceClient(inventoryServiceAddress)
-	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
+	inventoryServiceClientConfig, err := inventoryClient.NewGRPCConfig()
+	if err != nil {
+		log.Printf("failed to create inventory grpc client config: %v\n", err)
+	}
+
+	paymentServiceClientConfig, err := paymentClient.NewGRPCConfig()
+	if err != nil {
+		log.Printf("failed to create payment grpc client config: %v\n", err)
+	}
 
 	httpConfig, err := env.NewHTTPConfig()
 	if err != nil {
@@ -74,6 +81,9 @@ func main() {
 		log.Printf("failed to up database migration: %v\n", err)
 		return
 	}
+
+	inventoryServiceClient := newInventoryServiceClient(inventoryServiceClientConfig.Address())
+	paymentServiceClient := newPaymentServiceClient(paymentServiceClientConfig.Address())
 
 	ordersRepository := postgres.NewOrderRepository(dbPool)
 	ordersService := orders.NewService(ordersRepository, paymentServiceClient, inventoryServiceClient)
