@@ -4,13 +4,12 @@ import (
 	"context"
 	"log"
 
-	"github.com/andredubov/golibs/pkg/config"
-	"github.com/andredubov/golibs/pkg/config/env"
-
 	api "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 	"github.com/andredubov/rocket-factory/inventory/internal/service"
 	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/shared/pkg/config"
+	"github.com/andredubov/rocket-factory/shared/pkg/config/env"
 )
 
 // serviceProvider implements the dependency container pattern
