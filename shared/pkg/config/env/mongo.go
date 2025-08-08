@@ -32,7 +32,7 @@ func NewMongoDBConfig() (config.MongoDBConfig, error) {
 		return nil, fmt.Errorf("%s", "mongo database usernane not found")
 	}
 
-	password := os.Getenv(mongoUsernameEnvName)
+	password := os.Getenv(mongoPasswordEnvName)
 	if len(password) == 0 {
 		return nil, fmt.Errorf("%s", "mongo database usernane not found")
 	}

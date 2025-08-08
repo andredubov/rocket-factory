@@ -61,7 +61,7 @@ func (s *serviceProvider) MongoDBConfig() config.MongoDBConfig {
 
 // MongoDatabase creates an instance of database client
 func (s *serviceProvider) MongoDatabase(ctx context.Context) *mongo.Database {
-	if s.mongoDB != nil {
+	if s.mongoDB == nil {
 		URI := s.MongoDBConfig().Address()
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(URI))
 		if err != nil {
