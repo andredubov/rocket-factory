@@ -1,4 +1,4 @@
-package mongo
+package mongodb
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 )
 
-func (r *inventoryRepository) UpdatePart(ctx context.Context, part model.Part) error {
+func (r *InventoryRepository) UpdatePart(ctx context.Context, part model.Part) error {
 	repoPart := converter.PartToRepoModel(part)
 
 	filter := bson.M{"_id": part.Uuid}
@@ -23,7 +23,7 @@ func (r *inventoryRepository) UpdatePart(ctx context.Context, part model.Part) e
 	}
 
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
-	err := r.collection.FindOneAndUpdate(ctx, filter, update, opts).Err()
+	err := r.Collection.FindOneAndUpdate(ctx, filter, update, opts).Err()
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return repository.ErrPartWithUUIDNotFound(part.Uuid)

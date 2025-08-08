@@ -1,4 +1,4 @@
-package mongo
+package mongodb
 
 import (
 	"context"
@@ -15,8 +15,30 @@ const (
 	PartsCollection = "parts"
 )
 
-type inventoryRepository struct {
-	collection *mongo.Collection
+type MongoCursor interface {
+	Next(ctx context.Context) bool
+	TryNext(ctx context.Context) bool
+	Decode(val interface{}) error
+	Close(ctx context.Context) error
+	Err() error
+	All(ctx context.Context, results interface{}) error
+	ID() int64
+	RemainingBatchLength() int
+	Current() bson.Raw
+	SetBatchSize(int32)
+	GetBatchSize() int32
+}
+
+type MongoCollection interface {
+	InsertOne(ctx context.Context, document interface{}, opts ...*options.InsertOneOptions) (*mongo.InsertOneResult, error)
+	FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult
+	Find(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (*mongo.Cursor, error)
+	DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
+	FindOneAndUpdate(ctx context.Context, filter, update interface{}, opts ...*options.FindOneAndUpdateOptions) *mongo.SingleResult
+}
+
+type InventoryRepository struct {
+	Collection MongoCollection
 }
 
 // NewInventoryRepository creates a mongodb inventory repository instance
@@ -38,7 +60,7 @@ func NewInventoryRepository(db *mongo.Database) service.InventoryRepository {
 		panic(err)
 	}
 
-	return &inventoryRepository{
-		collection: collection,
+	return &InventoryRepository{
+		Collection: collection,
 	}
 }

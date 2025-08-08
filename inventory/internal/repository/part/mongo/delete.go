@@ -1,4 +1,4 @@
-package mongo
+package mongodb
 
 import (
 	"context"
@@ -8,11 +8,11 @@ import (
 	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 )
 
-func (r *inventoryRepository) DeletePart(ctx context.Context, uuid string) error {
+func (r *InventoryRepository) DeletePart(ctx context.Context, uuid string) error {
 	filter := bson.M{"_id": uuid}
 
 	// Выполняем операцию удаления
-	result, err := r.collection.DeleteOne(ctx, filter)
+	result, err := r.Collection.DeleteOne(ctx, filter)
 	if err != nil {
 		return err
 	}

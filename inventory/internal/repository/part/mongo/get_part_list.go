@@ -1,4 +1,4 @@
-package mongo
+package mongodb
 
 import (
 	"context"
@@ -14,13 +14,15 @@ import (
 	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
-func (r *inventoryRepository) GetPartList(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+func (r *InventoryRepository) GetPartList(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
 	repoFilter := converter.PartFilterToRepoModel(filter)
 
 	// Строим MongoDB-фильтр
 	mongoFilter := buildMongoFilter(repoFilter)
 
-	cursor, err := r.collection.Find(ctx, mongoFilter, options.Find())
+	opts := options.Find()
+
+	cursor, err := r.Collection.Find(ctx, mongoFilter, opts)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, model.ErrPartNotFound

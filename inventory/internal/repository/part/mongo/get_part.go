@@ -1,4 +1,4 @@
-package mongo
+package mongodb
 
 import (
 	"context"
@@ -13,13 +13,13 @@ import (
 	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
-func (r *inventoryRepository) GetPart(ctx context.Context, uuid string) (*model.Part, error) {
+func (r *InventoryRepository) GetPart(ctx context.Context, uuid string) (*model.Part, error) {
 	// Создаем фильтр для поиска по UUID
 	filter := bson.M{"_id": uuid}
 
 	repoPart := repoModel.Part{}
 
-	err := r.collection.FindOne(ctx, filter).Decode(&repoPart)
+	err := r.Collection.FindOne(ctx, filter).Decode(&repoPart)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, repository.ErrPartWithUUIDNotFound(uuid)
