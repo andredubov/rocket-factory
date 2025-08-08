@@ -27,6 +27,12 @@ type GRPCConfig interface {
 	Address() string
 }
 
+// GRPCConfig interface
+type MongoDBConfig interface {
+	Address() string
+	DatabaseName() string
+}
+
 // HTTPConfig interface
 type HTTPConfig interface {
 	Address() string

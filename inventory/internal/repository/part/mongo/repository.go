@@ -42,7 +42,7 @@ type InventoryRepository struct {
 }
 
 // NewInventoryRepository creates a mongodb inventory repository instance
-func NewInventoryRepository(db *mongo.Database) service.InventoryRepository {
+func NewInventoryRepository(ctx context.Context, db *mongo.Database) service.InventoryRepository {
 	collection := db.Collection(PartsCollection)
 
 	indexModels := []mongo.IndexModel{
@@ -52,7 +52,7 @@ func NewInventoryRepository(db *mongo.Database) service.InventoryRepository {
 		},
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	_, err := collection.Indexes().CreateMany(ctx, indexModels)

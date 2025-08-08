@@ -4,8 +4,11 @@ import (
 	"context"
 	"log"
 
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
 	api "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
+	mongodb "github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo"
 	"github.com/andredubov/rocket-factory/inventory/internal/service"
 	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
 	"github.com/andredubov/rocket-factory/shared/pkg/config"
@@ -17,7 +20,9 @@ import (
 type serviceProvider struct {
 	inventoryRepository  service.InventoryRepository
 	inventoryService     api.InventoryService
-	grpcConfig           config.GRPCConfig            // GRPC server configuration
+	grpcConfig           config.GRPCConfig // GRPC server configuration
+	mongoDBConfig        config.MongoDBConfig
+	mongoDB              *mongo.Database
 	serverImplementation *api.InventoryImplementation // GRPC service implementation
 }
 
@@ -40,11 +45,50 @@ func (s *serviceProvider) GRPCConfig() config.GRPCConfig {
 	return s.grpcConfig
 }
 
+// MongoDBConfig loads MongoDB configuration from environment variables
+// Implements singleton pattern - initializes config only once
+func (s *serviceProvider) MongoDBConfig() config.MongoDBConfig {
+	if s.mongoDBConfig == nil {
+		cfg, err := env.NewMongoDBConfig()
+		if err != nil {
+			log.Fatalf("failed to get MongoDB config: %s", err.Error())
+		}
+		s.mongoDBConfig = cfg
+	}
+
+	return s.mongoDBConfig
+}
+
+// MongoDatabase creates an instance of database client
+func (s *serviceProvider) MongoDatabase(ctx context.Context) *mongo.Database {
+	if s.mongoDB != nil {
+		URI := s.MongoDBConfig().Address()
+		client, err := mongo.Connect(ctx, options.Client().ApplyURI(URI))
+		if err != nil {
+			log.Printf("failed to connect MongoDB: %s\n", err)
+			return nil
+		}
+
+		err = client.Ping(ctx, nil)
+		if err != nil {
+			log.Printf("failed to ping MongoDB: %v\n", err)
+			return nil
+		}
+
+		s.mongoDB = client.Database(s.MongoDBConfig().DatabaseName())
+	}
+
+	return s.mongoDB
+}
+
 // InventoryRepository provides access to inventory data
 // Uses in-memory implementation and singleton pattern
 func (s *serviceProvider) InventoryRepository(ctx context.Context) service.InventoryRepository {
 	if s.inventoryRepository == nil {
-		s.inventoryRepository = memory.NewInventoryRepository()
+		s.inventoryRepository = mongodb.NewInventoryRepository(
+			ctx,
+			s.MongoDatabase(ctx),
+		)
 	}
 
 	return s.inventoryRepository

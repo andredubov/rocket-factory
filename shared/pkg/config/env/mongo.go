@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/andredubov/golibs/pkg/config"
+	"github.com/andredubov/rocket-factory/shared/pkg/config"
 )
 
 const (
@@ -12,19 +12,21 @@ const (
 	mongoPortEnvName       = "MG_PORT"
 	mongoUsernameEnvName   = "MG_INITDB_ROOT_USERNAME"
 	mongoPasswordEnvName   = "MG_INITDB_ROOT_PASSWORD"
+	mongoDatabaseEnvName   = "MG_INITDB_DATABASE"
 	mongoAuthSourceEnvName = "MG_AUTH_SOURCE"
 )
 
 type mongoDBConfig struct {
-	username   string
-	password   string
-	host       string
-	port       string
-	authSource string
+	username    string
+	password    string
+	host        string
+	port        string
+	authSource  string
+	mongoDBName string
 }
 
 // NewMongoDBConfig returns an instance of mongoDBConfig struct
-func NewMongoDBConfig() (config.GRPCConfig, error) {
+func NewMongoDBConfig() (config.MongoDBConfig, error) {
 	username := os.Getenv(mongoUsernameEnvName)
 	if len(username) == 0 {
 		return nil, fmt.Errorf("%s", "mongo database usernane not found")
@@ -50,12 +52,18 @@ func NewMongoDBConfig() (config.GRPCConfig, error) {
 		return nil, fmt.Errorf("%s", "mongo database auth source not found")
 	}
 
+	mongoDBName := os.Getenv(mongoDatabaseEnvName)
+	if len(mongoDBName) == 0 {
+		return nil, fmt.Errorf("%s", "mongo database name not found")
+	}
+
 	return &mongoDBConfig{
-		username:   username,
-		password:   password,
-		host:       host,
-		port:       port,
-		authSource: authSource,
+		username:    username,
+		password:    password,
+		host:        host,
+		port:        port,
+		authSource:  authSource,
+		mongoDBName: mongoDBName,
 	}, nil
 }
 
@@ -69,4 +77,8 @@ func (cfg *mongoDBConfig) Address() string {
 		cfg.port,
 		cfg.authSource,
 	)
+}
+
+func (cfg *mongoDBConfig) DatabaseName() string {
+	return cfg.mongoDBName
 }
