@@ -1,6 +1,11 @@
 package model
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/google/uuid"
+)
 
 var (
 	ErrInvalidOrderStatus    = errors.New("invalid order status")
@@ -12,3 +17,11 @@ var (
 	ErrOrderHasNoParts       = errors.New("order has no parts")
 	ErrInvalidPartFilter     = errors.New("invalid part filter")
 )
+
+func ErrOrderAlreadyExistsWith(uuid uuid.UUID) error {
+	return fmt.Errorf("%w: %s", ErrOrderAlreadyExists, uuid)
+}
+
+func ErrOrderNotFoundWith(uuid uuid.UUID) error {
+	return fmt.Errorf("%w: %s", ErrOrderNotFound, uuid)
+}

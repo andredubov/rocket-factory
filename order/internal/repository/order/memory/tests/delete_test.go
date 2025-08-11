@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 )
 
@@ -40,7 +39,7 @@ func TestDeleteOrder_Success(t *testing.T) {
 
 	// Verify order was actually deleted
 	_, err = ordersRepository.GetOrder(ctx, order.OrderUUID)
-	require.Equal(t, err, repository.ErrOrderNotFoundWith(order.OrderUUID))
+	require.Equal(t, err, model.ErrOrderNotFoundWith(order.OrderUUID))
 }
 
 // TestDeleteOrder_NotFound verifies proper handling of delete attempts for non-existent orders.
@@ -58,7 +57,7 @@ func TestDeleteOrder_NotFound(t *testing.T) {
 	err := ordersRepository.DeleteOrder(ctx, nonExistentUUID)
 
 	// Verify
-	require.Equal(t, err, repository.ErrOrderNotFoundWith(nonExistentUUID))
+	require.Equal(t, err, model.ErrOrderNotFoundWith(nonExistentUUID))
 }
 
 // TestDeleteOrder_ConcurrentAccess verifies thread-safe deletion behavior under race conditions.
@@ -101,5 +100,5 @@ func TestDeleteOrder_ConcurrentAccess(t *testing.T) {
 
 	// Verify order was deleted
 	_, err = ordersRepository.GetOrder(ctx, order.OrderUUID)
-	require.Equal(t, err, repository.ErrOrderNotFoundWith(order.OrderUUID))
+	require.Equal(t, err, model.ErrOrderNotFoundWith(order.OrderUUID))
 }

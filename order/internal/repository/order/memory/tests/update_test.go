@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 )
 
@@ -74,7 +73,7 @@ func TestUpdateOrder_NotFound(t *testing.T) {
 	err := ordersRepository.UpdateOrder(ctx, nonExistentOrder)
 
 	// Verify
-	require.Equal(t, err, repository.ErrOrderNotFoundWith(nonExistentOrder.OrderUUID))
+	require.Equal(t, err, model.ErrOrderNotFoundWith(nonExistentOrder.OrderUUID))
 }
 
 // TestUpdateOrder_ConcurrentAccess verifies thread-safe update behavior under race conditions.

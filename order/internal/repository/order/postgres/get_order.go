@@ -12,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 )
 
 // GetOrder возвращает заказ по его UUID вместе со всеми связанными данными.
@@ -95,7 +94,7 @@ func (r *ordersRepository) getOrderDetails(ctx context.Context, tx pgx.Tx, order
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, repository.ErrOrderNotFoundWith(orderUUID)
+			return nil, model.ErrOrderNotFoundWith(orderUUID)
 		}
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}

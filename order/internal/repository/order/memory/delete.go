@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository"
+	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
 // DeleteOrder removes an order from the repository by its UUID.
@@ -14,7 +14,7 @@ func (r *ordersRepository) DeleteOrder(ctx context.Context, uuid uuid.UUID) erro
 	defer r.mu.Unlock()
 
 	if _, exists := r.orders[uuid]; !exists {
-		return repository.ErrOrderNotFoundWith(uuid)
+		return model.ErrOrderNotFoundWith(uuid)
 	}
 
 	delete(r.orders, uuid)

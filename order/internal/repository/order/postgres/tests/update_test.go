@@ -10,7 +10,7 @@ import (
 	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/require"
 
-	"github.com/andredubov/rocket-factory/order/internal/repository"
+	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
 	repoOrder "github.com/andredubov/rocket-factory/order/internal/repository/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
@@ -199,7 +199,7 @@ func TestUpdateOrder_NotFound(t *testing.T) {
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
-	require.Equal(t, err, repository.ErrOrderNotFoundWith(order.OrderUUID))
+	require.Equal(t, err, model.ErrOrderNotFoundWith(order.OrderUUID))
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

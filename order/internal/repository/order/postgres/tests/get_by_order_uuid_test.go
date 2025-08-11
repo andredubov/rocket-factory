@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
 )
 
@@ -198,7 +197,7 @@ func TestGetOrder_NotFound(t *testing.T) {
 	// Verify
 	require.Error(t, err, "GetOrder should return an error")
 	require.Nil(t, order, "Order should be nil")
-	require.EqualError(t, err, repository.ErrOrderNotFoundWith(orderUUID).Error())
+	require.EqualError(t, err, model.ErrOrderNotFoundWith(orderUUID).Error())
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
 )
 
@@ -65,7 +64,7 @@ func TestAddOrder_DuplicateOrder(t *testing.T) {
 	err = ordersRepository.AddOrder(ctx, order)
 
 	// Verify
-	require.Equal(t, err, repository.ErrOrderAlreadyExistsWith(order.OrderUUID))
+	require.Equal(t, err, model.ErrOrderAlreadyExistsWith(order.OrderUUID))
 }
 
 // TestAddOrder_ConcurrentAccess verifies thread-safe order creation behavior.

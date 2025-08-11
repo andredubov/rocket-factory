@@ -9,7 +9,6 @@ import (
 	sq "github.com/Masterminds/squirrel"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 )
 
 func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) error {
@@ -54,7 +53,7 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) e
 	}
 
 	if result.RowsAffected() == 0 {
-		return repository.ErrOrderNotFoundWith(order.OrderUUID)
+		return model.ErrOrderNotFoundWith(order.OrderUUID)
 	}
 
 	// 2. Обновляем состав заказа (части)

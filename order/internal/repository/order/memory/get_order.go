@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
 )
 
@@ -17,7 +16,7 @@ func (r *ordersRepository) GetOrder(ctx context.Context, uuid uuid.UUID) (*model
 
 	repoOrder, exists := r.orders[uuid]
 	if !exists {
-		return nil, repository.ErrOrderNotFoundWith(uuid)
+		return nil, model.ErrOrderNotFoundWith(uuid)
 	}
 
 	// Return a copy to prevent external modifications
