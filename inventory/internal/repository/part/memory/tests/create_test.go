@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
@@ -77,7 +76,7 @@ func TestAddPart_DuplicateUUID(t *testing.T) {
 
 	// Verify we get the expected error
 	require.Error(t, err)
-	require.Equal(t, repository.ErrPartWithUUIDExists(part.Uuid), err)
+	require.Equal(t, model.ErrPartWithUUIDExists(part.Uuid), err)
 }
 
 // TestAddPart_EmptyPart verifies that a minimal valid part (with only required fields)
@@ -154,7 +153,7 @@ func TestAddPart_ConcurrentAccess(t *testing.T) {
 		go func() {
 			err := inventoryRepository.AddPart(ctx, part)
 			if err != nil {
-				assert.Equal(t, repository.ErrPartWithUUIDExists(part.Uuid), err)
+				assert.Equal(t, model.ErrPartWithUUIDExists(part.Uuid), err)
 			}
 			done <- true
 		}()

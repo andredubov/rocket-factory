@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
@@ -101,7 +100,7 @@ func TestUpdatePart_NotFound(t *testing.T) {
 
 	// Verify
 	require.Error(t, err)
-	require.Equal(t, repository.ErrPartWithUUIDNotFound(nonExistentPart.Uuid), err)
+	require.Equal(t, model.ErrPartWithUUIDNotFound(nonExistentPart.Uuid), err)
 }
 
 // TestUpdatePart_EmptyUUID verifies the repository correctly handles update attempts
@@ -124,7 +123,7 @@ func TestUpdatePart_EmptyUUID(t *testing.T) {
 
 	// Verify
 	require.Error(t, err)
-	require.Equal(t, repository.ErrPartWithUUIDNotFound(""), err)
+	require.Equal(t, model.ErrPartWithUUIDNotFound(""), err)
 }
 
 func TestUpdatePart_ConcurrentAccess(t *testing.T) {

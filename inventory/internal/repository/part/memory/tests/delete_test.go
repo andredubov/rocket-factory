@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
@@ -56,7 +55,7 @@ func TestDeletePart_Success(t *testing.T) {
 	require.NoError(t, err)
 	retrived, err := inventoryRepository.GetPart(ctx, part.Uuid)
 	require.Error(t, err)
-	require.Equal(t, err, repository.ErrPartWithUUIDNotFound(part.Uuid))
+	require.Equal(t, err, model.ErrPartWithUUIDNotFound(part.Uuid))
 	require.Nil(t, retrived)
 }
 
@@ -74,7 +73,7 @@ func TestDeletePart_NotFound(t *testing.T) {
 
 	// Verify
 	require.Error(t, err)
-	require.Equal(t, err, repository.ErrPartWithUUIDNotFound(nonExistentUUID))
+	require.Equal(t, err, model.ErrPartWithUUIDNotFound(nonExistentUUID))
 }
 
 // TestDeletePart_Concurrent verifies thread-safe deletion behavior by attempting to delete
@@ -133,14 +132,14 @@ func TestDeletePart_Concurrent(t *testing.T) {
 
 	if err1 == nil {
 		require.Error(t, err2)
-		require.Equal(t, err2, repository.ErrPartWithUUIDNotFound(part.Uuid))
+		require.Equal(t, err2, model.ErrPartWithUUIDNotFound(part.Uuid))
 	} else {
 		require.Error(t, err1)
-		require.Equal(t, err1, repository.ErrPartWithUUIDNotFound(part.Uuid))
+		require.Equal(t, err1, model.ErrPartWithUUIDNotFound(part.Uuid))
 	}
 
 	retrived, err := inventoryRepository.GetPart(ctx, part.Uuid)
 	require.Error(t, err)
-	require.Equal(t, err, repository.ErrPartWithUUIDNotFound(part.Uuid))
+	require.Equal(t, err, model.ErrPartWithUUIDNotFound(part.Uuid))
 	require.Nil(t, retrived)
 }

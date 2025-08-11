@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	mongoRepository "github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo/mocks"
 )
@@ -43,7 +42,7 @@ func TestInventoryRepository_AddPart(t *testing.T) {
 						},
 					})
 			},
-			expectedError: repository.ErrPartWithUUIDExists("123"),
+			expectedError: model.ErrPartWithUUIDExists("123"),
 		},
 		{
 			name: "other error",

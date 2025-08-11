@@ -11,7 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 	mongoRepository "github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo/mocks"
@@ -65,7 +64,7 @@ func TestUpdatePart_PartNotFount(t *testing.T) {
 			Uuid: "456",
 			Name: "Non-existent Part",
 		}
-		expectedError = repository.ErrPartWithUUIDNotFound("456")
+		expectedError = model.ErrPartWithUUIDNotFound("456")
 	)
 
 	// Setup mock
@@ -88,7 +87,7 @@ func TestUpdatePart_PartNotFount(t *testing.T) {
 	// Assertions
 	if expectedError != nil {
 		assert.Error(t, err)
-		if errors.Is(expectedError, repository.ErrPartWithUUIDNotFound("456")) {
+		if errors.Is(expectedError, model.ErrPartWithUUIDNotFound("456")) {
 			assert.Equal(t, expectedError.Error(), err.Error())
 		} else {
 			assert.Equal(t, expectedError, err)

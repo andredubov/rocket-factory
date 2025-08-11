@@ -6,7 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 )
 
@@ -17,7 +16,7 @@ func (r *InventoryRepository) AddPart(ctx context.Context, part model.Part) erro
 	_, err := r.Collection.InsertOne(ctx, repoPart)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
-			return repository.ErrPartWithUUIDExists(part.Uuid)
+			return model.ErrPartWithUUIDExists(part.Uuid)
 		}
 		return err
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 )
 
@@ -19,7 +18,7 @@ func (r *inventoryRepository) GetPart(ctx context.Context, uuid string) (*model.
 
 	repoPart, exists := r.parts[uuid]
 	if !exists {
-		return nil, repository.ErrPartWithUUIDNotFound(uuid)
+		return nil, model.ErrPartWithUUIDNotFound(uuid)
 	}
 
 	part := converter.PartToModel(*repoPart)

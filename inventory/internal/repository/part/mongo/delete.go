@@ -5,7 +5,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 )
 
 func (r *InventoryRepository) DeletePart(ctx context.Context, uuid string) error {
@@ -19,7 +19,7 @@ func (r *InventoryRepository) DeletePart(ctx context.Context, uuid string) error
 
 	// Проверяем, был ли удален документ
 	if result.DeletedCount == 0 {
-		return repository.ErrPartWithUUIDNotFound(uuid)
+		return model.ErrPartWithUUIDNotFound(uuid)
 	}
 
 	return nil

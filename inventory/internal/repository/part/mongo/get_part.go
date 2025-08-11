@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
@@ -22,7 +21,7 @@ func (r *InventoryRepository) GetPart(ctx context.Context, uuid string) (*model.
 	err := r.Collection.FindOne(ctx, filter).Decode(&repoPart)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			return nil, repository.ErrPartWithUUIDNotFound(uuid)
+			return nil, model.ErrPartWithUUIDNotFound(uuid)
 		}
 		return nil, err
 	}

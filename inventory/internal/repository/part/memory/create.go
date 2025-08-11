@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/converter"
 )
 
@@ -20,7 +19,7 @@ func (r *inventoryRepository) AddPart(ctx context.Context, part model.Part) erro
 
 	// Check for existing part with same UUID
 	if _, exists := r.parts[part.Uuid]; exists {
-		return repository.ErrPartWithUUIDExists(part.Uuid)
+		return model.ErrPartWithUUIDExists(part.Uuid)
 	}
 
 	// Create defensive copy to prevent external modifications

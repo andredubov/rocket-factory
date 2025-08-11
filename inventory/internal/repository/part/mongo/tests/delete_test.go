@@ -10,7 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
+	"github.com/andredubov/rocket-factory/inventory/internal/model"
 	mongoRepository "github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo/mocks"
 )
@@ -38,7 +38,7 @@ func TestInventoryRepository_DeletePart(t *testing.T) {
 				mc.On("DeleteOne", mock.Anything, bson.M{"_id": "123"}, mock.Anything).
 					Return(&mongo.DeleteResult{DeletedCount: 0}, nil)
 			},
-			expectedError: repository.ErrPartWithUUIDNotFound("123"),
+			expectedError: model.ErrPartWithUUIDNotFound("123"),
 		},
 		{
 			name: "database error",
