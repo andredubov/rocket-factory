@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
 )
 
@@ -15,7 +14,7 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 
 	repoOrder := converter.OrderToRepoModel(order)
 	if _, exists := r.orders[repoOrder.OrderUUID]; exists {
-		return repository.ErrOrderAlreadyExistsWith(order.OrderUUID)
+		return model.ErrOrderAlreadyExistsWith(order.OrderUUID)
 	}
 
 	// Store a copy of the order to prevent external modifications

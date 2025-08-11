@@ -20,7 +20,7 @@ require (
 )
 
 require (
-	github.com/andredubov/golibs v0.0.0-20240902121557-ded4e7068ebd
+	github.com/andredubov/golibs v0.0.0-20240902121557-ded4e7068ebd // indirect
 	github.com/brianvoe/gofakeit/v7 v7.3.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1 // indirect

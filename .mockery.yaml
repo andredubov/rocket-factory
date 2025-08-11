@@ -17,6 +17,9 @@ packages:
   github.com/andredubov/rocket-factory/inventory/internal/service:
     config:
       include-regex: "InventoryRepository"
+  github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo:
+    config:
+      include-regex: "MongoCollection|MongoCursor"
   github.com/andredubov/rocket-factory/order/internal/api/v1/order:
     config:
       include-regex: "OrdersService"

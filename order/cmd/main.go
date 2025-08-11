@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,38 +12,87 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	handler "github.com/andredubov/rocket-factory/order/internal/api/v1/order"
+	inventoryClient "github.com/andredubov/rocket-factory/order/internal/client/config/env/inventory"
+	paymentClient "github.com/andredubov/rocket-factory/order/internal/client/config/env/payment"
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/inventory/v1"
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/payment/v1"
-	"github.com/andredubov/rocket-factory/order/internal/repository/order/memory"
+	"github.com/andredubov/rocket-factory/order/internal/migrator"
+	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
 	"github.com/andredubov/rocket-factory/order/internal/service"
 	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
+	"github.com/andredubov/rocket-factory/shared/pkg/config/env"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
 const (
-	httpPort                = "8080"
-	readHeaderTimeout       = 5 * time.Second
-	shutdownTimeout         = 30 * time.Second
-	paymentServiceAddress   = "localhost:50051"
-	inventoryServiceAddress = "localhost:50052"
+	pingTimeout     = 5 * time.Second
+	shutdownTimeout = 30 * time.Second
 )
 
 func main() {
-	paymentServiceClient := newPaymentServiceClient(paymentServiceAddress)
-	inventoryServiceClient := newInventoryServiceClient(inventoryServiceAddress)
-	ordersRepository := memory.NewOrderRepository()
+	inventoryServiceClientConfig, err := inventoryClient.NewGRPCConfig()
+	if err != nil {
+		log.Printf("failed to create inventory grpc client config: %v\n", err)
+	}
+
+	paymentServiceClientConfig, err := paymentClient.NewGRPCConfig()
+	if err != nil {
+		log.Printf("failed to create payment grpc client config: %v\n", err)
+	}
+
+	httpConfig, err := env.NewHTTPConfig()
+	if err != nil {
+		log.Printf("failed to create http server config: %v\n", err)
+	}
+
+	dbConfig, err := env.NewPostgresConfig()
+	if err != nil {
+		log.Printf("failed to create postgres config: %v\n", err)
+	}
+
+	ctx := context.Background()
+	dbPool, err := pgxpool.New(ctx, dbConfig.DSN())
+	if err != nil {
+		log.Printf("failed to connect to database: %v\n", err)
+		return
+	}
+	defer dbPool.Close()
+
+	ctx, cancel := context.WithTimeout(ctx, pingTimeout)
+	defer cancel()
+
+	err = dbPool.Ping(ctx)
+	if err != nil {
+		log.Printf("postgres unawailable: %v\n", err)
+		return
+	}
+
+	migratorRunner := migrator.NewMigrator(stdlib.OpenDBFromPool(dbPool), dbConfig.MigrationDirectory())
+	err = migratorRunner.Up()
+	if err != nil {
+		log.Printf("failed to up database migration: %v\n", err)
+		return
+	}
+
+	inventoryServiceClient := newInventoryServiceClient(inventoryServiceClientConfig.Address())
+	paymentServiceClient := newPaymentServiceClient(paymentServiceClientConfig.Address())
+
+	ordersRepository := postgres.NewOrderRepository(dbPool)
 	ordersService := orders.NewService(ordersRepository, paymentServiceClient, inventoryServiceClient)
 	ordersHandler := handler.NewOrderHandler(ordersService, paymentServiceClient, inventoryServiceClient)
 
 	orderServer, err := order_v1.NewServer(ordersHandler)
 	if err != nil {
-		log.Fatalf("failed to create order server: %v", err)
+		log.Printf("failed to create order server: %v\n", err)
+		return
 	}
 
 	router := chi.NewRouter()
@@ -54,16 +102,17 @@ func main() {
 	router.Mount("/", orderServer)
 
 	server := &http.Server{
-		Addr:              net.JoinHostPort("localhost", httpPort),
+		Addr:              httpConfig.Address(),
 		Handler:           router,
-		ReadHeaderTimeout: readHeaderTimeout,
+		ReadHeaderTimeout: httpConfig.ReadHeaderTimeout(),
 	}
 
 	go func() {
-		log.Println("server started")
+		log.Printf("http server started on %s\n", httpConfig.Address())
 		err = server.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Printf("failed to start server: %v", err)
+			log.Printf("failed to start http server: %v\n", err)
+			return
 		}
 	}()
 
@@ -71,15 +120,16 @@ func main() {
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	ctx, cancel = context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	err = server.Shutdown(ctx)
 	if err != nil {
-		log.Printf("failed to shutdown server: %v", err)
+		log.Printf("failed to shutdown http server: %v\n", err)
+		return
 	}
 
-	log.Println("server stopped")
+	log.Printf("http server stopped on %s\n", httpConfig.Address())
 }
 
 func newPaymentServiceClient(serviceAddress string) service.PaymentClient {
@@ -89,12 +139,12 @@ func newPaymentServiceClient(serviceAddress string) service.PaymentClient {
 
 	conn, err := grpc.NewClient(serviceAddress, dialOptions...)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Payment: %v\n", err)
 	}
 
 	client := payment_v1.NewPaymentServiceClient(conn)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Payment: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Payment: %v\n", err)
 	}
 
 	return payment.NewClient(client)
@@ -107,12 +157,12 @@ func newInventoryServiceClient(serviceAddress string) service.InventoryClient {
 
 	conn, err := grpc.NewClient(serviceAddress, dialOptions...)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v\n", err)
 	}
 
 	client := inventory_v1.NewInventoryServiceClient(conn)
 	if err != nil {
-		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v", err)
+		log.Fatalf("Ошибка создания клиента сервиса Inventory: %v\n", err)
 	}
 
 	return inventory.NewClient(client)

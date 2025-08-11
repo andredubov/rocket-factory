@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"fmt"
 
 	sharedErrors "github.com/andredubov/rocket-factory/shared/pkg/errors"
 )
@@ -11,6 +12,16 @@ var (
 	ErrInvalidUUID       = sharedErrors.NewInvalidArgumentError(errors.New("invalid uuid"))
 	ErrPartAlreadyExists = sharedErrors.NewAlreadyExistsError(errors.New("part already exists"))
 )
+
+// ErrPartWithUUIDNotFound constructs a new error indicating a part with the specified UUID was not found.
+func ErrPartWithUUIDNotFound(uuid string) error {
+	return fmt.Errorf("part with UUID %s not found: %w", uuid, ErrPartNotFound)
+}
+
+// ErrPartWithUUIDExists constructs a new error indicating a part with the specified UUID already exists.
+func ErrPartWithUUIDExists(uuid string) error {
+	return fmt.Errorf("part with UUID %s already exists: %w", uuid, ErrPartAlreadyExists)
+}
 
 // import "errors"
 

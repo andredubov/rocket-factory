@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
-	"github.com/andredubov/rocket-factory/order/internal/repository"
 	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
 )
 
@@ -14,7 +13,7 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) e
 	defer r.mu.Unlock()
 
 	if _, exists := r.orders[order.OrderUUID]; !exists {
-		return repository.ErrOrderNotFoundWith(order.OrderUUID)
+		return model.ErrOrderNotFoundWith(order.OrderUUID)
 	}
 
 	// Store a copy of the order to prevent external modifications

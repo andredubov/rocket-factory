@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/inventory/internal/model"
-	"github.com/andredubov/rocket-factory/inventory/internal/repository"
 	"github.com/andredubov/rocket-factory/inventory/internal/repository/part/memory"
 )
 
@@ -73,7 +72,7 @@ func TestGetPart_NotFound(t *testing.T) {
 
 	// Verify
 	require.Error(t, err)
-	require.Equal(t, repository.ErrPartWithUUIDNotFound(nonExistentUUID), err)
+	require.Equal(t, model.ErrPartWithUUIDNotFound(nonExistentUUID), err)
 	require.Nil(t, part)
 }
 
@@ -92,7 +91,7 @@ func TestGetPart_EmptyUUID(t *testing.T) {
 
 	// Verify
 	require.Error(t, err)
-	require.Equal(t, repository.ErrPartWithUUIDNotFound(emptyUUID), err)
+	require.Equal(t, model.ErrPartWithUUIDNotFound(emptyUUID), err)
 	require.Nil(t, part)
 }
 

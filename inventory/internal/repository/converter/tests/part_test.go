@@ -325,3 +325,137 @@ func TestPartToModel_CategoryConversion(t *testing.T) {
 		require.Equal(t, model.PartCategory(category), result.Category)
 	}
 }
+
+// TestPartsToModel_EmptySlice verifies empty slice conversion from repo to domain model.
+func TestPartsToModel_EmptySlice(t *testing.T) {
+	// Arrange
+	var repoParts []repoModel.Part
+
+	// Act
+	modelParts := converter.PartsToModel(repoParts)
+
+	// Assert
+	require.Empty(t, modelParts)
+}
+
+// TestPartsToModel_SinglePart tests conversion of a single part with all fields.
+func TestPartsToModel_SinglePart(t *testing.T) {
+	// Arrange
+	now := time.Now()
+	repoParts := []repoModel.Part{
+		{
+			Uuid:          "test-uuid",
+			Name:          "Test Part",
+			Description:   "Test Description",
+			Price:         100.50,
+			StockQuantity: 10,
+			Category:      repoModel.PartCategoryEngine,
+			Dimensions: repoModel.Dimensions{
+				Length: 10.0,
+				Width:  5.0,
+				Height: 2.0,
+				Weight: 1.5,
+			},
+			Manufacturer: repoModel.Manufacturer{
+				Name:    "Test Manufacturer",
+				Country: "Test Country",
+				Website: "http://test.com",
+			},
+			Tags:      []string{"tag1", "tag2"},
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+	}
+
+	// Act
+	modelParts := converter.PartsToModel(repoParts)
+
+	// Assert
+	require.Len(t, modelParts, 1)
+	require.Equal(t, model.Part{
+		Uuid:          "test-uuid",
+		Name:          "Test Part",
+		Description:   "Test Description",
+		Price:         100.50,
+		StockQuantity: 10,
+		Category:      model.PartCategoryEngine,
+		Dimensions: model.Dimensions{
+			Length: 10.0,
+			Width:  5.0,
+			Height: 2.0,
+			Weight: 1.5,
+		},
+		Manufacturer: model.Manufacturer{
+			Name:    "Test Manufacturer",
+			Country: "Test Country",
+			Website: "http://test.com",
+		},
+		Tags:      []string{"tag1", "tag2"},
+		CreatedAt: now,
+		UpdatedAt: now,
+	},
+		modelParts[0],
+	)
+}
+
+// TestPartsToModel_MultiplePart checks batch conversion of multiple parts, preserving order and fields.
+func TestPartsToModel_MultiplePart(t *testing.T) {
+	// Arrange
+	repoParts := []repoModel.Part{
+		{
+			Uuid:        "part-1",
+			Name:        "Part 1",
+			Description: "Description 1",
+			Category:    repoModel.PartCategoryEngine,
+		},
+		{
+			Uuid:        "part-2",
+			Name:        "Part 2",
+			Description: "Description 2",
+			Category:    repoModel.PartCategoryFuel,
+		},
+		{
+			Uuid:        "part-3",
+			Name:        "Part 3",
+			Description: "Description 3",
+			Category:    repoModel.PartCategoryWing,
+		},
+	}
+
+	// Act
+	modelParts := converter.PartsToModel(repoParts)
+
+	// Assert
+	require.Len(t, modelParts, 3)
+	require.Equal(t, "part-1", modelParts[0].Uuid)
+	require.Equal(t, "part-2", modelParts[1].Uuid)
+	require.Equal(t, "part-3", modelParts[2].Uuid)
+	require.Equal(t, model.PartCategoryEngine, modelParts[0].Category)
+	require.Equal(t, model.PartCategoryFuel, modelParts[1].Category)
+	require.Equal(t, model.PartCategoryWing, modelParts[2].Category)
+}
+
+// TestPartsToModel_WithMetadata tests metadata conversion, including different value types.
+func TestPartsToModel_WithMetadata(t *testing.T) {
+	// Arrange
+	strVal := "test"
+	intVal := int64(42)
+	repoParts := []repoModel.Part{
+		{
+			Uuid: "part-with-metadata",
+			Metadata: map[string]repoModel.Value{
+				"string": {StringValue: &strVal},
+				"int":    {Int64Value: &intVal},
+			},
+		},
+	}
+
+	// Act
+	modelParts := converter.PartsToModel(repoParts)
+
+	// Assert
+	require.Len(t, modelParts, 1)
+	require.NotNil(t, modelParts[0].Metadata)
+	require.Equal(t, "test", *modelParts[0].Metadata["string"].StringValue)
+	require.Equal(t, int64(42), *modelParts[0].Metadata["int"].Int64Value)
+}

@@ -59,6 +59,17 @@ func PartToModel(part repoModel.Part) model.Part {
 	}
 }
 
+// PartsToModel converts a slice of repository model parts to a slice of domain model parts.
+func PartsToModel(parts []repoModel.Part) []model.Part {
+	modelParts := make([]model.Part, len(parts))
+
+	for i, p := range parts {
+		modelParts[i] = PartToModel(p)
+	}
+
+	return modelParts
+}
+
 // convertMetadataToRepo converts metadata values from domain model format to repository model format.
 func convertMetadataToRepo(metadata map[string]model.Value) map[string]repoModel.Value {
 	if metadata == nil {

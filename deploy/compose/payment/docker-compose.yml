@@ -1,0 +1,20 @@
+services:
+  # Здесь описываются контейнеры, необходимые для Payment-сервиса
+  payment-service:
+    image: payment-service
+    container_name: payment_service
+    build:
+      context: ../../..
+      dockerfile: ./payment/Dockerfile
+    env_file:
+      - ../../../payment/config/.env
+    ports:
+      - ${GRPC_PORT}:${GRPC_PORT}
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.7
+
+networks:
+  # Сетевые настройки
+  rocketfactory-net:
+    external: true

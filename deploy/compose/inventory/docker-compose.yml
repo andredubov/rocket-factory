@@ -1,0 +1,64 @@
+services:
+  # Здесь описываются контейнеры, необходимые для Inventory-сервиса
+  inventory-service:
+    image: inventory-service
+    container_name: inventory_service
+    build:
+      context: ../../..
+      dockerfile: ./inventory/Dockerfile
+    env_file:
+      - ../../../inventory/config/.env
+    ports:
+      - ${GRPC_PORT}:${GRPC_PORT}
+    depends_on:
+      inventory-mongo:
+        condition: service_healthy
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.3
+
+  inventory-mongo:
+    # Контейнер с MongoDB — используется для хранения данных об инвентаре (например, запчасти, компоненты)
+    image: mongo:7.0.5
+    container_name: inventory_mongo
+    environment:
+      # Переменные окружения для инициализации MongoDB
+      MONGO_INITDB_DATABASE: ${MG_INITDB_DATABASE} # Имя базы данных, которая будет создана при запуске
+      MONGO_INITDB_ROOT_USERNAME: ${MG_INITDB_ROOT_USERNAME} # Имя root-пользователя MongoDB
+      MONGO_INITDB_ROOT_PASSWORD: ${MG_INITDB_ROOT_PASSWORD} # Пароль для root-пользователя
+    volumes:
+      - inventory_mongo_volume:/data/db
+      # Подключаем локальный Docker-том к директории MongoDB, где хранятся все данные (коллекции, документы и т.д.)
+      # Это нужно для сохранения данных между перезапусками контейнера
+    ports:
+      - "${MG_PORT_OUT}:${MG_PORT}"
+      # Пробрасываем внутренний порт MongoDB ${MG_PORT} наружу на порт ${MG_PORT_OUT}:
+      # Это позволяет подключаться к Mongo из внешних инструментов
+    healthcheck:
+      test: [ "CMD-SHELL", "echo 'db.runCommand({ ping: 1 }).ok' | mongosh --quiet -u ${MG_INITDB_ROOT_USERNAME} -p ${MG_INITDB_ROOT_PASSWORD} --authenticationDatabase admin" ]
+      # Проверка готовности MongoDB: выполняем команду ping через mongosh с указанием логина и пароля
+      # --quiet отключает лишний вывод, чтобы результатом был только "1" при успехе
+      interval: 10s # Запускаем проверку каждые 10 секунд
+      timeout: 5s # Максимальное время ожидания выполнения ping-команды
+      retries: 5 # После 5 неудачных проверок подряд контейнер считается "неработоспособным"
+    restart: unless-stopped
+    # Автоматически перезапускаем контейнер, если он аварийно завершился
+    # Но если мы остановим его вручную — он не запустится повторно
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.4
+      # Подключаем контейнер к общей сети всех микросервисов, чтобы они могли взаимодействовать между собой по имени
+
+volumes:
+  # Раздел с томами — определяем хранилище, которое создаст Docker
+  inventory_mongo_volume:
+    name: inventory_mongo_volume
+    # Именованный том, в котором будут храниться данные MongoDB для Inventory-сервиса
+    # Он живёт отдельно от контейнера и сохраняется даже после удаления контейнера
+
+networks:
+  # Определение используемой сети
+  rocketfactory-net:
+    external: true
+    # Мы не создаём новую сеть, а подключаемся к внешней, общей для всех микросервисов
+    # Её должен создать docker-compose.yml или вручную: docker network create microservices-net

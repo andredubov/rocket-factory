@@ -4,11 +4,10 @@ import (
 	"context"
 	"log"
 
-	"github.com/andredubov/golibs/pkg/config"
-	"github.com/andredubov/golibs/pkg/config/env"
-
 	api "github.com/andredubov/rocket-factory/payment/internal/api/v1/payment"
 	"github.com/andredubov/rocket-factory/payment/internal/service/payment"
+	"github.com/andredubov/rocket-factory/shared/pkg/config"
+	"github.com/andredubov/rocket-factory/shared/pkg/config/env"
 )
 
 // serviceProvider implements the dependency injection container pattern.
