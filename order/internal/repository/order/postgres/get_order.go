@@ -43,10 +43,11 @@ func (r *ordersRepository) GetOrder(ctx context.Context, orderUUID uuid.UUID) (*
 		return nil, err
 	}
 
-	committed = true
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	committed = true
 
 	return order, nil
 }

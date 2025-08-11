@@ -50,10 +50,11 @@ func (r *ordersRepository) GetUserOrders(ctx context.Context, userUUID uuid.UUID
 		}
 	}
 
-	committed = true
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	committed = true
 
 	return orders, nil
 }

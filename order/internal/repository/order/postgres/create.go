@@ -69,10 +69,11 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 		}
 	}
 
-	committed = true
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
+
+	committed = true
 
 	return nil
 }

@@ -3,6 +3,7 @@ package tests
 import (
 	"context"
 	"fmt"
+	"log"
 	"strings"
 	"testing"
 	"time"
@@ -281,6 +282,11 @@ func TestGetUserOrders_CommitError(t *testing.T) {
 	// Simulate commit error
 	mock.ExpectCommit().
 		WillReturnError(fmt.Errorf("commit failed"))
+
+	// Capture log output
+	var logOutput string
+	log.SetOutput(&testLogWriter{&logOutput})
+	defer log.SetOutput(nil)
 
 	// Test
 	orders, err := repo.GetUserOrders(context.Background(), userUUID)

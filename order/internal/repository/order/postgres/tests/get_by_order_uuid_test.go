@@ -455,6 +455,11 @@ func TestGetOrder_CommitError(t *testing.T) {
 	expectedErr := errors.New("commit error")
 	mock.ExpectCommit().WillReturnError(expectedErr)
 
+	// Capture log output
+	var logOutput string
+	log.SetOutput(&testLogWriter{&logOutput})
+	defer log.SetOutput(nil)
+
 	// Test
 	order, err := repo.GetOrder(context.Background(), orderUUID)
 

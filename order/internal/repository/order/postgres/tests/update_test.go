@@ -352,7 +352,7 @@ func TestUpdateOrder_InsertPartsError(t *testing.T) {
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
 	require.Contains(t, err.Error(), "failed to insert order parts")
-	// require.NoError(t, mock.ExpectationsWereMet())
+	require.NoError(t, mock.ExpectationsWereMet())
 }
 
 func TestUpdateOrder_CommitError(t *testing.T) {
@@ -393,6 +393,11 @@ func TestUpdateOrder_CommitError(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("INSERT", 2))
 
 	mock.ExpectCommit().WillReturnError(errors.New("commit error"))
+
+	// Capture log output
+	var logOutput string
+	log.SetOutput(&testLogWriter{&logOutput})
+	defer log.SetOutput(nil)
 
 	// Test
 	order := converter.OrderToModel(repoOrder)

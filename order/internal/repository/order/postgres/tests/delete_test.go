@@ -98,6 +98,11 @@ func TestDeleteOrder_CommitError(t *testing.T) {
 		WillReturnResult(pgxmock.NewResult("DELETE", 1))
 	mock.ExpectCommit().WillReturnError(errors.New("commit error"))
 
+	// Capture log output
+	var logOutput string
+	log.SetOutput(&testLogWriter{&logOutput})
+	defer log.SetOutput(nil)
+
 	// Test
 	err = repo.DeleteOrder(context.Background(), orderUUID)
 

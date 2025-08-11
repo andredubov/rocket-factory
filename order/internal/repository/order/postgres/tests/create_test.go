@@ -15,6 +15,7 @@ import (
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
 )
 
+// testLogWriter is a helper to capture log output
 type testLogWriter struct {
 	output *string
 }
