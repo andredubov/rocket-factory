@@ -7,7 +7,7 @@ services:
       context: ../../..
       dockerfile: ./order/Dockerfile
     env_file:
-      - ../../../order/config/.env
+      - .env
     ports:
       - ${HTTP_PORT}:${HTTP_PORT}
     depends_on:
@@ -19,7 +19,7 @@ services:
 
   order-postgres:
     # Контейнер с PostgreSQL, используемый для хранения данных заказов
-    image: postgres:17.0-alpine3.20
+    image: ${PG_IMAGE_NAME}
     # Используем официальный образ PostgreSQL версии 17 на базе Alpine Linux
     # Это лёгкая и быстрая сборка, которая экономит ресурсы
     container_name: order_postgres
@@ -33,7 +33,7 @@ services:
       # Определяем том, который будет использоваться для хранения данных PostgreSQL
       # Он сохраняет данные между перезапусками контейнера
     ports:
-      - "${PG_PORT_OUT}:${PG_PORT}"
+      - "${EXTERNAL_PG_PORT}:${INTERNAL_PG_PORT}"
       # Пробрасываем внутренний порт PostgreSQL (${PG_PORT}) на порт хоста (${PG_PORT_OUT})
       # Это нужно, чтобы другие сервисы или инструменты могли подключиться к базе
     healthcheck:

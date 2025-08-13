@@ -7,7 +7,7 @@ services:
       context: ../../..
       dockerfile: ./inventory/Dockerfile
     env_file:
-      - ../../../inventory/config/.env
+      - .env
     ports:
       - ${GRPC_PORT}:${GRPC_PORT}
     depends_on:
@@ -19,23 +19,23 @@ services:
 
   inventory-mongo:
     # Контейнер с MongoDB — используется для хранения данных об инвентаре (например, запчасти, компоненты)
-    image: mongo:7.0.5
+    image: ${MONGO_IMAGE_NAME}
     container_name: inventory_mongo
     environment:
       # Переменные окружения для инициализации MongoDB
-      MONGO_INITDB_DATABASE: ${MG_INITDB_DATABASE} # Имя базы данных, которая будет создана при запуске
-      MONGO_INITDB_ROOT_USERNAME: ${MG_INITDB_ROOT_USERNAME} # Имя root-пользователя MongoDB
-      MONGO_INITDB_ROOT_PASSWORD: ${MG_INITDB_ROOT_PASSWORD} # Пароль для root-пользователя
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE} # Имя базы данных, которая будет создана при запуске
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME} # Имя root-пользователя MongoDB
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD} # Пароль для root-пользователя
     volumes:
       - inventory_mongo_volume:/data/db
       # Подключаем локальный Docker-том к директории MongoDB, где хранятся все данные (коллекции, документы и т.д.)
       # Это нужно для сохранения данных между перезапусками контейнера
     ports:
-      - "${MG_PORT_OUT}:${MG_PORT}"
+      - "${EXTERNAL_MONGO_PORT}:${INTERNAL_MONGO_PORT}"
       # Пробрасываем внутренний порт MongoDB ${MG_PORT} наружу на порт ${MG_PORT_OUT}:
       # Это позволяет подключаться к Mongo из внешних инструментов
     healthcheck:
-      test: [ "CMD-SHELL", "echo 'db.runCommand({ ping: 1 }).ok' | mongosh --quiet -u ${MG_INITDB_ROOT_USERNAME} -p ${MG_INITDB_ROOT_PASSWORD} --authenticationDatabase admin" ]
+      test: [ "CMD-SHELL", "echo 'db.runCommand({ ping: 1 }).ok' | mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase ${MONGO_AUTH_SOURCE}" ]
       # Проверка готовности MongoDB: выполняем команду ping через mongosh с указанием логина и пароля
       # --quiet отключает лишний вывод, чтобы результатом был только "1" при успехе
       interval: 10s # Запускаем проверку каждые 10 секунд
