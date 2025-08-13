@@ -8,16 +8,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	api "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
+	"github.com/andredubov/rocket-factory/inventory/internal/config"
+	"github.com/andredubov/rocket-factory/inventory/internal/config/env"
 	mongodb "github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo"
 	"github.com/andredubov/rocket-factory/inventory/internal/service"
 	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
-	"github.com/andredubov/rocket-factory/shared/pkg/config"
-	"github.com/andredubov/rocket-factory/shared/pkg/config/env"
 )
 
-// serviceProvider implements the dependency container pattern
+// diContainer implements the dependency container pattern
 // It provides lazy initialization of application components
-type serviceProvider struct {
+type diContainer struct {
 	inventoryRepository  service.InventoryRepository
 	inventoryService     api.InventoryService
 	grpcConfig           config.GRPCConfig // GRPC server configuration
@@ -26,14 +26,14 @@ type serviceProvider struct {
 	serverImplementation *api.InventoryImplementation // GRPC service implementation
 }
 
-// newServiceProvider creates a new service provider instance
-func newServiceProvider() *serviceProvider {
-	return &serviceProvider{}
+// newDIContainer creates a new service provider instance.
+func NewDIContainer() *diContainer {
+	return &diContainer{}
 }
 
 // GRPCConfig loads GRPC configuration from environment variables
 // Implements singleton pattern - initializes config only once
-func (s *serviceProvider) GRPCConfig() config.GRPCConfig {
+func (s *diContainer) GRPCConfig() config.GRPCConfig {
 	if s.grpcConfig == nil {
 		cfg, err := env.NewGRPCConfig()
 		if err != nil {
@@ -47,7 +47,7 @@ func (s *serviceProvider) GRPCConfig() config.GRPCConfig {
 
 // MongoDBConfig loads MongoDB configuration from environment variables
 // Implements singleton pattern - initializes config only once
-func (s *serviceProvider) MongoDBConfig() config.MongoDBConfig {
+func (s *diContainer) MongoDBConfig() config.MongoDBConfig {
 	if s.mongoDBConfig == nil {
 		cfg, err := env.NewMongoDBConfig()
 		if err != nil {
@@ -60,7 +60,7 @@ func (s *serviceProvider) MongoDBConfig() config.MongoDBConfig {
 }
 
 // MongoDatabase creates an instance of database client
-func (s *serviceProvider) MongoDatabase(ctx context.Context) *mongo.Database {
+func (s *diContainer) MongoDatabase(ctx context.Context) *mongo.Database {
 	if s.mongoDB == nil {
 		URI := s.MongoDBConfig().Address()
 		client, err := mongo.Connect(ctx, options.Client().ApplyURI(URI))
@@ -83,7 +83,7 @@ func (s *serviceProvider) MongoDatabase(ctx context.Context) *mongo.Database {
 
 // InventoryRepository provides access to inventory data
 // Uses in-memory implementation and singleton pattern
-func (s *serviceProvider) InventoryRepository(ctx context.Context) service.InventoryRepository {
+func (s *diContainer) InventoryRepository(ctx context.Context) service.InventoryRepository {
 	if s.inventoryRepository == nil {
 		s.inventoryRepository = mongodb.NewInventoryRepository(
 			ctx,
@@ -95,7 +95,7 @@ func (s *serviceProvider) InventoryRepository(ctx context.Context) service.Inven
 }
 
 // InventoryService provides access to inventory service layer
-func (s *serviceProvider) InventoryService(ctx context.Context) api.InventoryService {
+func (s *diContainer) InventoryService(ctx context.Context) api.InventoryService {
 	if s.inventoryService == nil {
 		s.inventoryService = inventory.NewService(
 			s.InventoryRepository(ctx),
@@ -107,7 +107,7 @@ func (s *serviceProvider) InventoryService(ctx context.Context) api.InventorySer
 
 // ServerImplementation creates GRPC service handler
 // Initializes all required dependencies (service)
-func (s *serviceProvider) ServerImplementation(ctx context.Context) *api.InventoryImplementation {
+func (s *diContainer) ServerImplementation(ctx context.Context) *api.InventoryImplementation {
 	if s.serverImplementation == nil {
 		inventoryService := s.InventoryService(ctx)
 		s.serverImplementation = api.NewInventoryImplementation(inventoryService)
