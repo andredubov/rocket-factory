@@ -29,14 +29,13 @@ func main() {
 
 	closer.Configure(syscall.SIGINT, syscall.SIGTERM)
 
-	a, err := app.New(appCtx)
+	application, err := app.New(appCtx)
 	if err != nil {
 		logger.Error(appCtx, "❌ Не удалось создать приложение", zap.Error(err))
 		return
 	}
 
-	err = a.Run(appCtx)
-	if err != nil {
+	if err = application.Run(appCtx); err != nil {
 		logger.Error(appCtx, "❌ Ошибка при работе приложения", zap.Error(err))
 		return
 	}
