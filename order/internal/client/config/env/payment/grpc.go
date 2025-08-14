@@ -5,7 +5,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/andredubov/rocket-factory/shared/pkg/config"
+	"github.com/andredubov/rocket-factory/order/internal/config"
 )
 
 const (
