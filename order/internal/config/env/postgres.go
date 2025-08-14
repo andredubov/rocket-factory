@@ -29,7 +29,7 @@ func NewPostgresDBConfig() (*postgresConfig, error) {
 	return &postgresConfig{raw: raw}, nil
 }
 
-func (cfg *postgresConfig) Address() string {
+func (cfg *postgresConfig) DSN() string {
 	return fmt.Sprintf(
 		"host=%s port=%s dbname=%s user=%s password=%s sslmode=%s",
 		cfg.raw.Host,
@@ -39,10 +39,6 @@ func (cfg *postgresConfig) Address() string {
 		cfg.raw.Password,
 		cfg.raw.SSLMode,
 	)
-}
-
-func (cfg *postgresConfig) DSN() string {
-	return cfg.raw.DatabaseName
 }
 
 func (cfg *postgresConfig) MigrationDirectory() string {

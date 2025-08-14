@@ -125,7 +125,7 @@ func (s *diContainer) PostgresDBConfig() config.PostgresDBConfig {
 	if s.postgresDBConfig == nil {
 		cfg, err := env.NewPostgresDBConfig()
 		if err != nil {
-			log.Printf("failed to get MongoDB config: %s", err.Error())
+			log.Printf("failed to get Postgres database config: %s", err.Error())
 			return nil
 		}
 
