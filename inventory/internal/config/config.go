@@ -22,25 +22,25 @@ func Load(path ...string) error {
 		return err
 	}
 
-	loggerCfg, err := env.NewLoggerConfig()
+	loggerConfig, err := env.NewLoggerConfig()
 	if err != nil {
 		return err
 	}
 
-	ufoGRPCCfg, err := env.NewGRPCConfig()
+	grpcConfig, err := env.NewGRPCConfig()
 	if err != nil {
 		return err
 	}
 
-	mongoDBCfg, err := env.NewMongoDBConfig()
+	mongoDBConfig, err := env.NewMongoDBConfig()
 	if err != nil {
 		return err
 	}
 
 	appConfig = &config{
-		Logger:     loggerCfg,
-		GRPCServer: ufoGRPCCfg,
-		MongoDB:    mongoDBCfg,
+		Logger:     loggerConfig,
+		GRPCServer: grpcConfig,
+		MongoDB:    mongoDBConfig,
 	}
 
 	return nil
