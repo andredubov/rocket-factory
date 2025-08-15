@@ -53,6 +53,7 @@ func setupTestEnvironment(ctx context.Context) *TestEnvironment {
 	mongoPassword := getEnvWithLogging(ctx, testcontainers.MongoPasswordKey)
 	mongoImageName := getEnvWithLogging(ctx, testcontainers.MongoImageNameKey)
 	mongoDatabase := getEnvWithLogging(ctx, testcontainers.MongoDatabaseKey)
+	mongoAuthDB := getEnvWithLogging(ctx, testcontainers.MongoAuthDBKey)
 
 	// Получаем порт gRPC для waitStrategy
 	grpcPort := getEnvWithLogging(ctx, grpcPortKey)
@@ -64,6 +65,7 @@ func setupTestEnvironment(ctx context.Context) *TestEnvironment {
 		mongo.WithImageName(mongoImageName),
 		mongo.WithDatabase(mongoDatabase),
 		mongo.WithAuth(mongoUsername, mongoPassword),
+		mongo.WithAuthDB(mongoAuthDB),
 		mongo.WithLogger(logger.Logger()),
 	)
 	if err != nil {
@@ -77,12 +79,7 @@ func setupTestEnvironment(ctx context.Context) *TestEnvironment {
 
 	appEnv := map[string]string{
 		// Переопределяем хост MongoDB для подключения к контейнеру из testcontainers
-		testcontainers.MongoHostKey:     generatedMongo.Config().ContainerName,
-		testcontainers.MongoPortKey:     generatedMongo.Config().Port,
-		testcontainers.MongoUsernameKey: generatedMongo.Config().Username,
-		testcontainers.MongoPasswordKey: generatedMongo.Config().Password,
-		testcontainers.MongoDatabaseKey: generatedMongo.Config().Database,
-		testcontainers.MongoAuthDBKey:   generatedMongo.Config().AuthDB,
+		testcontainers.MongoHostKey: generatedMongo.Config().ContainerName,
 	}
 
 	// Создаем настраиваемую стратегию ожидания с увеличенным таймаутом

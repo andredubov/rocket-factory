@@ -67,7 +67,7 @@ COPY --from=builder /app/inventory-app .
 COPY --from=builder /app/grpc-health-probe /bin/grpc-health-probe
 
 # Копируем .env файл для конфигурации приложения
-COPY ./deploy/compose/inventory/.env .env
+COPY deploy/compose/inventory/.env /deploy/compose/inventory/.env
 
 # Экспонируем порт gRPC-сервиса Inventory
 EXPOSE 50051

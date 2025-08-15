@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,9 +13,13 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
+	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/path"
 )
 
-const testsTimeout = 5 * time.Minute
+const (
+	testsTimeout         = 5 * time.Minute
+	inventoryEnvFilePath = "/deploy/compose/inventory/.env"
+)
 
 var (
 	env *TestEnvironment
@@ -39,7 +42,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	suiteCtx, suiteCancel = context.WithTimeout(context.Background(), testsTimeout)
 
 	// Загружаем .env файл и устанавливаем переменные в окружение
-	envVars, err := godotenv.Read(filepath.Join("..", "..", "..", "deploy", "compose", "inventory", ".env"))
+	envVars, err := godotenv.Read(path.GetProjectRoot() + inventoryEnvFilePath)
 	if err != nil {
 		logger.Fatal(suiteCtx, "Не удалось загрузить .env файл", zap.Error(err))
 	}
