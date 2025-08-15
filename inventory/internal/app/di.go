@@ -16,7 +16,6 @@ import (
 )
 
 // diContainer implements the dependency container pattern
-// It provides lazy initialization of application components
 type diContainer struct {
 	inventoryRepository  service.InventoryRepository
 	inventoryService     api.InventoryService
@@ -32,7 +31,6 @@ func NewDIContainer() *diContainer {
 }
 
 // GRPCConfig loads GRPC configuration from environment variables
-// Implements singleton pattern - initializes config only once
 func (s *diContainer) GRPCConfig() config.GRPCConfig {
 	if s.grpcConfig == nil {
 		cfg, err := env.NewGRPCConfig()
@@ -46,7 +44,6 @@ func (s *diContainer) GRPCConfig() config.GRPCConfig {
 }
 
 // MongoDBConfig loads MongoDB configuration from environment variables
-// Implements singleton pattern - initializes config only once
 func (s *diContainer) MongoDBConfig() config.MongoDBConfig {
 	if s.mongoDBConfig == nil {
 		cfg, err := env.NewMongoDBConfig()
@@ -82,7 +79,6 @@ func (s *diContainer) MongoDatabase(ctx context.Context) *mongo.Database {
 }
 
 // InventoryRepository provides access to inventory data
-// Uses in-memory implementation and singleton pattern
 func (s *diContainer) InventoryRepository(ctx context.Context) service.InventoryRepository {
 	if s.inventoryRepository == nil {
 		s.inventoryRepository = mongodb.NewInventoryRepository(
@@ -106,7 +102,6 @@ func (s *diContainer) InventoryService(ctx context.Context) api.InventoryService
 }
 
 // ServerImplementation creates GRPC service handler
-// Initializes all required dependencies (service)
 func (s *diContainer) ServerImplementation(ctx context.Context) *api.InventoryImplementation {
 	if s.serverImplementation == nil {
 		inventoryService := s.InventoryService(ctx)
