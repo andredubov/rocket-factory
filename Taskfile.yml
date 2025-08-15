@@ -592,21 +592,6 @@ tasks:
         echo
         echo "🎉 Все тесты API успешно выполнены!"
 
-  run:inventory:
-    cmds:
-      - go build -o ./bin/inventory ./inventory/cmd/main.go
-      - ./bin/inventory -config-path ./inventory/config/.env
-
-  run:payment:
-    cmds:
-      - go build -o ./bin/payment ./payment/cmd/main.go
-      - ./bin/payment -config-path ./payment/config/.env
-
-  run:order:
-    cmds:
-      - go build -o ./bin/order ./order/cmd/main.go
-      - ./bin/order -config-path ./order/config/.env
-
   up-core:
     desc: Поднять core контейнеры
     dir: deploy/compose/core
@@ -683,6 +668,12 @@ tasks:
       - task down-payment
       - task down-core
 
+  restart-all:
+    desc: Перезапустить все сервисы
+    cmds:
+      - task down-all
+      - task up-all
+
   env:install-envsubst:
     desc: "Устанавливает envsubst в bin/"
     cmds:
@@ -717,3 +708,36 @@ tasks:
         # Передаем список сервисов в виде строки с разделителями-запятыми
         export SERVICES="{{.SERVICES}}"
         ENV_SUBST={{.ENVSUBST}} "$SCRIPT"
+  
+  e2e:test:inventory:
+    desc: "Запускает e2e тесты для Inventory сервиса"
+    dir: inventory/tests/e2e
+    cmds:
+      - echo "🚀 Запуск e2e тестов Inventory сервиса..."
+      - cd ../../ && go mod tidy
+      - go test -tags=integration -v ./...
+
+  grpc:test:inventory:get:
+    desc: "Тестирует получение детали по UUID"
+    deps: [ grpcurl:install ]
+    cmds:
+      - echo "🔍 Получаем деталь по UUID... (замените UUID на реальный)"
+      - |
+        {{.GRPCURL}} -plaintext -d '{
+          "uuid": "REPLACE_WITH_REAL_UUID"
+        }' {{.GRPC_SERVER_ADDR}} inventory.v1.InventoryService/GetPart
+
+  grpc:test:inventory:list:
+    desc: "Тестирует получение списка деталей"
+    deps: [ grpcurl:install ]
+    cmds:
+      - echo "📋 Получаем список деталей..."
+      - |
+        {{.GRPCURL}} -plaintext -d '{}' {{.GRPC_SERVER_ADDR}} inventory.v1.InventoryService/ListParts
+  
+  clean:
+    desc: Очистить все контейнеры, образы и volumes
+    cmds:
+      - echo "[task] 🧹 Очищаем все Docker ресурсы"
+      - docker system prune -a --volumes -f
+      - echo "✅ Очистка завершена"
