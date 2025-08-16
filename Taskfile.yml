@@ -187,29 +187,6 @@ tasks:
     cmds:
       - '{{.BUF}} lint'
 
-  redocly-cli:install:
-    desc: Установить локально Redocly CLI
-    cmds:
-      - |
-        [ -f {{.REDOCLY}} ] || {
-          npm ci
-        } || {
-          echo "📦 Устанавливаем redocly-cli..."
-          npm install
-        }
-
-  redocly-cli:order-v1-bundle:
-    desc: Собрать OpenAPI в один файл через локальный redocly
-    deps: [ redocly-cli:install ]
-    cmds:
-      - '{{.REDOCLY}} bundle {{.OPEN_API_ORDER_V1_BASE}} -o {{.OPEN_API_ORDER_V1_BUNDLE}}'
-
-  redocly-cli:bundle:
-    desc: Собрать все схемы OpenAPI в общие файлы через локальный redocly
-    deps: [ redocly-cli:install ]
-    cmds:
-      - task: redocly-cli:order-v1-bundle
-
   ogen:install:
     desc: "Скачивает ogen в папку bin"
     cmds:
@@ -716,24 +693,6 @@ tasks:
       - echo "🚀 Запуск e2e тестов Inventory сервиса..."
       - cd ../../ && go mod tidy
       - go test -tags=integration -v ./...
-
-  grpc:test:inventory:get:
-    desc: "Тестирует получение детали по UUID"
-    deps: [ grpcurl:install ]
-    cmds:
-      - echo "🔍 Получаем деталь по UUID... (замените UUID на реальный)"
-      - |
-        {{.GRPCURL}} -plaintext -d '{
-          "uuid": "REPLACE_WITH_REAL_UUID"
-        }' {{.GRPC_SERVER_ADDR}} inventory.v1.InventoryService/GetPart
-
-  grpc:test:inventory:list:
-    desc: "Тестирует получение списка деталей"
-    deps: [ grpcurl:install ]
-    cmds:
-      - echo "📋 Получаем список деталей..."
-      - |
-        {{.GRPCURL}} -plaintext -d '{}' {{.GRPC_SERVER_ADDR}} inventory.v1.InventoryService/ListParts
   
   clean:
     desc: Очистить все контейнеры, образы и volumes
@@ -741,3 +700,45 @@ tasks:
       - echo "[task] 🧹 Очищаем все Docker ресурсы"
       - docker system prune -a --volumes -f
       - echo "✅ Очистка завершена"
+
+  status:
+    desc: Показать статус всех контейнеров
+    cmds:
+      - echo "[task] 📊 Статус всех контейнеров"
+      - docker ps
+
+  logs-all:
+    desc: Показать логи всех сервисов
+    cmds:
+      - echo "[task] 📋 Логи всех сервисов"
+      - docker compose -f deploy/compose/core/docker-compose.yaml logs --tail=50
+      - echo "--- Inventory logs ---"
+      - docker compose -f deploy/compose/inventory/docker-compose.yaml logs --tail=50
+      - echo "--- Payment logs ---"
+      - docker compose -f deploy/compose/payment/docker-compose.yaml logs --tail=50
+      - echo "--- Order logs ---"
+      - docker compose -f deploy/compose/order/docker-compose.yaml logs --tail=50
+
+  logs-core:
+    desc: Логи core сервисов
+    dir: deploy/compose/core
+    cmds:
+      - docker compose logs --tail=50
+
+  logs-inventory:
+    desc: Логи inventory сервиса
+    dir: deploy/compose/inventory
+    cmds:
+      - docker compose logs --tail=50
+
+  logs-payment:
+    desc: Логи payment сервиса
+    dir: deploy/compose/payment
+    cmds:
+      - docker compose logs --tail=50
+
+  logs-order:
+    desc: Логи order сервиса
+    dir: deploy/compose/order
+    cmds:
+      - docker compose logs --tail=50
