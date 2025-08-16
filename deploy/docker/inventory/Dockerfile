@@ -46,7 +46,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o inventory-app ./inventory/
 # ============================
 
 # Используем чистый Alpine образ как итоговый контейнер — он будет лёгким и безопасным
-FROM alpine:3.21.3
+FROM alpine:3.22.1
 
 # Создаём системного пользователя без root-прав — best practice для безопасности
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
@@ -67,7 +67,7 @@ COPY --from=builder /app/inventory-app .
 COPY --from=builder /app/grpc-health-probe /bin/grpc-health-probe
 
 # Копируем .env файл для конфигурации приложения
-COPY deploy/compose/inventory/.env /deploy/compose/inventory/.env
+COPY deploy/compose/inventory/.env deploy/compose/inventory/.env
 
 # Экспонируем порт gRPC-сервиса Inventory
 EXPOSE 50051
