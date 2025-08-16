@@ -16,10 +16,10 @@ import (
 	"github.com/andredubov/rocket-factory/order/internal/client/grpc/payment/v1"
 	"github.com/andredubov/rocket-factory/order/internal/config"
 	"github.com/andredubov/rocket-factory/order/internal/config/env"
-	"github.com/andredubov/rocket-factory/order/internal/migrator"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
 	"github.com/andredubov/rocket-factory/order/internal/service"
 	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
+	"github.com/andredubov/rocket-factory/platform/pkg/migrator"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )

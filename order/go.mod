@@ -52,7 +52,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/ogen-go/ogen v1.14.0 // indirect
 	github.com/pashagolub/pgxmock/v4 v4.8.0
-	github.com/pressly/goose/v3 v3.24.3
+	github.com/pressly/goose/v3 v3.24.3 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.4.0
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
