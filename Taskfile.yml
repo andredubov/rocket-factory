@@ -686,7 +686,7 @@ tasks:
         export SERVICES="{{.SERVICES}}"
         ENV_SUBST={{.ENVSUBST}} "$SCRIPT"
   
-  e2e:test:inventory:
+  test-integration:
     desc: "Запускает e2e тесты для Inventory сервиса"
     dir: inventory/tests/e2e
     cmds:

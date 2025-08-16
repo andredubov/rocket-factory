@@ -10,7 +10,8 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
 func (env *TestEnvironment) ClearPartsCollection(ctx context.Context) error {
@@ -29,35 +30,33 @@ func mongoDBName() string {
 }
 
 func (env *TestEnvironment) InsertTestPart(ctx context.Context) (string, error) {
-	gofakeit.Seed(time.Now().UnixNano()) //nolint:errcheck,gosec
-
-	parsed := uuid.New()
-	uuid := parsed.String()
-	now := time.Now()
-
-	document := bson.M{
-		"_id":            primitive.Binary{Subtype: 0x04, Data: parsed[:]},
-		"name":           gofakeit.RandomString([]string{"Main Engine", "Thruster", "Fuel Tank", "Left Wing", "Right Wing"}),
-		"description":    gofakeit.Sentence(8),
-		"price":          int64(gofakeit.Price(100, 300_000)),
-		"stock_quantity": int64(gofakeit.Number(1, 25)),
-		"category":       int32(gofakeit.Number(0, 4)), // nolint:gosec
-		"dimensions": bson.M{
-			"length": gofakeit.Float64Range(1, 1000),
-			"width":  gofakeit.Float64Range(1, 1000),
-			"height": gofakeit.Float64Range(1, 1000),
-			"weight": gofakeit.Float64Range(1, 1000),
-		},
-		"manufacturer": bson.M{
-			"name":    gofakeit.Company(),
-			"country": gofakeit.Country(),
-			"website": gofakeit.URL(),
-		},
-		"tags":       []string{gofakeit.Word(), gofakeit.Word()},
-		"metadata":   bson.M{"key": gofakeit.Word()},
-		"created_at": primitive.NewDateTimeFromTime(now),
-		"updated_at": primitive.NewDateTimeFromTime(now),
-	}
+	var (
+		uuid     = uuid.New().String()
+		now      = time.Now()
+		document = repoModel.Part{
+			Uuid:          uuid,
+			Name:          gofakeit.RandomString([]string{"Main Engine", "Thruster", "Fuel Tank", "Left Wing", "Right Wing"}),
+			Description:   "Description",
+			Price:         234.56,
+			StockQuantity: 13,
+			Category:      repoModel.PartCategoryEngine,
+			Dimensions: repoModel.Dimensions{
+				Length: 34.43,
+				Width:  12.45,
+				Height: 67.12,
+				Weight: 34.68,
+			},
+			Manufacturer: repoModel.Manufacturer{
+				Name:    gofakeit.Company(),
+				Country: gofakeit.Country(),
+				Website: gofakeit.URL(),
+			},
+			Tags:      []string{gofakeit.Word(), gofakeit.Word()},
+			Metadata:  map[string]repoModel.Value{},
+			CreatedAt: now.Add(-2 * time.Hour),
+			UpdatedAt: now.Add(-1 * time.Hour),
+		}
+	)
 
 	databaseName := mongoDBName()
 	_, err := env.Mongo.Client().Database(databaseName).Collection(partsCollectionName).InsertOne(ctx, document)

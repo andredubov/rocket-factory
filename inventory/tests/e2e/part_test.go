@@ -22,15 +22,11 @@ var _ = ginkgo.Describe("InventoryService", func() {
 
 	ginkgo.BeforeEach(func() {
 		ctx, cancel = context.WithCancel(suiteCtx)
-
 		conn, err := grpc.NewClient(
 			env.App.Address(),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		)
-
-		// Verify
 		gomega.Expect(err).ToNot(gomega.HaveOccurred(), "ожидали успешное подключение к gRPC приложению")
-
 		client = inventory_v1.NewInventoryServiceClient(conn)
 	})
 
@@ -39,15 +35,26 @@ var _ = ginkgo.Describe("InventoryService", func() {
 	})
 
 	ginkgo.Describe("Test GetPart", func() {
+		ginkgo.BeforeEach(func() {
+			ctx, cancel = context.WithCancel(suiteCtx)
+			err := env.ClearPartsCollection(ctx)
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+		})
+
+		ginkgo.AfterEach(func() {
+			cancel()
+		})
+
 		ginkgo.It("должен возвращать деталь по UUID", func() {
 			// Setup
 			partUUID, err := env.InsertTestPart(ctx)
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+			gomega.Expect(partUUID).ToNot(gomega.BeEmpty())
 
 			resp, err := client.GetPart(ctx, &inventory_v1.GetPartRequest{Uuid: partUUID})
 
 			// Verify
-			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+			gomega.Expect(err).ToNot(gomega.HaveOccurred(), "")
 			gomega.Expect(resp.GetPart()).ToNot(gomega.BeNil())
 			gomega.Expect(resp.GetPart().GetUuid()).To(gomega.Equal(partUUID))
 			gomega.Expect(resp.GetPart().GetName()).ToNot(gomega.BeEmpty())
@@ -57,12 +64,24 @@ var _ = ginkgo.Describe("InventoryService", func() {
 	})
 
 	ginkgo.Describe("Test ListParts", func() {
+		ginkgo.BeforeEach(func() {
+			ctx, cancel = context.WithCancel(suiteCtx)
+			err := env.ClearPartsCollection(ctx)
+			gomega.Expect(err).ToNot(gomega.HaveOccurred())
+		})
+
+		ginkgo.AfterEach(func() {
+			cancel()
+		})
+
 		ginkgo.It("должен возвращать список деталей", func() {
 			// Setup
+			const quanity = 1
 			partUUIDs := make([]string, 0)
-			for i := 0; i < 2; i++ {
+			for i := 0; i < quanity; i++ {
 				partUUID, err := env.InsertTestPart(ctx)
 				gomega.Expect(err).ToNot(gomega.HaveOccurred())
+				gomega.Expect(partUUID).ToNot(gomega.BeEmpty())
 				partUUIDs = append(partUUIDs, partUUID)
 			}
 
@@ -76,9 +95,9 @@ var _ = ginkgo.Describe("InventoryService", func() {
 			// Verify
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 			gomega.Expect(resp.GetParts()).ToNot(gomega.BeNil())
-			gomega.Expect(len(resp.GetParts())).To(gomega.BeNumerically("==", len(partUUIDs)))
-			for i := 0; i < 2; i++ {
-				gomega.Expect(resp.GetParts()[i].GetUuid()).ToNot(gomega.Equal(partUUIDs[i]))
+			gomega.Expect(len(resp.GetParts())).To(gomega.Equal(len(partUUIDs)))
+			for i := 0; i < quanity; i++ {
+				gomega.Expect(resp.GetParts()[i].GetUuid()).To(gomega.Equal(partUUIDs[i]))
 			}
 		})
 	})

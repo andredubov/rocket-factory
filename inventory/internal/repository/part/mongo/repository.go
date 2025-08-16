@@ -47,8 +47,20 @@ func NewInventoryRepository(ctx context.Context, db *mongo.Database) service.Inv
 
 	indexModels := []mongo.IndexModel{
 		{
-			Keys:    bson.D{{Key: "uuid", Value: 1}},
-			Options: options.Index().SetUnique(true),
+			Keys:    bson.D{{Key: "name", Value: 1}},
+			Options: options.Index().SetUnique(false),
+		},
+		{
+			Keys:    bson.D{{Key: "category", Value: 1}},
+			Options: options.Index().SetUnique(false),
+		},
+		{
+			Keys:    bson.D{{Key: "country", Value: 1}},
+			Options: options.Index().SetUnique(false),
+		},
+		{
+			Keys:    bson.D{{Key: "tags", Value: 1}},
+			Options: options.Index().SetUnique(false),
 		},
 	}
 
