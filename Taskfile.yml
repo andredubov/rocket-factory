@@ -13,6 +13,7 @@ vars:
   YQ_VERSION: 'v4.45.2'
   GRPCURL_VERSION: 'v1.9.3'
   MOCKERY_VERSION: 'v2.53.3'
+  ENVSUBST_VERSION: 'v1.4.3'
 
   BIN_DIR: '{{.ROOT_DIR}}/bin'
   GOLANGCI_LINT: '{{.BIN_DIR}}/golangci-lint'
@@ -25,6 +26,8 @@ vars:
   PROTOC_GEN_GO_GRPC: '{{.BIN_DIR}}/protoc-gen-go-grpc'
   GRPCURL: '{{.BIN_DIR}}/grpcurl'
   MOCKERY: "{{.BIN_DIR}}/mockery"
+  ENVSUBST: '{{.BIN_DIR}}/envsubst'
+  ENVDIR: '{{.ROOT_DIR}}/deploy/env'
 
   NODE_MODULES_DIR: '{{.ROOT_DIR}}/node_modules/.bin'
   REDOCLY: '{{.NODE_MODULES_DIR}}/redocly'
@@ -42,7 +45,8 @@ vars:
   ORDER_MIGRATIONS_DIR: './order/migrations'
   POSTGRES_DSN: 'postgres://order-service-user:order-service-password@localhost:5432/order-service?sslmode=disable'
 
-  MODULES: inventory order payment
+  MODULES: inventory order payment platform
+  SERVICES: core,inventory,payment,order
 
 tasks:
   install-formatters:
@@ -182,29 +186,6 @@ tasks:
     dir: shared/proto
     cmds:
       - '{{.BUF}} lint'
-
-  redocly-cli:install:
-    desc: Установить локально Redocly CLI
-    cmds:
-      - |
-        [ -f {{.REDOCLY}} ] || {
-          npm ci
-        } || {
-          echo "📦 Устанавливаем redocly-cli..."
-          npm install
-        }
-
-  redocly-cli:order-v1-bundle:
-    desc: Собрать OpenAPI в один файл через локальный redocly
-    deps: [ redocly-cli:install ]
-    cmds:
-      - '{{.REDOCLY}} bundle {{.OPEN_API_ORDER_V1_BASE}} -o {{.OPEN_API_ORDER_V1_BUNDLE}}'
-
-  redocly-cli:bundle:
-    desc: Собрать все схемы OpenAPI в общие файлы через локальный redocly
-    deps: [ redocly-cli:install ]
-    cmds:
-      - task: redocly-cli:order-v1-bundle
 
   ogen:install:
     desc: "Скачивает ogen в папку bin"
@@ -588,21 +569,6 @@ tasks:
         echo
         echo "🎉 Все тесты API успешно выполнены!"
 
-  run:inventory:
-    cmds:
-      - go build -o ./bin/inventory ./inventory/cmd/main.go
-      - ./bin/inventory -config-path ./inventory/config/.env
-
-  run:payment:
-    cmds:
-      - go build -o ./bin/payment ./payment/cmd/main.go
-      - ./bin/payment -config-path ./payment/config/.env
-
-  run:order:
-    cmds:
-      - go build -o ./bin/order ./order/cmd/main.go
-      - ./bin/order -config-path ./order/config/.env
-
   up-core:
     desc: Поднять core контейнеры
     dir: deploy/compose/core
@@ -623,58 +589,156 @@ tasks:
     dir: deploy/compose/inventory
     cmds:
       - echo "[task] 📦 Поднимаем Inventory с зависимостями"
-      - docker compose --env-file=../../../inventory/config/.env build --no-cache 
-      - docker compose --env-file=../../../inventory/config/.env up --detach --force-recreate
+      - docker compose build --no-cache 
+      - docker compose up --detach --force-recreate
   
   down-inventory:
     desc: Остановить и удалить Inventory сервис и все его зависимости
     dir: deploy/compose/inventory
     cmds:
       - echo "[task] 🛑 Останавливаем Inventory с зависимостями"
-      - docker compose --env-file=../../../inventory/config/.env down --volumes
+      - docker compose down --volumes
 
   up-order:
     desc: Поднять Order сервис и все его зависимости
     dir: deploy/compose/order
     cmds:
       - echo "[task] 📦 Поднимаем Order с зависимостями"
-      - docker compose --env-file=../../../order/config/.env build --no-cache
-      - docker compose --env-file=../../../order/config/.env up --detach --force-recreate
+      - docker compose build --no-cache
+      - docker compose up --detach --force-recreate
 
   down-order:
     desc: Остановить и удалить Order сервис и все его зависимости
     dir: deploy/compose/order
     cmds:
       - echo "[task] 🛑 Останавливаем Order с зависимостями"
-      - docker compose --env-file=../../../order/config/.env down --volumes
+      - docker compose down --volumes
 
   up-payment:
     desc: Поднять Payment сервис и все его зависимости
     dir: deploy/compose/payment
     cmds:
       - echo "[task] 📦 Поднимаем Payment с зависимостями"
-      - docker compose --env-file=../../../payment/config/.env build --no-cache
-      - docker compose --env-file=../../../payment/config/.env up --detach --force-recreate
+      - docker compose build --no-cache
+      - docker compose up --detach --force-recreate
 
   down-payment:
     desc: Остановить и удалить Payment сервис и все его зависимости
     dir: deploy/compose/payment
     cmds:
       - echo "[task] 🛑 Останавливаем Payment с зависимостями"
-      - docker compose --env-file=../../../payment/config/.env down --volumes
+      - docker compose down --volumes
 
   up-all:
     desc: Поднять все сервисы по очереди вместе с зависимостями
     cmds:
       - task up-core
+      - task up-payment
       - task up-inventory
       - task up-order
-      - task up-payment
 
   down-all:
     desc: Остановить и удалить все сервисы по очереди вместе с зависимостями
     cmds:
-      - task down-inventory
       - task down-order
+      - task down-inventory
       - task down-payment
       - task down-core
+
+  restart-all:
+    desc: Перезапустить все сервисы
+    cmds:
+      - task down-all
+      - task up-all
+
+  env:install-envsubst:
+    desc: "Устанавливает envsubst в bin/"
+    cmds:
+      - |
+        [ -f {{.ENVSUBST}} ] || {
+          echo "📦 Устанавливаем envsubst версии {{.ENVSUBST_VERSION}}..."
+          GOBIN={{.BIN_DIR}} go install github.com/a8m/envsubst/cmd/envsubst@{{.ENVSUBST_VERSION}}
+        }
+        echo "✅ envsubst установлен: {{.ENVSUBST}}"
+
+  env:generate:
+    desc: "Генерирует .env файлы для всех сервисов из шаблонов и единого файла конфигурации"
+    deps: [ env:install-envsubst ]
+    cmds:
+      - |
+        ENV_FILE="{{.ENVDIR}}/.env"
+        TEMPLATE_FILE="{{.ENVDIR}}/.env.template"
+        SCRIPT="{{.ENVDIR}}/generate-env.sh"
+        
+        if [ ! -f "$ENV_FILE" ]; then
+          if [ -f "$TEMPLATE_FILE" ]; then
+            echo "🔄 Файл $ENV_FILE не найден, создаем из шаблона $TEMPLATE_FILE"
+            cp "$TEMPLATE_FILE" "$ENV_FILE"
+            echo "✅ Создан файл $ENV_FILE. Проверьте и отредактируйте значения переменных при необходимости."
+          else
+            echo "❌ Шаблон $TEMPLATE_FILE не найден!"
+            exit 1
+          fi
+        fi
+
+        chmod +x "$SCRIPT"
+        # Передаем список сервисов в виде строки с разделителями-запятыми
+        export SERVICES="{{.SERVICES}}"
+        ENV_SUBST={{.ENVSUBST}} "$SCRIPT"
+  
+  test-integration:
+    desc: "Запускает e2e тесты для Inventory сервиса"
+    dir: inventory/tests/e2e
+    cmds:
+      - echo "🚀 Запуск e2e тестов Inventory сервиса..."
+      - cd ../../ && go mod tidy
+      - go test -tags=integration -v ./...
+  
+  clean:
+    desc: Очистить все контейнеры, образы и volumes
+    cmds:
+      - echo "[task] 🧹 Очищаем все Docker ресурсы"
+      - docker system prune -a --volumes -f
+      - echo "✅ Очистка завершена"
+
+  status:
+    desc: Показать статус всех контейнеров
+    cmds:
+      - echo "[task] 📊 Статус всех контейнеров"
+      - docker ps
+
+  logs-all:
+    desc: Показать логи всех сервисов
+    cmds:
+      - echo "[task] 📋 Логи всех сервисов"
+      - docker compose -f deploy/compose/core/docker-compose.yaml logs --tail=50
+      - echo "--- Inventory logs ---"
+      - docker compose -f deploy/compose/inventory/docker-compose.yaml logs --tail=50
+      - echo "--- Payment logs ---"
+      - docker compose -f deploy/compose/payment/docker-compose.yaml logs --tail=50
+      - echo "--- Order logs ---"
+      - docker compose -f deploy/compose/order/docker-compose.yaml logs --tail=50
+
+  logs-core:
+    desc: Логи core сервисов
+    dir: deploy/compose/core
+    cmds:
+      - docker compose logs --tail=50
+
+  logs-inventory:
+    desc: Логи inventory сервиса
+    dir: deploy/compose/inventory
+    cmds:
+      - docker compose logs --tail=50
+
+  logs-payment:
+    desc: Логи payment сервиса
+    dir: deploy/compose/payment
+    cmds:
+      - docker compose logs --tail=50
+
+  logs-order:
+    desc: Логи order сервиса
+    dir: deploy/compose/order
+    cmds:
+      - docker compose logs --tail=50

@@ -8,7 +8,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o ../bin/order ./cmd/main.go
 
 FROM alpine:3.22.1
 
-WORKDIR /root/
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+WORKDIR /app
+USER appuser
+
 COPY --from=builder /github.com/andredubov/rocket-factory/bin/order .
 COPY --from=builder /github.com/andredubov/rocket-factory/order/migrations/*.sql ./migrations/
 

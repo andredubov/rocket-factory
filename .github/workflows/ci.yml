@@ -37,6 +37,13 @@ jobs:
     with:
       modules: ${{ needs.extract-vars.outputs.modules }}
       go-version: ${{ needs.extract-vars.outputs.go-version }}
+  
+  integration-test:
+    uses: ./.github/workflows/test-integration-reusable.yml
+    needs: test
+    with:
+      modules: ${{ needs.extract-vars.outputs.modules }}
+      go-version: ${{ needs.extract-vars.outputs.go-version }}
 
   coverage:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

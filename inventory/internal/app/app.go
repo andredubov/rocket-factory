@@ -2,60 +2,55 @@ package app
 
 import (
 	"context"
-	"log"
+	"errors"
+	"fmt"
 	"net"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/andredubov/rocket-factory/shared/pkg/closer"
-	"github.com/andredubov/rocket-factory/shared/pkg/config"
+	"github.com/andredubov/rocket-factory/inventory/internal/config"
+	"github.com/andredubov/rocket-factory/platform/pkg/closer"
+	"github.com/andredubov/rocket-factory/platform/pkg/grpc/health"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 	"github.com/andredubov/rocket-factory/shared/pkg/interceptors"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 )
 
-// App represents the core application structure
-// Manages lifecycle and dependencies of the service
 type App struct {
-	serviceProvider *serviceProvider
-	grpcServer      *grpc.Server
+	diContainer *diContainer
+	grpcServer  *grpc.Server
+	listener    net.Listener
 }
 
-// NewApp constructs new application instance
-// Initializes all dependencies through initDeps
-func NewApp(ctx context.Context) (*App, error) {
-	application := &App{}
-	if err := application.initDeps(ctx); err != nil {
+func New(ctx context.Context) (*App, error) {
+	a := &App{}
+
+	err := a.initDeps(ctx)
+	if err != nil {
 		return nil, err
 	}
 
-	return application, nil
+	return a, nil
 }
 
-// Run starts the application:
-// 1. Launches GRPC server
-// 2. Sets up graceful shutdown via closer
-func (a *App) Run() error {
-	defer func() {
-		closer.CloseAll()
-		closer.Wait()
-	}()
-
-	return a.runGRPCServer()
+func (a *App) Run(ctx context.Context) error {
+	return a.runGRPCServer(ctx)
 }
 
-// initDeps initializes application dependencies
-// Executes initialization functions sequentially
 func (a *App) initDeps(ctx context.Context) error {
 	inits := []func(context.Context) error{
-		a.initConfig,          // Load configuration
-		a.initServiceProvider, // Initialize service container
-		a.initGRPCServer,      // Setup GRPC server
+		a.initDIContainer,
+		a.initLogger,
+		a.initCloser,
+		a.initListener,
+		a.initGRPCServer,
 	}
 
 	for _, f := range inits {
-		if err := f(ctx); err != nil {
+		err := f(ctx)
+		if err != nil {
 			return err
 		}
 	}
@@ -63,48 +58,69 @@ func (a *App) initDeps(ctx context.Context) error {
 	return nil
 }
 
-// initConfig loads application configuration
-func (a *App) initConfig(_ context.Context) error {
-	err := config.Load()
+func (a *App) initDIContainer(_ context.Context) error {
+	a.diContainer = NewDIContainer()
+	return nil
+}
+
+func (a *App) initLogger(_ context.Context) error {
+	return logger.Init(
+		config.AppConfig().Logger.Level(),
+		config.AppConfig().Logger.AsJson(),
+	)
+}
+
+func (a *App) initCloser(_ context.Context) error {
+	closer.SetLogger(logger.Logger())
+	return nil
+}
+
+func (a *App) initListener(_ context.Context) error {
+	listener, err := net.Listen("tcp", config.AppConfig().GRPCServer.Address())
 	if err != nil {
 		return err
 	}
 
+	closer.AddNamed("TCP listener", func(ctx context.Context) error {
+		lerr := listener.Close()
+		if lerr != nil && !errors.Is(lerr, net.ErrClosed) {
+			return lerr
+		}
+
+		return nil
+	})
+
+	a.listener = listener
+
 	return nil
 }
 
-// initServiceProvider creates service provider instance
-func (a *App) initServiceProvider(_ context.Context) error {
-	a.serviceProvider = newServiceProvider()
-	return nil
-}
-
-// initGRPCServer configures GRPC server:
-// 1. Creates server with insecure credentials (dev only)
-// 2. Enables reflection for testing
-// 3. Registers inventory service
 func (a *App) initGRPCServer(ctx context.Context) error {
 	opts := []grpc.ServerOption{
-		grpc.Creds(insecure.NewCredentials()), // Disabled security (development only)
+		grpc.Creds(insecure.NewCredentials()), // Disable TLS for development
 		grpc.UnaryInterceptor(interceptors.UnaryErrorInterceptor()),
 	}
 
 	a.grpcServer = grpc.NewServer(opts...)
-	reflection.Register(a.grpcServer) // For grpcurl testing
-	inventory_v1.RegisterInventoryServiceServer(a.grpcServer, a.serviceProvider.ServerImplementation(ctx))
+
+	closer.AddNamed("gRPC server", func(ctx context.Context) error {
+		a.grpcServer.GracefulStop()
+		return nil
+	})
+
+	reflection.Register(a.grpcServer) // Enable reflection API
+
+	health.RegisterService(a.grpcServer) // for healthcheck
+
+	inventory_v1.RegisterInventoryServiceServer(a.grpcServer, a.diContainer.ServerImplementation(ctx))
 
 	return nil
 }
 
-// runGRPCServer starts GRPC server on configured address
-func (a *App) runGRPCServer() error {
-	addr := a.serviceProvider.GRPCConfig().Address()
-	log.Printf("gRPC server starting on %s", addr)
+// runGRPCServer starts the gRPC server and begins listening for incoming requests.
+func (a *App) runGRPCServer(ctx context.Context) error {
+	address := config.AppConfig().GRPCServer.Address()
+	logger.Info(ctx, fmt.Sprintf("🚀 gRPC PaymentService server starting on %s", address))
 
-	listener, err := net.Listen("tcp", addr)
-	if err != nil {
-		return err
-	}
-
-	return a.grpcServer.Serve(listener) // Blocking call
+	return a.grpcServer.Serve(a.listener) // Blocking call
 }

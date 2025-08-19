@@ -1,8 +1,9 @@
 package model
 
+import "errors"
+
 type PartCategory int32
 
-// Valid PartCategory values
 const (
 	PartCategoryUnknown  PartCategory = 0
 	PartCategoryEngine   PartCategory = 1
@@ -11,12 +12,22 @@ const (
 	PartCategoryWing     PartCategory = 4
 )
 
-// IsValid checks if the OrderStatus has a valid value
-func (os PartCategory) IsValid() bool {
-	switch os {
-	case PartCategoryUnknown, PartCategoryEngine, PartCategoryFuel, PartCategoryPorthole, PartCategoryWing:
-		return true
+var ErrUnknownPartCategory = errors.New("invalid part category")
+
+// NewPartCategory creates a new PartCategory from a numeric value.
+func NewPartCategory(number int32) (PartCategory, error) {
+	switch number {
+	case 0:
+		return PartCategoryUnknown, nil
+	case 1:
+		return PartCategoryEngine, nil
+	case 2:
+		return PartCategoryFuel, nil
+	case 3:
+		return PartCategoryPorthole, nil
+	case 4:
+		return PartCategoryWing, nil
 	default:
-		return false
+		return PartCategoryUnknown, ErrUnknownPartCategory
 	}
 }
