@@ -16,15 +16,16 @@ import (
 // TestCreateOrder_Success tests the successful order creation scenario.
 func TestCreateOrder_Success(t *testing.T) {
 	var (
-		ordersRepository   = mocks.NewOrdersRepository(t)
-		paymentClient      = mocks.NewPaymentClient(t)
-		inventoryClient    = mocks.NewInventoryClient(t)
-		ordersService      = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx                = context.Background()
-		userUUID           = uuid.New()
-		partUUIDs          = []uuid.UUID{uuid.New(), uuid.New()}
-		expectedTotalPrice = 300.0
-		order              = model.Order{
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		userUUID               = uuid.New()
+		partUUIDs              = []uuid.UUID{uuid.New(), uuid.New()}
+		expectedTotalPrice     = 300.0
+		order                  = model.Order{
 			UserUUID:  userUUID,
 			PartUUIDs: partUUIDs,
 		}
@@ -62,11 +63,12 @@ func TestCreateOrder_Success(t *testing.T) {
 // TestCreateOrder_EmptyParts tests order creation with empty parts list.
 func TestCreateOrder_EmptyParts(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
 
 		order = model.Order{
 			UserUUID:  uuid.New(),
@@ -86,12 +88,13 @@ func TestCreateOrder_EmptyParts(t *testing.T) {
 // TestCreateOrder_InventoryClientError tests order creation when inventory service fails.
 func TestCreateOrder_InventoryClientError(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		partUUIDs        = []uuid.UUID{uuid.New(), uuid.New()}
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		partUUIDs              = []uuid.UUID{uuid.New(), uuid.New()}
 
 		order = model.Order{
 			UserUUID:  uuid.New(),
@@ -117,14 +120,15 @@ func TestCreateOrder_InventoryClientError(t *testing.T) {
 // TestCreateOrder_RepositoryError tests order creation when repository fails.
 func TestCreateOrder_RepositoryError(t *testing.T) {
 	var (
-		ordersRepository   = mocks.NewOrdersRepository(t)
-		paymentClient      = mocks.NewPaymentClient(t)
-		inventoryClient    = mocks.NewInventoryClient(t)
-		ordersService      = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx                = context.Background()
-		userUUID           = uuid.New()
-		partUUIDs          = []uuid.UUID{uuid.New(), uuid.New()}
-		expectedTotalPrice = 300.0
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		userUUID               = uuid.New()
+		partUUIDs              = []uuid.UUID{uuid.New(), uuid.New()}
+		expectedTotalPrice     = 300.0
 
 		order = model.Order{
 			UserUUID:  userUUID,

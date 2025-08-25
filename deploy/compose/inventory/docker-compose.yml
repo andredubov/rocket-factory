@@ -1,7 +1,7 @@
 services:
   # Здесь описываются контейнеры, необходимые для Inventory-сервиса
   inventory-service:
-    image: inventory-service
+    image: inventory-service:1.0.0
     container_name: inventory_service
     build:
       context: ../../..
@@ -15,7 +15,7 @@ services:
         condition: service_healthy
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.3
+        ipv4_address: 172.19.0.5
 
   inventory-mongo:
     # Контейнер с MongoDB — используется для хранения данных об инвентаре (например, запчасти, компоненты)
@@ -46,7 +46,7 @@ services:
     # Но если мы остановим его вручную — он не запустится повторно
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.4
+        ipv4_address: 172.19.0.6
       # Подключаем контейнер к общей сети всех микросервисов, чтобы они могли взаимодействовать между собой по имени
 
 volumes:

@@ -25,4 +25,13 @@ packages:
       include-regex: "OrdersService"
   github.com/andredubov/rocket-factory/order/internal/service:
     config:
-      include-regex: "OrdersRepository|InventoryClient|PaymentClient"
+      include-regex: "OrdersRepository|InventoryClient|PaymentClient|ProducerService|ConsumerService"
+  github.com/andredubov/rocket-factory/platform/pkg/kafka:
+    config:
+      include-regex: "Producer|Consumer"
+  github.com/andredubov/rocket-factory/platform/pkg/kafka/producer:
+    config:
+      include-regex: "Logger"
+  github.com/andredubov/rocket-factory/order/internal/converter/kafka:
+    config:
+      include-regex: "OrderAssembledEventDecoder"

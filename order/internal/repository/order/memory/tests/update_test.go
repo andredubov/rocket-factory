@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
@@ -26,19 +27,22 @@ func TestUpdateOrder_Success(t *testing.T) {
 			Status:     model.OrderStatusPending,
 			TotalPrice: 100.0,
 		}
+		newTotalPrice = 150.0
 	)
 
 	// Add initial order
 	err := ordersRepository.AddOrder(ctx, originalOrder)
 	require.NoError(t, err)
 
-	// Prepare update
-	updatedOrder := originalOrder
-	updatedOrder.Status = model.OrderStatusPaid
-	updatedOrder.TotalPrice = 150.0
-	updatedOrder.PaymentInfo = &model.PaymentInfo{
-		PaymentMethod:   model.PaymentMethodCard,
-		TransactionUUID: uuid.New(),
+	updatedOrder := model.OrderUpdateInfo{
+		OrderUUID:  originalOrder.OrderUUID,
+		UserUUID:   &originalOrder.UserUUID,
+		Status:     lo.ToPtr(model.OrderStatusPaid),
+		TotalPrice: &newTotalPrice,
+		PaymentInfo: &model.PaymentInfo{
+			PaymentMethod:   model.PaymentMethodCard,
+			TransactionUUID: uuid.New(),
+		},
 	}
 
 	// Test
@@ -50,8 +54,8 @@ func TestUpdateOrder_Success(t *testing.T) {
 	// Verify changes were applied
 	retrieved, err := ordersRepository.GetOrder(ctx, originalOrder.OrderUUID)
 	require.NoError(t, err)
-	require.Equal(t, updatedOrder.Status, retrieved.Status)
-	require.Equal(t, updatedOrder.TotalPrice, retrieved.TotalPrice)
+	require.Equal(t, *updatedOrder.Status, retrieved.Status)
+	require.Equal(t, *updatedOrder.TotalPrice, retrieved.TotalPrice)
 	require.Equal(t, updatedOrder.PaymentInfo.PaymentMethod, retrieved.PaymentInfo.PaymentMethod)
 }
 
@@ -63,9 +67,9 @@ func TestUpdateOrder_NotFound(t *testing.T) {
 	var (
 		ordersRepository = memory.NewOrderRepository()
 		ctx              = context.Background()
-		nonExistentOrder = model.Order{
+		nonExistentOrder = model.OrderUpdateInfo{
 			OrderUUID: uuid.New(),
-			Status:    model.OrderStatusPending,
+			Status:    lo.ToPtr(model.OrderStatusPending),
 		}
 	)
 
@@ -90,6 +94,8 @@ func TestUpdateOrder_ConcurrentAccess(t *testing.T) {
 			Status:      model.OrderStatusPending,
 			PaymentInfo: &model.PaymentInfo{PaymentMethod: model.PaymentMethodCard},
 		}
+		newTotalPrice1 = 300.0
+		newTotalPrice2 = 200.0
 	)
 
 	// Add initial order
@@ -97,11 +103,27 @@ func TestUpdateOrder_ConcurrentAccess(t *testing.T) {
 	require.NoError(t, err)
 
 	// Prepare updates
-	update1 := originalOrder
-	update1.TotalPrice = 300.0
+	update1 := model.OrderUpdateInfo{
+		OrderUUID: originalOrder.OrderUUID,
+		UserUUID:  &originalOrder.UserUUID,
+		Status:    &originalOrder.Status,
+		PaymentInfo: &model.PaymentInfo{
+			PaymentMethod:   model.PaymentMethodCard,
+			TransactionUUID: uuid.New(),
+		},
+		TotalPrice: &newTotalPrice1,
+	}
 
-	update2 := originalOrder
-	update2.TotalPrice = 200.0
+	update2 := model.OrderUpdateInfo{
+		OrderUUID: originalOrder.OrderUUID,
+		UserUUID:  &originalOrder.UserUUID,
+		Status:    &originalOrder.Status,
+		PaymentInfo: &model.PaymentInfo{
+			PaymentMethod:   model.PaymentMethodCard,
+			TransactionUUID: uuid.New(),
+		},
+		TotalPrice: &newTotalPrice2,
+	}
 
 	// Test concurrent updates
 	var wg sync.WaitGroup
@@ -128,8 +150,8 @@ func TestUpdateOrder_ConcurrentAccess(t *testing.T) {
 
 	// Check which update was applied
 	if err1 == nil {
-		require.Equal(t, update1.Status, retrieved.Status)
+		require.Equal(t, *update1.Status, retrieved.Status)
 	} else {
-		require.Equal(t, update2.TotalPrice, retrieved.TotalPrice)
+		require.Equal(t, *update2.TotalPrice, retrieved.TotalPrice)
 	}
 }

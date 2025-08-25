@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/andredubov/rocket-factory/order/internal/converter"
 	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
@@ -25,6 +26,8 @@ func (s *ordersService) CancelOrder(ctx context.Context, uuid uuid.UUID) error {
 	// Меняем статус на Cancelled для заказов в статусе Pending
 	order.Status = model.OrderStatusCancelled
 
+	updateInfo := converter.OrderToOrderUpdateInfo(order)
+
 	// Обновляем заказ в репозитории
-	return s.ordersRepository.UpdateOrder(ctx, *order)
+	return s.ordersRepository.UpdateOrder(ctx, updateInfo)
 }

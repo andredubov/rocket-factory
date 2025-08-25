@@ -69,6 +69,31 @@ func OrderPaymentMethodFromRequest(req *order_v1.PayOrderRequest) string {
 	return string(req.PaymentMethod)
 }
 
+// OrderToOrderUpdateInfo converts a domain Order to domain OrderUpdateInfo
+func OrderToOrderUpdateInfo(order *model.Order) model.OrderUpdateInfo {
+	if order == nil {
+		return model.OrderUpdateInfo{}
+	}
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:  order.OrderUUID,
+		UserUUID:   &order.UserUUID,
+		TotalPrice: &order.TotalPrice,
+		Status:     &order.Status,
+	}
+
+	if order.PaymentInfo != nil {
+		updateInfo.PaymentInfo = &model.PaymentInfo{
+			TransactionUUID: order.PaymentInfo.TransactionUUID,
+			PaymentMethod:   order.PaymentInfo.PaymentMethod,
+		}
+	}
+
+	updateInfo.PartUUIDs = append(updateInfo.PartUUIDs, order.PartUUIDs...)
+
+	return updateInfo
+}
+
 // convertToPaymentMethod конвертирует внутреннее представление метода оплаты в формат API.
 func convertToPaymentMethod(method model.PaymentMethod) (order_v1.PaymentMethod, error) {
 	switch method {

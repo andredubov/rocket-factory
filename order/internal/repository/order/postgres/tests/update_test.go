@@ -71,7 +71,17 @@ func TestUpdateOrder_Success(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.NoError(t, err, "UpdateOrder should not return an error")
@@ -117,7 +127,17 @@ func TestUpdateOrder_WithoutPaymentInfo(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.NoError(t, err, "UpdateOrder should not return an error")
@@ -160,7 +180,17 @@ func TestUpdateOrder_NoParts(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.NoError(t, err, "UpdateOrder should not return an error")
@@ -195,7 +225,17 @@ func TestUpdateOrder_NotFound(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
@@ -218,7 +258,17 @@ func TestUpdateOrder_BeginTxError(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(testOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
@@ -254,7 +304,17 @@ func TestUpdateOrder_UpdateError(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
@@ -295,7 +355,17 @@ func TestUpdateOrder_DeletePartsError(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
@@ -347,7 +417,17 @@ func TestUpdateOrder_InsertPartsError(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
@@ -401,7 +481,17 @@ func TestUpdateOrder_CommitError(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
@@ -443,7 +533,17 @@ func TestUpdateOrder_RollbackError(t *testing.T) {
 
 	// Test
 	order := converter.OrderToModel(repoOrder)
-	err = repo.UpdateOrder(context.Background(), *order)
+
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   order.OrderUUID,
+		UserUUID:    &order.UserUUID,
+		PartUUIDs:   order.PartUUIDs,
+		TotalPrice:  &order.TotalPrice,
+		PaymentInfo: order.PaymentInfo,
+		Status:      &order.Status,
+	}
+
+	err = repo.UpdateOrder(context.Background(), updateInfo)
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")

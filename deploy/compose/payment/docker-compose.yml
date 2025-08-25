@@ -1,7 +1,7 @@
 services:
   # Здесь описываются контейнеры, необходимые для Payment-сервиса
   payment-service:
-    image: payment-service
+    image: payment-service:1.0.0
     container_name: payment_service
     build:
       context: ../../..
@@ -12,7 +12,7 @@ services:
       - ${GRPC_PORT}:${GRPC_PORT}
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.7
+        ipv4_address: 172.19.0.9
 
 networks:
   # Сетевые настройки

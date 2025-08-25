@@ -16,12 +16,13 @@ import (
 // TestCancelOrder_Success tests successful order cancellation.
 func TestCancelOrder_Success(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
 
 		order = &model.Order{
 			OrderUUID: orderUUID,
@@ -31,9 +32,18 @@ func TestCancelOrder_Success(t *testing.T) {
 	)
 	expectedOrder.Status = model.OrderStatusCancelled
 
+	updateInfo := model.OrderUpdateInfo{
+		OrderUUID:   expectedOrder.OrderUUID,
+		UserUUID:    &expectedOrder.UserUUID,
+		TotalPrice:  &expectedOrder.TotalPrice,
+		Status:      &expectedOrder.Status,
+		PartUUIDs:   nil,
+		PaymentInfo: nil,
+	}
+
 	// Mock expectations
 	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
-	ordersRepository.On("UpdateOrder", ctx, expectedOrder).Return(nil)
+	ordersRepository.On("UpdateOrder", ctx, updateInfo).Return(nil)
 
 	// Test
 	err := ordersService.CancelOrder(ctx, orderUUID)
@@ -46,13 +56,14 @@ func TestCancelOrder_Success(t *testing.T) {
 // TestCancelOrder_AlreadyPaid tests cancellation of already paid order.
 func TestCancelOrder_AlreadyPaid(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
-		order            = &model.Order{
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
+		order                  = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusPaid,
 		}
@@ -74,13 +85,14 @@ func TestCancelOrder_AlreadyPaid(t *testing.T) {
 // TestCancelOrder_AlreadyCancelled tests cancellation of already cancelled order
 func TestCancelOrder_AlreadyCancelled(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
-		order            = &model.Order{
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
+		order                  = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusCancelled,
 		}
@@ -102,12 +114,13 @@ func TestCancelOrder_AlreadyCancelled(t *testing.T) {
 // TestCancelOrder_NotFound tests cancellation of non-existent order.
 func TestCancelOrder_NotFound(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
 	)
 
 	// Mock expectations
@@ -126,13 +139,14 @@ func TestCancelOrder_NotFound(t *testing.T) {
 // TestCancelOrder_UpdateError tests failure during order update.
 func TestCancelOrder_UpdateError(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
-		order            = &model.Order{
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
+		order                  = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusPending,
 		}
