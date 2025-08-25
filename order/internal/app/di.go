@@ -46,12 +46,12 @@ type diContainer struct {
 
 	consumerGroup               sarama.ConsumerGroup
 	orderAssembledEventConsumer wrappedKafka.Consumer
+	orderAssembledEventDecoder  kafkaConverter.OrderAssembledEventDecoder
 	consumerService             service.ConsumerService
 
-	syncProducer               sarama.SyncProducer
-	orderPaidEventProducer     wrappedKafka.Producer
-	orderAssembledEventDecoder kafkaConverter.OrderAssembledEventDecoder
-	producerService            service.ProducerService
+	syncProducer           sarama.SyncProducer
+	orderPaidEventProducer wrappedKafka.Producer
+	producerService        service.ProducerService
 
 	postgresDB           *pgxpool.Pool
 	ordersRepository     service.OrdersRepository

@@ -16,9 +16,7 @@ import (
 )
 
 const (
-	pingTimeout     = 5 * time.Second
-	shutdownTimeout = 30 * time.Second
-	configPath      = "./deploy/compose/order/.env"
+	configPath = "./deploy/compose/order/.env"
 )
 
 func main() {
