@@ -35,3 +35,12 @@ packages:
   github.com/andredubov/rocket-factory/order/internal/converter/kafka:
     config:
       include-regex: "OrderAssembledEventDecoder"
+  github.com/andredubov/rocket-factory/assembly/internal/service:
+    config:
+      include-regex: "ProducerService|ConsumerService"
+  github.com/andredubov/rocket-factory/assembly/internal/converter/kafka:
+    config:
+      include-regex: "OrderPaidEventDecoder"
+  github.com/andredubov/rocket-factory/assembly/internal/config:
+    config:
+      include-regex: "LoggerConfig|KafkaConfig|OrderAssembledProducerConfig|OrderPaidEventConsumerConfig"
