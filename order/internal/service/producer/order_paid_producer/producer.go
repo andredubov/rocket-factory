@@ -1,4 +1,4 @@
-package producer
+package order_paid_producer
 
 import (
 	"context"

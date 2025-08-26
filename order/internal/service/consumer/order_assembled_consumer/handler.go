@@ -1,4 +1,4 @@
-package order
+package order_assembled_consumer
 
 import (
 	"context"
