@@ -1,4 +1,4 @@
-package producer
+package order_assembled_producer
 
 import (
 	"context"

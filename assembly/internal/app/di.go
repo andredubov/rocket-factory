@@ -10,8 +10,8 @@ import (
 	kafkaConverter "github.com/andredubov/rocket-factory/assembly/internal/converter/kafka"
 	"github.com/andredubov/rocket-factory/assembly/internal/converter/kafka/decoder"
 	"github.com/andredubov/rocket-factory/assembly/internal/service"
-	consumer "github.com/andredubov/rocket-factory/assembly/internal/service/consumer/order"
-	"github.com/andredubov/rocket-factory/assembly/internal/service/producer"
+	"github.com/andredubov/rocket-factory/assembly/internal/service/consumer/order_paid_consumer"
+	"github.com/andredubov/rocket-factory/assembly/internal/service/producer/order_assembled_producer"
 	"github.com/andredubov/rocket-factory/platform/pkg/closer"
 	wrappedKafka "github.com/andredubov/rocket-factory/platform/pkg/kafka"
 	wrappedKafkaConsumer "github.com/andredubov/rocket-factory/platform/pkg/kafka/consumer"
@@ -81,7 +81,7 @@ func (d *diContainer) OrderAssembledEventDecoder() kafkaConverter.OrderPaidEvent
 
 func (d *diContainer) ConsumerService(_ context.Context) service.ConsumerService {
 	if d.consumerService == nil {
-		d.consumerService = consumer.NewService(
+		d.consumerService = order_paid_consumer.NewService(
 			d.OrderPaidEventConsumer(),
 			d.OrderAssembledEventDecoder(),
 			d.ProducerService(),
@@ -125,7 +125,7 @@ func (d *diContainer) OrderAssembledEventProducer() wrappedKafka.Producer {
 
 func (d *diContainer) ProducerService() service.ProducerService {
 	if d.producerService == nil {
-		d.producerService = producer.NewService(d.OrderAssembledEventProducer())
+		d.producerService = order_assembled_producer.NewService(d.OrderAssembledEventProducer())
 	}
 
 	return d.producerService

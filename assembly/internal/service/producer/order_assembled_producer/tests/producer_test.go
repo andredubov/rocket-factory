@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/andredubov/rocket-factory/assembly/internal/model"
-	"github.com/andredubov/rocket-factory/assembly/internal/service/producer"
+	producer "github.com/andredubov/rocket-factory/assembly/internal/service/producer/order_assembled_producer"
 	"github.com/andredubov/rocket-factory/platform/pkg/kafka/mocks"
 	events_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/events/v1"
 )

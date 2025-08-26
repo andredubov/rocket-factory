@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	kafkaConverterMocks "github.com/andredubov/rocket-factory/assembly/internal/converter/kafka/mocks"
-	"github.com/andredubov/rocket-factory/assembly/internal/service/consumer/order"
-	"github.com/andredubov/rocket-factory/assembly/internal/service/producer"
+	"github.com/andredubov/rocket-factory/assembly/internal/service/consumer/order_paid_consumer"
+	"github.com/andredubov/rocket-factory/assembly/internal/service/producer/order_assembled_producer"
 	"github.com/andredubov/rocket-factory/platform/pkg/kafka/mocks"
 )
 
@@ -17,11 +17,11 @@ func TestNewService(t *testing.T) {
 		mockConsumer    = mocks.NewConsumer(t)
 		mockDecoder     = kafkaConverterMocks.NewOrderPaidEventDecoder(t)
 		mockProducer    = mocks.NewProducer(t)
-		producerService = producer.NewService(mockProducer)
+		producerService = order_assembled_producer.NewService(mockProducer)
 	)
 
 	// Test
-	service := order.NewService(mockConsumer, mockDecoder, producerService)
+	service := order_paid_consumer.NewService(mockConsumer, mockDecoder, producerService)
 
 	// Verify
 	assert.NotNil(t, service)
