@@ -18,36 +18,57 @@ func (c *consumerService) OrderHandler(ctx context.Context, msg kafka.Message) e
 		return err
 	}
 
-	go func(ctx context.Context) {
-		var (
-			delay               = 10 * time.Second
-			begin               = time.Now()
-			orderAssembledEvent = model.OrderAssembledEvent{
-				UUID:         event.UUID,
-				OrderUUID:    event.OrderUUID,
-				UserUUID:     event.UserUUID,
-				BuildTimeSec: int64(time.Since(begin)),
-			}
-		)
+	logger.Info(ctx, "Processing OrderPaidEvent",
+		zap.String("topic", msg.Topic),
+		zap.Int32("partition", msg.Partition),
+		zap.Int64("offset", msg.Offset),
+		zap.String("event_uuid", event.UUID),
+		zap.String("order_uuid", event.OrderUUID),
+		zap.String("user_uuid", event.UserUUID),
+	)
 
-		logger.Info(ctx, "Processing OrderPaidEvent",
-			zap.String("topic", msg.Topic),
-			zap.Any("partition", msg.Partition),
-			zap.Any("offset", msg.Offset),
-			zap.String("event_uuid", event.UUID),
-			zap.String("order_uuid", event.OrderUUID),
-			zap.String("user_uuid", event.UserUUID),
-		)
-
-		select {
-		case <-time.After(delay):
-			err = c.orderAssembledProducer.ProduceOrderAssembledEvent(ctx, orderAssembledEvent)
-			if err != nil {
-				logger.Info(ctx, "Failed to produce OrderAssembledEvent", zap.Error(err))
-			}
-		case <-ctx.Done():
-		}
-	}(ctx)
+	go c.processOrderAssembled(ctx, event)
 
 	return nil
+}
+
+func (c *consumerService) processOrderAssembled(ctx context.Context, event model.OrderPaidEvent) {
+	begin := time.Now()
+
+	// Имитируем время сборки (10 секунд)
+	select {
+	case <-time.After(10 * time.Second):
+		// Вычисляем реальное время выполнения
+		buildTime := time.Since(begin)
+
+		orderAssembledEvent := model.OrderAssembledEvent{
+			UUID:         event.UUID,
+			OrderUUID:    event.OrderUUID,
+			UserUUID:     event.UserUUID,
+			BuildTimeSec: int64(buildTime.Seconds()),
+		}
+
+		produceCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		err := c.orderAssembledProducer.ProduceOrderAssembledEvent(produceCtx, orderAssembledEvent)
+		if err != nil {
+			logger.Error(ctx, "Failed to produce OrderAssembledEvent",
+				zap.Error(err),
+				zap.String("order_uuid", event.OrderUUID),
+			)
+			// Здесь можно добавить retry логику или dead letter queue
+		} else {
+			logger.Info(ctx, "Successfully produced OrderAssembledEvent",
+				zap.String("order_uuid", event.OrderUUID),
+				zap.Duration("build_time", buildTime),
+			)
+		}
+
+	case <-ctx.Done():
+		logger.Info(ctx, "Order processing cancelled",
+			zap.String("order_uuid", event.OrderUUID),
+			zap.String("reason", ctx.Err().Error()),
+		)
+	}
 }

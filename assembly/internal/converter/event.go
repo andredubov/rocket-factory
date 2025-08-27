@@ -14,12 +14,17 @@ func OrderAssembledEventToProtobufEvent(event model.OrderAssembledEvent) *events
 	}
 }
 
-func OrderPaidEventFromProtobufEvent(event *events_v1.OrderPaid) model.OrderPaidEvent {
+func OrderPaidEventFromProtobufEvent(event *events_v1.OrderPaid) (model.OrderPaidEvent, error) {
+	paymentMethod, err := model.NewPaymentMethod(event.PaymentMethod)
+	if err != nil {
+		return model.OrderPaidEvent{}, model.ErrInvalidPaymentMethod
+	}
+
 	return model.OrderPaidEvent{
 		UUID:           event.EventUuid,
 		OrderUUID:      event.OrderUuid,
 		UserUUID:       event.UserUuid,
-		PaymentMethod:  model.PaymentMethod(event.EventUuid),
+		PaymentMethod:  paymentMethod,
 		TrasactionUUID: event.TransactionUuid,
-	}
+	}, nil
 }

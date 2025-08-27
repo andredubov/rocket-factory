@@ -3,7 +3,7 @@ package decoder
 import (
 	"fmt"
 
-	"github.com/gogo/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/andredubov/rocket-factory/assembly/internal/converter"
 	"github.com/andredubov/rocket-factory/assembly/internal/model"
@@ -22,5 +22,10 @@ func (d *decoder) Decode(data []byte) (model.OrderPaidEvent, error) {
 		return model.OrderPaidEvent{}, fmt.Errorf("failed to unmarshal protobuf: %w", err)
 	}
 
-	return converter.OrderPaidEventFromProtobufEvent(&pb), nil
+	event, err := converter.OrderPaidEventFromProtobufEvent(&pb)
+	if err != nil {
+		return model.OrderPaidEvent{}, fmt.Errorf("failed to convert OrderPaidEvent from protobuf event: %w", err)
+	}
+
+	return event, nil
 }
