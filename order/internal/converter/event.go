@@ -14,7 +14,7 @@ func OrderPaidEventToProtobufEvent(event model.OrderPaidEvent) *events_v1.OrderP
 		OrderUuid:       event.OrderUUID,
 		UserUuid:        event.UserUUID,
 		PaymentMethod:   string(event.PaymentMethod),
-		TransactionUuid: event.TrasactionUUID,
+		TransactionUuid: event.TransactionUUID,
 	}
 }
 
@@ -29,11 +29,11 @@ func OrderAssembledEventFromProtobufEvent(event *events_v1.ShipAssembled) model.
 
 func OrderToOrderPaidEvent(order *model.Order) model.OrderPaidEvent {
 	return model.OrderPaidEvent{
-		UUID:           order.OrderUUID.String(),
-		UserUUID:       order.UserUUID.String(),
-		OrderUUID:      order.OrderUUID.String(),
-		PaymentMethod:  order.PaymentInfo.PaymentMethod,
-		TrasactionUUID: order.PaymentInfo.TransactionUUID.String(),
+		UUID:            order.OrderUUID.String(),
+		UserUUID:        order.UserUUID.String(),
+		OrderUUID:       order.OrderUUID.String(),
+		PaymentMethod:   order.PaymentInfo.PaymentMethod,
+		TransactionUUID: order.PaymentInfo.TransactionUUID.String(),
 	}
 }
 

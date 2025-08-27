@@ -58,11 +58,11 @@ func TestPayOrder_Success(t *testing.T) {
 	}
 
 	event := model.OrderPaidEvent{
-		UUID:           expectedOrder.OrderUUID.String(),
-		OrderUUID:      expectedOrder.OrderUUID.String(),
-		UserUUID:       expectedOrder.UserUUID.String(),
-		PaymentMethod:  expectedOrder.PaymentInfo.PaymentMethod,
-		TrasactionUUID: expectedOrder.PaymentInfo.TransactionUUID.String(),
+		UUID:            expectedOrder.OrderUUID.String(),
+		OrderUUID:       expectedOrder.OrderUUID.String(),
+		UserUUID:        expectedOrder.UserUUID.String(),
+		PaymentMethod:   expectedOrder.PaymentInfo.PaymentMethod,
+		TransactionUUID: expectedOrder.PaymentInfo.TransactionUUID.String(),
 	}
 
 	// Mock expectations
@@ -279,11 +279,11 @@ func TestPayOrder_ProduceEventFailed(t *testing.T) {
 
 	// Подготовка ожидаемого события
 	expectedEvent := model.OrderPaidEvent{
-		UUID:           orderUUID.String(),
-		OrderUUID:      orderUUID.String(),
-		UserUUID:       userUUID.String(),
-		PaymentMethod:  model.PaymentMethodCard,
-		TrasactionUUID: transactionUUID.String(),
+		UUID:            orderUUID.String(),
+		OrderUUID:       orderUUID.String(),
+		UserUUID:        userUUID.String(),
+		PaymentMethod:   model.PaymentMethodCard,
+		TransactionUUID: transactionUUID.String(),
 	}
 
 	// Mock expectations
