@@ -45,8 +45,8 @@ vars:
   ORDER_MIGRATIONS_DIR: './order/migrations'
   POSTGRES_DSN: 'postgres://order-service-user:order-service-password@localhost:5432/order-service?sslmode=disable'
 
-  MODULES: inventory order payment platform assembly
-  SERVICES: core,inventory,payment,order,assembly
+  MODULES: inventory order payment platform assembly notification
+  SERVICES: core,inventory,payment,order,assembly,notification
 
 tasks:
   install-formatters:
@@ -584,6 +584,21 @@ tasks:
       - echo "[task] 🛑 Останавливаем core контейнеры"
       - docker compose down --volumes
 
+  up-notification:
+    desc: Поднять Notification сервис и все его зависимости
+    dir: deploy/compose/notification
+    cmds:
+      - echo "[task] 📦 Поднимаем Notification с зависимостями"
+      - docker compose build --no-cache 
+      - docker compose up --detach --force-recreate
+
+  down-notification:
+    desc: Остановить и удалить Notification сервис и все его зависимости
+    dir: deploy/compose/notification
+    cmds:
+      - echo "[task] 🛑 Останавливаем Notification с зависимостями"
+      - docker compose down --volumes
+
   up-assembly:
     desc: Поднять Assembly сервис и все его зависимости
     dir: deploy/compose/assembly
@@ -652,10 +667,12 @@ tasks:
       - task up-inventory
       - task up-order
       - task up-assembly
+      - task up-notification
 
   down-all:
     desc: Остановить и удалить все сервисы по очереди вместе с зависимостями
     cmds:
+      - task down-notification
       - task down-assembly
       - task down-order
       - task down-inventory

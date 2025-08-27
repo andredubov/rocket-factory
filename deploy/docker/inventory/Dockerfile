@@ -21,6 +21,7 @@ COPY inventory/go.mod inventory/go.sum ./inventory/
 COPY order/go.mod order/go.sum ./order/
 COPY payment/go.mod payment/go.sum ./payment/
 COPY assembly/go.mod assembly/go.sum ./assembly/
+COPY notification/go.mod notification/go.sum ./notification/
 
 # Загружаем все зависимости, указанные в модульных файлах
 RUN go mod download
@@ -32,6 +33,7 @@ COPY inventory ./inventory
 COPY order ./order
 COPY payment ./payment
 COPY assembly ./assembly
+COPY notification ./notification
 
 # Скачиваем grpc-health-probe — это утилита для проверки состояния gRPC-сервиса
 ADD https://github.com/grpc-ecosystem/grpc-health-probe/releases/download/v0.4.37/grpc_health_probe-linux-amd64 ./grpc-health-probe
