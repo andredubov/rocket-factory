@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"context"
+	"log"
 
 	sq "github.com/Masterminds/squirrel"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
@@ -14,9 +16,18 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 	return WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		repoOrder := converter.OrderToRepoModel(order)
 
+		var transactionUUID uuid.UUID
+		var paymentMethod string
+
+		if repoOrder.PaymentInfo != nil {
+			transactionUUID = repoOrder.PaymentInfo.TransactionUUID
+			paymentMethod = string(repoOrder.PaymentInfo.PaymentMethod)
+		}
+
 		orderBuilderInsert := sq.Insert(OrdersTable).
 			PlaceholderFormat(sq.Dollar).
 			Columns(
+				UUIDTableColumn,
 				UserUUIDTableColumn,
 				TotalPriceTableColumn,
 				TransactionUUIDTableColumn,
@@ -24,21 +35,24 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 				StatusTableColumn,
 			).
 			Values(
+				repoOrder.OrderUUID,
 				repoOrder.UserUUID,
 				repoOrder.TotalPrice,
-				repoOrder.PaymentInfo.TransactionUUID,
-				repoOrder.PaymentInfo.PaymentMethod,
+				transactionUUID,
+				paymentMethod,
 				repoOrder.Status,
 			)
 
 		orderQuery, orderQueryArgs, err := orderBuilderInsert.ToSql()
 		if err != nil {
+			log.Printf("ERROR: Failed to build order query: %v", err)
 			return err
 		}
 
 		if _, err := tx.Exec(ctx, orderQuery, orderQueryArgs...); err != nil {
 			return err
 		}
+		log.Printf("DEBUG: Order query: %s, args: %v", orderQuery, orderQueryArgs)
 
 		for _, partUUID := range order.PartUUIDs {
 			orderPartsBuilderInsert := sq.Insert(OrderPartsTable).
@@ -48,12 +62,17 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 
 			orderPartsQuery, orderPartsQueryArgs, err := orderPartsBuilderInsert.ToSql()
 			if err != nil {
+				log.Printf("ERROR: Failed to build order query: %v", err)
 				return err
 			}
 
+			log.Printf("DEBUG: Order query: %s, args: %v", orderQuery, orderQueryArgs)
+
 			if _, err := tx.Exec(ctx, orderPartsQuery, orderPartsQueryArgs...); err != nil {
+				log.Printf("ERROR: Failed to exec order query: %v", err)
 				return err
 			}
+			log.Printf("DEBUG: Order inserted successfully")
 		}
 		return nil
 	})

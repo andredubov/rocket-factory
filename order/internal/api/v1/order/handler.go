@@ -13,7 +13,7 @@ import (
 // Orders defines the interface for order service operations.
 type OrdersService interface {
 	GetOrder(ctx context.Context, uuid uuid.UUID) (*model.Order, error)
-	CreateOrder(ctx context.Context, order model.Order) error
+	CreateOrder(ctx context.Context, order *model.Order) error
 	CancelOrder(ctx context.Context, uuid uuid.UUID) error
 	PayOrder(ctx context.Context, uuid uuid.UUID, paymentMethod string) (*model.Order, error)
 }

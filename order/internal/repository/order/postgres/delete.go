@@ -8,11 +8,11 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (r *ordersRepository) DeleteOrder(ctx context.Context, uuid uuid.UUID) error {
+func (r *ordersRepository) DeleteOrder(ctx context.Context, orderUUID uuid.UUID) error {
 	return WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		deleteBuilder := sq.Delete(OrdersTable).
 			PlaceholderFormat(sq.Dollar).
-			Where(sq.Eq{OrderUUIDTableColumn: uuid})
+			Where(sq.Eq{UUIDTableColumn: orderUUID})
 
 		query, args, err := deleteBuilder.ToSql()
 		if err != nil {

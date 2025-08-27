@@ -15,7 +15,7 @@ import (
 func (i *OrderImplementation) CreateOrder(ctx context.Context, req *order_v1.CreateOrderRequest) (order_v1.CreateOrderRes, error) {
 	order := converter.OrderFromCreateOrderRequest(req)
 
-	err := i.ordersService.CreateOrder(ctx, order)
+	err := i.ordersService.CreateOrder(ctx, &order)
 	if err != nil {
 		if errors.Is(err, model.ErrOrderHasNoParts) {
 			return &order_v1.BadRequestError{

@@ -153,7 +153,7 @@ func (a *App) initHTTPServer(ctx context.Context) error {
 
 func (a *App) runHTTPServer(ctx context.Context) error {
 	address := config.AppConfig().HTTPServer.Address()
-	logger.Info(ctx, fmt.Sprintf("🚀 gRPC OrderService server starting on %s", address))
+	logger.Info(ctx, fmt.Sprintf("🚀 HTTP OrderService server starting on %s", address))
 
 	return a.httpServer.Serve(a.listener) // Blocking call
 }

@@ -41,7 +41,7 @@ func TestCreateOrder_Success(t *testing.T) {
 	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(nil)
 
 	// Test
-	err := ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, &order)
 
 	// Verify
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestCreateOrder_EmptyParts(t *testing.T) {
 	)
 
 	// Test
-	err := ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, &order)
 
 	// Verify
 	require.Error(t, err)
@@ -108,7 +108,7 @@ func TestCreateOrder_InventoryClientError(t *testing.T) {
 	inventoryClient.On("ListParts", ctx, partFilter).Return(parts, model.ErrInvalidPartFilter)
 
 	// Test
-	err := ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, &order)
 
 	// Verify
 	require.Error(t, err)
@@ -146,7 +146,7 @@ func TestCreateOrder_RepositoryError(t *testing.T) {
 	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(model.ErrOrderAlreadyExists)
 
 	// Test
-	err := ordersService.CreateOrder(ctx, order)
+	err := ordersService.CreateOrder(ctx, &order)
 
 	// Verify
 	require.Error(t, err)

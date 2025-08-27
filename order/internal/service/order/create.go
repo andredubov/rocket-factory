@@ -11,13 +11,13 @@ import (
 )
 
 // AddOrder creates a new order
-func (s *ordersService) CreateOrder(ctx context.Context, order model.Order) error {
+func (s *ordersService) CreateOrder(ctx context.Context, order *model.Order) error {
 	// Валидация
 	if len(order.PartUUIDs) == 0 {
 		return model.ErrOrderHasNoParts
 	}
 
-	partFilter := converter.OrderToPartFilter(order)
+	partFilter := converter.OrderToPartFilter(*order)
 
 	parts, err := s.inventoryClient.ListParts(ctx, partFilter)
 	if err != nil {
@@ -28,7 +28,7 @@ func (s *ordersService) CreateOrder(ctx context.Context, order model.Order) erro
 	order.OrderUUID = uuid.New()
 	order.TotalPrice = calculateTotalPrice(parts)
 
-	return s.ordersRepository.AddOrder(ctx, order)
+	return s.ordersRepository.AddOrder(ctx, *order)
 }
 
 // calculateTotalPrice calculates and return order total price
