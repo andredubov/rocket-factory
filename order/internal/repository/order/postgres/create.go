@@ -5,7 +5,6 @@ import (
 	"log"
 
 	sq "github.com/Masterminds/squirrel"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
@@ -16,32 +15,32 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 	return WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		repoOrder := converter.OrderToRepoModel(order)
 
-		var transactionUUID uuid.UUID
-		var paymentMethod string
-
-		if repoOrder.PaymentInfo != nil {
-			transactionUUID = repoOrder.PaymentInfo.TransactionUUID
-			paymentMethod = string(repoOrder.PaymentInfo.PaymentMethod)
-		}
-
 		orderBuilderInsert := sq.Insert(OrdersTable).
 			PlaceholderFormat(sq.Dollar).
 			Columns(
 				UUIDTableColumn,
 				UserUUIDTableColumn,
 				TotalPriceTableColumn,
-				TransactionUUIDTableColumn,
-				PaymentMethodTableColumn,
 				StatusTableColumn,
 			).
 			Values(
 				repoOrder.OrderUUID,
 				repoOrder.UserUUID,
 				repoOrder.TotalPrice,
-				transactionUUID,
-				paymentMethod,
 				repoOrder.Status,
 			)
+
+		if repoOrder.PaymentInfo != nil {
+			orderBuilderInsert = orderBuilderInsert.
+				Columns(
+					TransactionUUIDTableColumn,
+					PaymentMethodTableColumn,
+				).
+				Values(
+					repoOrder.PaymentInfo.TransactionUUID,
+					string(repoOrder.PaymentInfo.PaymentMethod),
+				)
+		}
 
 		orderQuery, orderQueryArgs, err := orderBuilderInsert.ToSql()
 		if err != nil {
