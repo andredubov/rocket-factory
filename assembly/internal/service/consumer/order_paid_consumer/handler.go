@@ -27,12 +27,10 @@ func (c *consumerService) OrderHandler(ctx context.Context, msg kafka.Message) e
 		zap.String("user_uuid", event.UserUUID),
 	)
 
-	go c.processOrderAssembled(ctx, event)
-
-	return nil
+	return c.produceOrderAssembledEvent(ctx, event)
 }
 
-func (c *consumerService) processOrderAssembled(ctx context.Context, event model.OrderPaidEvent) {
+func (c *consumerService) produceOrderAssembledEvent(ctx context.Context, event model.OrderPaidEvent) error {
 	begin := time.Now()
 
 	// Имитируем время сборки (10 секунд)
@@ -57,13 +55,14 @@ func (c *consumerService) processOrderAssembled(ctx context.Context, event model
 				zap.Error(err),
 				zap.String("order_uuid", event.OrderUUID),
 			)
-			// Здесь можно добавить retry логику или dead letter queue
-		} else {
-			logger.Info(ctx, "Successfully produced OrderAssembledEvent",
-				zap.String("order_uuid", event.OrderUUID),
-				zap.Duration("build_time", buildTime),
-			)
+
+			return err
 		}
+
+		logger.Info(ctx, "Successfully produced OrderAssembledEvent",
+			zap.String("order_uuid", event.OrderUUID),
+			zap.Duration("build_time", buildTime),
+		)
 
 	case <-ctx.Done():
 		logger.Info(ctx, "Order processing cancelled",
@@ -71,4 +70,6 @@ func (c *consumerService) processOrderAssembled(ctx context.Context, event model
 			zap.String("reason", ctx.Err().Error()),
 		)
 	}
+
+	return nil
 }
