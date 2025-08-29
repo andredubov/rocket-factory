@@ -3,6 +3,7 @@ package order_assembled_consumer
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/platform/pkg/kafka"
@@ -26,7 +27,9 @@ func (c *consumerService) OrderHandler(ctx context.Context, msg kafka.Message) e
 		zap.Int64("build__time_sec", event.BuildTimeSec),
 	)
 
-	err = c.telegramService.SendOrderAssembledNotification(ctx, event.UUID, event)
+	notificationUUID := uuid.New().String()
+
+	err = c.telegramService.SendOrderAssembledNotification(ctx, notificationUUID, event)
 	if err != nil {
 		logger.Warn(ctx, "Notification of assembled order failed to send", zap.Error(err))
 		return err

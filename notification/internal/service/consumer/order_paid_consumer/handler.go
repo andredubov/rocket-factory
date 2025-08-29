@@ -3,6 +3,7 @@ package order_paid_consumer
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/platform/pkg/kafka"
@@ -27,7 +28,9 @@ func (c *consumerService) OrderHandler(ctx context.Context, msg kafka.Message) e
 		zap.String("payment_method", string(event.PaymentMethod)),
 	)
 
-	err = c.telegramService.SendOrderPaidNotification(ctx, event.UUID, event)
+	notificationUUID := uuid.New().String()
+
+	err = c.telegramService.SendOrderPaidNotification(ctx, notificationUUID, event)
 	if err != nil {
 		logger.Warn(ctx, "Notification of paid order failed to send", zap.Error(err))
 		return err
