@@ -34,14 +34,14 @@ func (c *codeRecorder) WriteHeader(status int) {
 //
 // Cancel an existing order.
 //
-// POST /orders/{order_uuid}/cancel
+// POST /api/v1/orders/{order_uuid}/cancel
 func (s *Server) handleCancelOrderRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("cancelOrder"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/orders/{order_uuid}/cancel"),
+		semconv.HTTPRouteKey.String("/api/v1/orders/{order_uuid}/cancel"),
 	}
 
 	// Start a span for this request.
@@ -175,14 +175,14 @@ func (s *Server) handleCancelOrderRequest(args [1]string, argsEscaped bool, w ht
 // Проверяет наличие всех деталей через InventoryService.
 // Рассчитывает общую стоимость.
 //
-// POST /orders
+// POST /api/v1/orders
 func (s *Server) handleCreateOrderRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createOrder"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/orders"),
+		semconv.HTTPRouteKey.String("/api/v1/orders"),
 	}
 
 	// Start a span for this request.
@@ -313,14 +313,14 @@ func (s *Server) handleCreateOrderRequest(args [0]string, argsEscaped bool, w ht
 //
 // Returns order information by its UUID.
 //
-// GET /orders/{order_uuid}
+// GET /api/v1/orders/{order_uuid}
 func (s *Server) handleGetOrderByUuidRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("getOrderByUuid"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/orders/{order_uuid}"),
+		semconv.HTTPRouteKey.String("/api/v1/orders/{order_uuid}"),
 	}
 
 	// Start a span for this request.
@@ -451,14 +451,14 @@ func (s *Server) handleGetOrderByUuidRequest(args [1]string, argsEscaped bool, w
 //
 // Process payment for an existing order.
 //
-// POST /orders/{order_uuid}/pay
+// POST /api/v1/orders/{order_uuid}/pay
 func (s *Server) handlePayOrderRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("payOrder"),
 		semconv.HTTPRequestMethodKey.String("POST"),
-		semconv.HTTPRouteKey.String("/orders/{order_uuid}/pay"),
+		semconv.HTTPRouteKey.String("/api/v1/orders/{order_uuid}/pay"),
 	}
 
 	// Start a span for this request.

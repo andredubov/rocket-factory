@@ -1,5 +1,6 @@
 type: string
 enum: [UNKNOWN, CARD, SBP, CREDIT_CARD, INVESTOR_MONEY]
+x-nullable: true  # ← Специальное расширение для ogen
 description: |
   Доступные методы оплаты:
   - UNKNOWN - Не известный способ

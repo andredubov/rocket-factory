@@ -17,7 +17,7 @@ var _ Handler = UnimplementedHandler{}
 //
 // Cancel an existing order.
 //
-// POST /orders/{order_uuid}/cancel
+// POST /api/v1/orders/{order_uuid}/cancel
 func (UnimplementedHandler) CancelOrder(ctx context.Context, params CancelOrderParams) (r CancelOrderRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -29,7 +29,7 @@ func (UnimplementedHandler) CancelOrder(ctx context.Context, params CancelOrderP
 // Проверяет наличие всех деталей через InventoryService.
 // Рассчитывает общую стоимость.
 //
-// POST /orders
+// POST /api/v1/orders
 func (UnimplementedHandler) CreateOrder(ctx context.Context, req *CreateOrderRequest) (r CreateOrderRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -38,7 +38,7 @@ func (UnimplementedHandler) CreateOrder(ctx context.Context, req *CreateOrderReq
 //
 // Returns order information by its UUID.
 //
-// GET /orders/{order_uuid}
+// GET /api/v1/orders/{order_uuid}
 func (UnimplementedHandler) GetOrderByUuid(ctx context.Context, params GetOrderByUuidParams) (r GetOrderByUuidRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
@@ -47,7 +47,7 @@ func (UnimplementedHandler) GetOrderByUuid(ctx context.Context, params GetOrderB
 //
 // Process payment for an existing order.
 //
-// POST /orders/{order_uuid}/pay
+// POST /api/v1/orders/{order_uuid}/pay
 func (UnimplementedHandler) PayOrder(ctx context.Context, req *PayOrderRequest, params PayOrderParams) (r PayOrderRes, _ error) {
 	return r, ht.ErrNotImplemented
 }

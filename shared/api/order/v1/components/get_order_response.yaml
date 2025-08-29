@@ -41,7 +41,6 @@ properties:
     example: "u123e4567-e89b-12d3-a456-7866152174001"
   payment_method:
     $ref: './enums/payment_method.yaml'
-    nullable: true
     description: |
       Использованный способ оплаты.
       Присутствует только для оплаченных заказов.

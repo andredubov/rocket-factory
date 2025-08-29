@@ -11,6 +11,7 @@ const (
 	OrderStatusPending   OrderStatus = "PENDING_PAYMENT"
 	OrderStatusPaid      OrderStatus = "PAID"
 	OrderStatusCancelled OrderStatus = "CANCELLED"
+	OrderStatusAssembled OrderStatus = "ASSEMBLED"
 )
 
 func NewOrderStatus(orderStatus string) (OrderStatus, error) {
@@ -21,6 +22,8 @@ func NewOrderStatus(orderStatus string) (OrderStatus, error) {
 		return OrderStatusPaid, nil
 	case "CANCELLED":
 		return OrderStatusCancelled, nil
+	case "ASSEMBLED":
+		return OrderStatusAssembled, nil
 	default:
 		return OrderStatusPending, ErrInvalidOrderStatus
 	}
@@ -68,4 +71,13 @@ type Order struct {
 	TotalPrice  float64
 	PaymentInfo *PaymentInfo
 	Status      OrderStatus
+}
+
+type OrderUpdateInfo struct {
+	OrderUUID   uuid.UUID
+	UserUUID    *uuid.UUID
+	PartUUIDs   []uuid.UUID
+	TotalPrice  *float64
+	PaymentInfo *PaymentInfo
+	Status      *OrderStatus
 }

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"log"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
@@ -17,28 +18,40 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 		orderBuilderInsert := sq.Insert(OrdersTable).
 			PlaceholderFormat(sq.Dollar).
 			Columns(
+				UUIDTableColumn,
 				UserUUIDTableColumn,
 				TotalPriceTableColumn,
-				TransactionUUIDTableColumn,
-				PaymentMethodTableColumn,
 				StatusTableColumn,
 			).
 			Values(
+				repoOrder.OrderUUID,
 				repoOrder.UserUUID,
 				repoOrder.TotalPrice,
-				repoOrder.PaymentInfo.TransactionUUID,
-				repoOrder.PaymentInfo.PaymentMethod,
 				repoOrder.Status,
 			)
 
+		if repoOrder.PaymentInfo != nil {
+			orderBuilderInsert = orderBuilderInsert.
+				Columns(
+					TransactionUUIDTableColumn,
+					PaymentMethodTableColumn,
+				).
+				Values(
+					repoOrder.PaymentInfo.TransactionUUID,
+					string(repoOrder.PaymentInfo.PaymentMethod),
+				)
+		}
+
 		orderQuery, orderQueryArgs, err := orderBuilderInsert.ToSql()
 		if err != nil {
+			log.Printf("ERROR: Failed to build order query: %v", err)
 			return err
 		}
 
 		if _, err := tx.Exec(ctx, orderQuery, orderQueryArgs...); err != nil {
 			return err
 		}
+		log.Printf("DEBUG: Order query: %s, args: %v", orderQuery, orderQueryArgs)
 
 		for _, partUUID := range order.PartUUIDs {
 			orderPartsBuilderInsert := sq.Insert(OrderPartsTable).
@@ -48,12 +61,17 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 
 			orderPartsQuery, orderPartsQueryArgs, err := orderPartsBuilderInsert.ToSql()
 			if err != nil {
+				log.Printf("ERROR: Failed to build order query: %v", err)
 				return err
 			}
 
+			log.Printf("DEBUG: Order query: %s, args: %v", orderQuery, orderQueryArgs)
+
 			if _, err := tx.Exec(ctx, orderPartsQuery, orderPartsQueryArgs...); err != nil {
+				log.Printf("ERROR: Failed to exec order query: %v", err)
 				return err
 			}
+			log.Printf("DEBUG: Order inserted successfully")
 		}
 		return nil
 	})

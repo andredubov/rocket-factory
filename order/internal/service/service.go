@@ -18,11 +18,21 @@ type PaymentClient interface {
 	PayOrder(ctx context.Context, order *model.Order) (uuid.UUID, error)
 }
 
+// ConsumerService defines the interface for service that consunes order assembled events
+type ConsumerService interface {
+	RunConsumer(ctx context.Context) error
+}
+
+// ProducerService defines the interface for service that produces order paid events
+type ProducerService interface {
+	ProduceOrderPaidEvent(ctx context.Context, event model.OrderPaidEvent) error
+}
+
 // OrdersRepository defines the interface for order repository operations.
 type OrdersRepository interface {
 	GetOrder(ctx context.Context, uuid uuid.UUID) (*model.Order, error)
 	AddOrder(ctx context.Context, order model.Order) error
-	UpdateOrder(ctx context.Context, order model.Order) error
+	UpdateOrder(ctx context.Context, order model.OrderUpdateInfo) error
 	DeleteOrder(ctx context.Context, uuid uuid.UUID) error
 	GetUserOrders(ctx context.Context, userUUID uuid.UUID) ([]model.Order, error)
 }

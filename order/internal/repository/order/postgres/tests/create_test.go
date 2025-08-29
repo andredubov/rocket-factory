@@ -49,11 +49,12 @@ func TestAddOrder_Success(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec(`INSERT INTO `+postgres.OrdersTable).
 		WithArgs(
+			repoOrder.OrderUUID,
 			repoOrder.UserUUID,
 			repoOrder.TotalPrice,
-			repoOrder.PaymentInfo.TransactionUUID,
-			repoOrder.PaymentInfo.PaymentMethod,
 			repoOrder.Status,
+			repoOrder.PaymentInfo.TransactionUUID,
+			string(repoOrder.PaymentInfo.PaymentMethod),
 		).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
@@ -99,11 +100,12 @@ func TestAddOrder_EmptyParts(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec(`INSERT INTO `+postgres.OrdersTable).
 		WithArgs(
+			repoOrder.OrderUUID,
 			repoOrder.UserUUID,
 			repoOrder.TotalPrice,
-			repoOrder.PaymentInfo.TransactionUUID,
-			repoOrder.PaymentInfo.PaymentMethod,
 			repoOrder.Status,
+			repoOrder.PaymentInfo.TransactionUUID,
+			string(repoOrder.PaymentInfo.PaymentMethod),
 		).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectCommit()
@@ -174,11 +176,12 @@ func TestAddOrder_OrderInsertError(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec(`INSERT INTO `+postgres.OrdersTable).
 		WithArgs(
+			repoOrder.OrderUUID,
 			repoOrder.UserUUID,
 			repoOrder.TotalPrice,
-			repoOrder.PaymentInfo.TransactionUUID,
-			repoOrder.PaymentInfo.PaymentMethod,
 			repoOrder.Status,
+			repoOrder.PaymentInfo.TransactionUUID,
+			string(repoOrder.PaymentInfo.PaymentMethod),
 		).
 		WillReturnError(errors.New("insert error"))
 	mock.ExpectRollback()
@@ -216,11 +219,12 @@ func TestAddOrder_PartInsertError(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec(`INSERT INTO `+postgres.OrdersTable).
 		WithArgs(
+			repoOrder.OrderUUID,
 			repoOrder.UserUUID,
 			repoOrder.TotalPrice,
-			repoOrder.PaymentInfo.TransactionUUID,
-			repoOrder.PaymentInfo.PaymentMethod,
 			repoOrder.Status,
+			repoOrder.PaymentInfo.TransactionUUID,
+			string(repoOrder.PaymentInfo.PaymentMethod),
 		).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
@@ -266,11 +270,12 @@ func TestAddOrder_CommitError(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec(`INSERT INTO `+postgres.OrdersTable).
 		WithArgs(
+			repoOrder.OrderUUID,
 			repoOrder.UserUUID,
 			repoOrder.TotalPrice,
-			repoOrder.PaymentInfo.TransactionUUID,
-			repoOrder.PaymentInfo.PaymentMethod,
 			repoOrder.Status,
+			repoOrder.PaymentInfo.TransactionUUID,
+			string(repoOrder.PaymentInfo.PaymentMethod),
 		).
 		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 	mock.ExpectExec(`INSERT INTO `+postgres.OrderPartsTable).
@@ -312,11 +317,12 @@ func TestAddOrder_RollbackErrorLogging(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectExec(`INSERT INTO `+postgres.OrdersTable).
 		WithArgs(
+			repoOrder.OrderUUID,
 			repoOrder.UserUUID,
 			repoOrder.TotalPrice,
-			repoOrder.PaymentInfo.TransactionUUID,
-			repoOrder.PaymentInfo.PaymentMethod,
 			repoOrder.Status,
+			repoOrder.PaymentInfo.TransactionUUID,
+			string(repoOrder.PaymentInfo.PaymentMethod),
 		).
 		WillReturnError(errors.New("order insert error"))
 

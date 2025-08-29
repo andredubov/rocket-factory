@@ -58,3 +58,32 @@ func OrdersToModel(orders []repoModel.Order) []model.Order {
 
 	return result
 }
+
+func OrderUpdateInfoToRepoModel(updateInfo model.OrderUpdateInfo) repoModel.Order {
+	order := repoModel.Order{OrderUUID: updateInfo.OrderUUID}
+
+	if updateInfo.TotalPrice != nil {
+		order.TotalPrice = *updateInfo.TotalPrice
+	}
+
+	if updateInfo.UserUUID != nil {
+		order.UserUUID = *updateInfo.UserUUID
+	}
+
+	if updateInfo.Status != nil {
+		order.Status = repoModel.OrderStatus(*updateInfo.Status)
+	}
+
+	if updateInfo.PartUUIDs != nil {
+		order.PartUUIDs = append(order.PartUUIDs, updateInfo.PartUUIDs...)
+	}
+
+	if updateInfo.PaymentInfo != nil {
+		order.PaymentInfo = &repoModel.PaymentInfo{
+			TransactionUUID: updateInfo.PaymentInfo.TransactionUUID,
+			PaymentMethod:   repoModel.PaymentMethod(updateInfo.PaymentInfo.PaymentMethod),
+		}
+	}
+
+	return order
+}

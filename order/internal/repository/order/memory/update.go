@@ -8,7 +8,7 @@ import (
 )
 
 // UpdateOrder modifies an existing order in the repository.
-func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) error {
+func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.OrderUpdateInfo) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -17,7 +17,7 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.Order) e
 	}
 
 	// Store a copy of the order to prevent external modifications
-	orderCopy := converter.OrderToRepoModel(order)
+	orderCopy := converter.OrderUpdateInfoToRepoModel(order)
 	r.orders[order.OrderUUID] = &orderCopy
 	return nil
 }

@@ -237,7 +237,7 @@ func (_c *OrdersRepository_GetUserOrders_Call) RunAndReturn(run func(context.Con
 }
 
 // UpdateOrder provides a mock function with given fields: ctx, order
-func (_m *OrdersRepository) UpdateOrder(ctx context.Context, order model.Order) error {
+func (_m *OrdersRepository) UpdateOrder(ctx context.Context, order model.OrderUpdateInfo) error {
 	ret := _m.Called(ctx, order)
 
 	if len(ret) == 0 {
@@ -245,7 +245,7 @@ func (_m *OrdersRepository) UpdateOrder(ctx context.Context, order model.Order) 
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, model.Order) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, model.OrderUpdateInfo) error); ok {
 		r0 = rf(ctx, order)
 	} else {
 		r0 = ret.Error(0)
@@ -261,14 +261,14 @@ type OrdersRepository_UpdateOrder_Call struct {
 
 // UpdateOrder is a helper method to define mock.On call
 //   - ctx context.Context
-//   - order model.Order
+//   - order model.OrderUpdateInfo
 func (_e *OrdersRepository_Expecter) UpdateOrder(ctx interface{}, order interface{}) *OrdersRepository_UpdateOrder_Call {
 	return &OrdersRepository_UpdateOrder_Call{Call: _e.mock.On("UpdateOrder", ctx, order)}
 }
 
-func (_c *OrdersRepository_UpdateOrder_Call) Run(run func(ctx context.Context, order model.Order)) *OrdersRepository_UpdateOrder_Call {
+func (_c *OrdersRepository_UpdateOrder_Call) Run(run func(ctx context.Context, order model.OrderUpdateInfo)) *OrdersRepository_UpdateOrder_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(model.Order))
+		run(args[0].(context.Context), args[1].(model.OrderUpdateInfo))
 	})
 	return _c
 }
@@ -278,7 +278,7 @@ func (_c *OrdersRepository_UpdateOrder_Call) Return(_a0 error) *OrdersRepository
 	return _c
 }
 
-func (_c *OrdersRepository_UpdateOrder_Call) RunAndReturn(run func(context.Context, model.Order) error) *OrdersRepository_UpdateOrder_Call {
+func (_c *OrdersRepository_UpdateOrder_Call) RunAndReturn(run func(context.Context, model.OrderUpdateInfo) error) *OrdersRepository_UpdateOrder_Call {
 	_c.Call.Return(run)
 	return _c
 }

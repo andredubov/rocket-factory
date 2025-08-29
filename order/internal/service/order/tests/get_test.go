@@ -15,13 +15,14 @@ import (
 // TestGetOrder_Success tests successful retrieval of an existing order.
 func TestGetOrder_Success(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
-		order            = &model.Order{
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
+		order                  = &model.Order{
 			OrderUUID: orderUUID,
 			Status:    model.OrderStatusPending,
 		}
@@ -42,12 +43,13 @@ func TestGetOrder_Success(t *testing.T) {
 // TestGetOrder_NotFound tests retrieval of a non-existent order.
 func TestGetOrder_NotFound(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
 	)
 
 	// Mock expectation
@@ -66,13 +68,14 @@ func TestGetOrder_NotFound(t *testing.T) {
 // TestGetOrder_RepositoryError tests error handling during order retrieval.
 func TestGetOrder_RepositoryError(t *testing.T) {
 	var (
-		ordersRepository = mocks.NewOrdersRepository(t)
-		paymentClient    = mocks.NewPaymentClient(t)
-		inventoryClient  = mocks.NewInventoryClient(t)
-		ordersService    = orders.NewService(ordersRepository, paymentClient, inventoryClient)
-		ctx              = context.Background()
-		orderUUID        = uuid.New()
-		repoError        = model.ErrOrderNotFound
+		ordersRepository       = mocks.NewOrdersRepository(t)
+		paymentClient          = mocks.NewPaymentClient(t)
+		inventoryClient        = mocks.NewInventoryClient(t)
+		orderPaidEventProducer = mocks.NewProducerService(t)
+		ordersService          = orders.NewService(ordersRepository, paymentClient, inventoryClient, orderPaidEventProducer)
+		ctx                    = context.Background()
+		orderUUID              = uuid.New()
+		repoError              = model.ErrOrderNotFound
 	)
 
 	// Mock expectation

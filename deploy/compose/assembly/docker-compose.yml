@@ -1,0 +1,20 @@
+services:
+  # Раздел, описывающий контейнеры, которые требуются для работы Assembly-сервиса
+  assembly-service:
+    image: assembly-service:1.0.0
+    container_name: assembly_service
+    build:
+      context: ../../..
+      dockerfile: ./assembly/Dockerfile
+    env_file:
+      - .env
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.11
+
+networks:
+  # Сетевые настройки
+  rocketfactory-net:
+    external: true
+    # Мы не создаём новую сеть, а подключаемся к уже существующей общей сети "rocketfactory-net"
+    # Эта сеть создаётся один раз в docker-compose.yml или вручную через docker network create

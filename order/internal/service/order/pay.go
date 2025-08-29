@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/andredubov/rocket-factory/order/internal/converter"
 	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
@@ -40,8 +41,17 @@ func (s *ordersService) PayOrder(ctx context.Context, uuid uuid.UUID, paymentMet
 	order.PaymentInfo.TransactionUUID = transactionUUID
 	order.Status = model.OrderStatusPaid
 
+	updateInfo := converter.OrderToOrderUpdateInfo(order)
+
 	// Сохранение обновленного заказа
-	if err := s.ordersRepository.UpdateOrder(ctx, *order); err != nil {
+	if err := s.ordersRepository.UpdateOrder(ctx, updateInfo); err != nil {
+		return nil, err
+	}
+
+	event := converter.OrderToOrderPaidEvent(order)
+
+	// Отправка сообщения об успешной оплате заказа в kafka
+	if err := s.orderPaidEventProducer.ProduceOrderPaidEvent(ctx, event); err != nil {
 		return nil, err
 	}
 

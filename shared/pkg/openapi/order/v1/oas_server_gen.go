@@ -12,7 +12,7 @@ type Handler interface {
 	//
 	// Cancel an existing order.
 	//
-	// POST /orders/{order_uuid}/cancel
+	// POST /api/v1/orders/{order_uuid}/cancel
 	CancelOrder(ctx context.Context, params CancelOrderParams) (CancelOrderRes, error)
 	// CreateOrder implements createOrder operation.
 	//
@@ -21,19 +21,19 @@ type Handler interface {
 	// Проверяет наличие всех деталей через InventoryService.
 	// Рассчитывает общую стоимость.
 	//
-	// POST /orders
+	// POST /api/v1/orders
 	CreateOrder(ctx context.Context, req *CreateOrderRequest) (CreateOrderRes, error)
 	// GetOrderByUuid implements getOrderByUuid operation.
 	//
 	// Returns order information by its UUID.
 	//
-	// GET /orders/{order_uuid}
+	// GET /api/v1/orders/{order_uuid}
 	GetOrderByUuid(ctx context.Context, params GetOrderByUuidParams) (GetOrderByUuidRes, error)
 	// PayOrder implements payOrder operation.
 	//
 	// Process payment for an existing order.
 	//
-	// POST /orders/{order_uuid}/pay
+	// POST /api/v1/orders/{order_uuid}/pay
 	PayOrder(ctx context.Context, req *PayOrderRequest, params PayOrderParams) (PayOrderRes, error)
 }
 
