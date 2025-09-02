@@ -17,9 +17,18 @@ import (
 // GetOrder возвращает заказ по его UUID вместе со всеми связанными данными.
 // Работает в рамках транзакции для обеспечения целостности данных.
 func (r *ordersRepository) GetOrder(ctx context.Context, orderUUID uuid.UUID) (*model.Order, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction:: %w", err)
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	committed := false
