@@ -8,10 +8,13 @@ import (
 
 	"github.com/andredubov/rocket-factory/order/internal/client/converter"
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/platform/pkg/middleware/grpc"
 )
 
 // PayOrder processes payment for the given order through the payment service.
 func (c *paymentClient) PayOrder(ctx context.Context, order *model.Order) (uuid.UUID, error) {
+	ctx = grpc.ForwardSessionUUIDToGRPC(ctx)
+
 	paymentRequest := converter.OrderToPayOrderRequest(order)
 
 	paymentResponse, err := c.generatedClient.PayOrder(ctx, paymentRequest)

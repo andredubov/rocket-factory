@@ -5,10 +5,13 @@ import (
 
 	"github.com/andredubov/rocket-factory/order/internal/client/converter"
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	grpc "github.com/andredubov/rocket-factory/platform/pkg/middleware/grpc"
 )
 
 // ListParts retrieves a list of parts from the inventory service based on the provided filter.
 func (c *inventoryClient) ListParts(ctx context.Context, filter model.PartFilter) ([]model.Part, error) {
+	ctx = grpc.ForwardSessionUUIDToGRPC(ctx)
+
 	request := converter.PartFilterToListPartsRequest(filter)
 
 	response, err := c.generatedClient.ListParts(ctx, request)
