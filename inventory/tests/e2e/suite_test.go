@@ -5,27 +5,21 @@ package integration
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
-	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
-	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/path"
 )
 
 const (
-	testsTimeout         = 5 * time.Minute
-	inventoryEnvFilePath = "/deploy/compose/inventory/.env"
+	testsTimeout = 5 * time.Minute
 )
 
 var (
-	env *TestEnvironment
-
+	env         *TestEnvironment
 	suiteCtx    context.Context
 	suiteCancel context.CancelFunc
 )
@@ -40,20 +34,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	if err != nil {
 		panic(fmt.Sprintf("не удалось инициализировать логгер: %v", err))
 	}
-
 	suiteCtx, suiteCancel = context.WithTimeout(context.Background(), testsTimeout)
-
-	// Загружаем .env файл и устанавливаем переменные в окружение
-	envVars, err := godotenv.Read(path.GetProjectRoot() + inventoryEnvFilePath)
-	if err != nil {
-		logger.Fatal(suiteCtx, "Не удалось загрузить .env файл", zap.Error(err))
-	}
-
-	// Устанавливаем переменные в окружение процесса
-	for key, value := range envVars {
-		_ = os.Setenv(key, value)
-	}
-
 	logger.Info(suiteCtx, "Запуск тестового окружения...")
 	env = setupTestEnvironment(suiteCtx)
 })

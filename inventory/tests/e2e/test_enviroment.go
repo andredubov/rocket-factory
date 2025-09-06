@@ -4,7 +4,6 @@ package integration
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -14,19 +13,19 @@ import (
 	repoModel "github.com/andredubov/rocket-factory/inventory/internal/repository/model"
 )
 
+const (
+	mongoDatabaseName           = "inventory"
+	mongoDatabaseCollectionName = "parts"
+)
+
 func (env *TestEnvironment) ClearPartsCollection(ctx context.Context) error {
-	databaseName := mongoDBName()
-	_, err := env.Mongo.Client().Database(databaseName).Collection(partsCollectionName).DeleteMany(ctx, bson.M{})
+	client := env.InventoryMongoContainer.Client()
+
+	_, err := client.Database(mongoDatabaseName).
+		Collection(mongoDatabaseCollectionName).
+		DeleteMany(ctx, bson.M{})
 
 	return err
-}
-
-func mongoDBName() string {
-	if v := os.Getenv("MONGO_INITDB_DATABASE"); v != "" {
-		return v
-	}
-
-	return "inventory-service-database"
 }
 
 func (env *TestEnvironment) InsertTestPart(ctx context.Context) (string, error) {
@@ -58,8 +57,10 @@ func (env *TestEnvironment) InsertTestPart(ctx context.Context) (string, error) 
 		}
 	)
 
-	databaseName := mongoDBName()
-	_, err := env.Mongo.Client().Database(databaseName).Collection(partsCollectionName).InsertOne(ctx, document)
+	_, err := env.InventoryMongoContainer.Client().
+		Database(mongoDatabaseName).
+		Collection(mongoDatabaseCollectionName).
+		InsertOne(ctx, document)
 	if err != nil {
 		return "", err
 	}

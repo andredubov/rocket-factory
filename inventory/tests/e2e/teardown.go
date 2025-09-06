@@ -22,19 +22,43 @@ func teardownTestEnvironment(ctx context.Context, env *TestEnvironment) {
 
 // cleanupTestEnvironment — вспомогательная функция для освобождения ресурсов
 func cleanupTestEnvironment(ctx context.Context, env *TestEnvironment) {
-	if env.App != nil {
-		if err := env.App.Terminate(ctx); err != nil {
-			logger.Error(ctx, "не удалось остановить контейнер приложения", zap.Error(err))
+	if env.InventoryAppContainer != nil {
+		if err := env.InventoryAppContainer.Terminate(ctx); err != nil {
+			logger.Error(ctx, "не удалось остановить контейнер Inventory сервиса", zap.Error(err))
 		} else {
-			logger.Info(ctx, "🛑 Контейнер приложения остановлен")
+			logger.Info(ctx, "🛑 Контейнер Inventory-сервиса остановлен")
 		}
 	}
 
-	if env.Mongo != nil {
-		if err := env.Mongo.Terminate(ctx); err != nil {
+	if env.InventoryMongoContainer != nil {
+		if err := env.InventoryMongoContainer.Terminate(ctx); err != nil {
 			logger.Error(ctx, "не удалось остановить контейнер MongoDB", zap.Error(err))
 		} else {
 			logger.Info(ctx, "🛑 Контейнер MongoDB остановлен")
+		}
+	}
+
+	if env.IAMAppContainer != nil {
+		if err := env.IAMAppContainer.Terminate(ctx); err != nil {
+			logger.Error(ctx, "не удалось остановить контейнер IAM сервиса", zap.Error(err))
+		} else {
+			logger.Info(ctx, "🛑 Контейнер IAM сервиса остановлен")
+		}
+	}
+
+	if env.IAMPostgresContainer != nil {
+		if err := env.IAMPostgresContainer.Terminate(ctx); err != nil {
+			logger.Error(ctx, "не удалось остановить контейнер PostgresDB", zap.Error(err))
+		} else {
+			logger.Info(ctx, "🛑 Контейнер PostgresDB остановлен")
+		}
+	}
+
+	if env.IAMRedisContainer != nil {
+		if err := env.IAMRedisContainer.Terminate(ctx); err != nil {
+			logger.Error(ctx, "не удалось остановить контейнер Redis", zap.Error(err))
+		} else {
+			logger.Info(ctx, "🛑 Контейнер Redis остановлен")
 		}
 	}
 

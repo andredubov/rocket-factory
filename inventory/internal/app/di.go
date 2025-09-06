@@ -3,9 +3,13 @@ package app
 import (
 	"context"
 	"log"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	api "github.com/andredubov/rocket-factory/inventory/internal/api/v1/inventory"
 	"github.com/andredubov/rocket-factory/inventory/internal/config"
@@ -13,16 +17,22 @@ import (
 	mongodb "github.com/andredubov/rocket-factory/inventory/internal/repository/part/mongo"
 	"github.com/andredubov/rocket-factory/inventory/internal/service"
 	"github.com/andredubov/rocket-factory/inventory/internal/service/inventory"
+	"github.com/andredubov/rocket-factory/platform/pkg/closer"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
+	middlewaregrpc "github.com/andredubov/rocket-factory/platform/pkg/middleware/grpc"
+	auth_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/auth/v1"
 )
 
 // diContainer implements the dependency container pattern
 type diContainer struct {
 	inventoryRepository  service.InventoryRepository
 	inventoryService     api.InventoryService
-	grpcConfig           config.GRPCConfig // GRPC server configuration
+	grpcConfig           config.GRPCConfig
 	mongoDBConfig        config.MongoDBConfig
 	mongoDB              *mongo.Database
 	serverImplementation *api.InventoryImplementation // GRPC service implementation
+	authClient           auth_v1.AuthServiceClient
+	authInterceptor      *middlewaregrpc.AuthInterceptor
 }
 
 // newDIContainer creates a new service provider instance.
@@ -109,4 +119,44 @@ func (s *diContainer) ServerImplementation(ctx context.Context) *api.InventoryIm
 	}
 
 	return s.serverImplementation
+}
+
+func (d *diContainer) AuthClient(ctx context.Context) auth_v1.AuthServiceClient {
+	if d.authClient == nil {
+		iamAddress := config.AppConfig().IAMClient.Address()
+		if iamAddress == "" {
+			logger.Error(ctx, "IAM client address is empty")
+			return nil
+		}
+
+		connectCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		iamConn, err := grpc.NewClient(
+			iamAddress,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		if err != nil {
+			logger.Error(connectCtx, "Failed to connect to IAM service", zap.Error(err))
+			return nil
+		}
+
+		closer.AddNamed("IAM grpc connection", func(ctx context.Context) error {
+			return iamConn.Close()
+		})
+
+		d.authClient = auth_v1.NewAuthServiceClient(iamConn)
+	}
+
+	return d.authClient
+}
+
+func (d *diContainer) AuthInterceptor(ctx context.Context) *middlewaregrpc.AuthInterceptor {
+	if d.authInterceptor == nil {
+		d.authInterceptor = middlewaregrpc.NewAuthInterceptor(
+			d.AuthClient(ctx),
+		)
+	}
+
+	return d.authInterceptor
 }

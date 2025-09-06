@@ -4,119 +4,348 @@ package integration
 
 import (
 	"context"
-	"os"
+	"fmt"
 	"time"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
-	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers"
 	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/app"
 	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/mongo"
 	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/network"
 	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/path"
+	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/postgres"
+	"github.com/andredubov/rocket-factory/platform/pkg/testcontainers/redis"
 )
 
 const (
-	// Параметры для контейнеров
-	inventoryAppName    = "inventory-app"
-	inventoryDockerfile = "deploy/docker/inventory/Dockerfile"
-
-	// Переменные окружения приложения
-	grpcPortKey = "GRPC_PORT"
-
-	// Значения переменных окружения
 	loggerLevelValue = "debug"
-	startupTimeout   = 10 * time.Minute
+
+	InventoryAppContainerName           = "inventory-service-test"
+	InventoryAppContainerPort           = "50051"
+	InventoryMongoContainerName         = "inventory-mongo-test"
+	InventoryMongoContainerInternalPort = "27017"
+	InventoryDockerfile                 = "deploy/docker/inventory/Dockerfile"
+
+	IAMAppContainerName              = "iam-service-test"
+	IAMAppContainerPort              = "50053"
+	IAMRedisContainerName            = "iam-redis-test"
+	IAMRedisContainerInternalPort    = "6379"
+	IAMPostgresContainerName         = "iam-postgres-test"
+	IAMPostgresContainerInternalPort = "5432"
+	IAMDockerfile                    = "deploy/docker/iam/Dockerfile"
 )
 
-// TestEnvironment — структура для хранения ресурсов тестового окружения
 type TestEnvironment struct {
-	Network *network.Network
-	Mongo   *mongo.Container
-	App     *app.Container
+	Network                 *network.Network
+	InventoryMongoContainer *mongo.Container
+	InventoryAppContainer   *app.Container
+	IAMPostgresContainer    *postgres.Container
+	IAMRedisContainer       *redis.Container
+	IAMAppContainer         *app.Container
 }
 
-// setupTestEnvironment — подготавливает тестовое окружение: сеть, контейнеры и возвращает структуру с ресурсами
+func customUsername(minLength int) string {
+	base := gofakeit.Username()
+	if len(base) >= minLength {
+		return base
+	}
+
+	// Добавляем цифры или символы если username слишком короткий
+	needed := minLength - len(base)
+	randomSuffix := gofakeit.DigitN(uint(needed))
+
+	return base + randomSuffix
+}
+
+func generateSimplePassword(minLength int) string {
+	// Только буквы и цифры
+	return gofakeit.Password(true, true, true, false, false, minLength)
+}
+
 func setupTestEnvironment(ctx context.Context) *TestEnvironment {
-	logger.Info(ctx, "🚀 Подготовка тестового окружения...")
+	logger.Info(ctx, "🚀 Setting up test environment with Testcontainers...")
 
-	// Шаг 1: Создаём общую Docker-сеть
-	generatedNetwork, err := network.NewNetwork(ctx, projectName)
+	// Создаем Docker network для изоляции
+	testNetwork, err := network.NewNetwork(ctx, "rocket-factory-net")
 	if err != nil {
-		logger.Fatal(ctx, "не удалось создать общую сеть", zap.Error(err))
+		logger.Fatal(ctx, "Failed to create network", zap.Error(err))
 	}
-	logger.Info(ctx, "✅ Сеть успешно создана")
 
-	// Получаем переменные окружения для MongoDB с проверкой на наличие
-	mongoUsername := getEnvWithLogging(ctx, testcontainers.MongoUsernameKey)
-	mongoPassword := getEnvWithLogging(ctx, testcontainers.MongoPasswordKey)
-	mongoImageName := getEnvWithLogging(ctx, testcontainers.MongoImageNameKey)
-	mongoDatabase := getEnvWithLogging(ctx, testcontainers.MongoDatabaseKey)
-	mongoAuthDB := getEnvWithLogging(ctx, testcontainers.MongoAuthDBKey)
-
-	// Получаем порт gRPC для waitStrategy
-	grpcPort := getEnvWithLogging(ctx, grpcPortKey)
-
-	// Шаг 2: Запускаем контейнер с MongoDB
-	generatedMongo, err := mongo.NewContainer(ctx,
-		mongo.WithNetworkName(generatedNetwork.Name()),
-		mongo.WithContainerName(testcontainers.MongoContainerName),
-		mongo.WithImageName(mongoImageName),
-		mongo.WithDatabase(mongoDatabase),
-		mongo.WithAuth(mongoUsername, mongoPassword),
-		mongo.WithAuthDB(mongoAuthDB),
-		mongo.WithLogger(logger.Logger()),
-	)
-	if err != nil {
-		cleanupTestEnvironment(ctx, &TestEnvironment{Network: generatedNetwork})
-		logger.Fatal(ctx, "не удалось запустить контейнер MongoDB", zap.Error(err))
+	env := &TestEnvironment{
+		Network: testNetwork,
 	}
-	logger.Info(ctx, "✅ Контейнер MongoDB успешно запущен")
 
-	// Шаг 3: Запускаем контейнер с приложением
+	// Запускаем инфраструктурные контейнеры
+	if err := setupInfrastructureContainers(ctx, env); err != nil {
+		logger.Fatal(ctx, "Failed to setup infrastructure", zap.Error(err))
+	}
+
+	// Запускаем сервисы
+	if err := setupServiceContainers(ctx, env); err != nil {
+		logger.Fatal(ctx, "Failed to setup services", zap.Error(err))
+	}
+
+	logger.Info(ctx, "✅ Test environment setup completed successfully")
+	return env
+}
+
+func setupInfrastructureContainers(ctx context.Context, env *TestEnvironment) error {
+	// Запускаем контейнеры параллельно для скорости
+	errCh := make(chan error, 3)
+	doneCh := make(chan bool, 3)
+
+	go func() {
+		if err := setupMongoContainer(ctx, env); err != nil {
+			errCh <- fmt.Errorf("failed to setup MongoDB: %w", err)
+		}
+		doneCh <- true
+	}()
+
+	go func() {
+		if err := setupPostgresContainer(ctx, env); err != nil {
+			errCh <- fmt.Errorf("failed to setup PostgreSQL: %w", err)
+		}
+		doneCh <- true
+	}()
+
+	go func() {
+		if err := setupRedisContainer(ctx, env); err != nil {
+			errCh <- fmt.Errorf("failed to setup Redis: %w", err)
+		}
+		doneCh <- true
+	}()
+
+	// Ждем завершения всех горутин
+	for i := 0; i < 3; i++ {
+		select {
+		case err := <-errCh:
+			return err
+		case <-doneCh:
+			// Контейнер успешно запущен
+		}
+	}
+
+	return nil
+}
+
+func setupServiceContainers(ctx context.Context, env *TestEnvironment) error {
+	// Запускаем сервисы последовательно, т.к. они зависят от инфраструктуры
+	if err := setupIAMService(ctx, env); err != nil {
+		return fmt.Errorf("failed to setup IAM service: %w", err)
+	}
+
+	if err := setupInventoryService(ctx, env); err != nil {
+		return fmt.Errorf("failed to setup Inventory service: %w", err)
+	}
+
+	return nil
+}
+
+func setupIAMService(ctx context.Context, env *TestEnvironment) error {
+	logger.Info(ctx, "Starting IAM service container...")
+
+	// Подготавливаем переменные окружения для IAM сервиса
+	iamEnv := map[string]string{
+		"GRPC_HOST":                "0.0.0.0",
+		"GRPC_PORT":                IAMAppContainerPort,
+		"LOGGER_LEVEL":             loggerLevelValue,
+		"LOGGER_AS_JSON":           "true",
+		"PG_HOST":                  IAMPostgresContainerName,
+		"PG_PORT":                  IAMPostgresContainerInternalPort,
+		"PG_DB":                    env.IAMPostgresContainer.Config().Database,
+		"PG_USER":                  env.IAMPostgresContainer.Config().Username,
+		"PG_PASSWORD":              env.IAMPostgresContainer.Config().Password,
+		"PG_SSL_MODE":              env.IAMPostgresContainer.Config().SSLMode,
+		"REDIS_HOST":               IAMRedisContainerName,
+		"REDIS_PORT":               IAMRedisContainerInternalPort,
+		"REDIS_CONNECTION_TIMEOUT": env.IAMRedisContainer.Config().ConnectionTimeout.String(),
+		"REDIS_IDLE_TIMEOUT":       env.IAMRedisContainer.Config().IdleTimeout.String(),
+		"REDIS_MAX_IDLE":           fmt.Sprintf("%d", env.IAMRedisContainer.Config().MaxIdle),
+		"SESSION_TTL":              "24h",
+	}
+
 	projectRoot := path.GetProjectRoot()
+	iamWaitStrategy := wait.ForListeningPort(nat.Port(IAMAppContainerPort + "/tcp")).WithStartupTimeout(5 * time.Minute)
 
-	appEnv := map[string]string{
-		// Переопределяем хост MongoDB для подключения к контейнеру из testcontainers
-		testcontainers.MongoHostKey: generatedMongo.Config().ContainerName,
-	}
-
-	// Создаем настраиваемую стратегию ожидания с увеличенным таймаутом
-	waitStrategy := wait.ForListeningPort(nat.Port(grpcPort + "/tcp")).WithStartupTimeout(startupTimeout)
-
-	appContainer, err := app.NewContainer(ctx,
-		app.WithName(inventoryAppName),
-		app.WithPort(grpcPort),
-		app.WithDockerfile(projectRoot, inventoryDockerfile),
-		app.WithNetwork(generatedNetwork.Name()),
-		app.WithEnv(appEnv),
-		app.WithLogOutput(os.Stdout),
-		app.WithStartupWait(waitStrategy),
+	iamApp, err := app.NewContainer(
+		ctx,
+		app.WithName(IAMAppContainerName),
+		app.WithDockerfile(projectRoot, IAMDockerfile),
+		app.WithPort(IAMAppContainerPort),
+		app.WithNetwork(env.Network.Name()),
+		app.WithEnv(iamEnv),
+		app.WithStartupWait(iamWaitStrategy),
 		app.WithLogger(logger.Logger()),
 	)
 	if err != nil {
-		cleanupTestEnvironment(ctx, &TestEnvironment{Network: generatedNetwork, Mongo: generatedMongo})
-		logger.Fatal(ctx, "не удалось запустить контейнер приложения", zap.Error(err))
+		return fmt.Errorf("failed to create IAM app container: %w", err)
 	}
-	logger.Info(ctx, "✅ Контейнер приложения успешно запущен")
 
-	logger.Info(ctx, "🎉 Тестовое окружение готово")
-	return &TestEnvironment{
-		Network: generatedNetwork,
-		Mongo:   generatedMongo,
-		App:     appContainer,
-	}
+	env.IAMAppContainer = iamApp
+
+	logger.Info(ctx, "IAM service started", zap.String("address", iamApp.Address()))
+
+	return nil
 }
 
-// getEnvWithLogging возвращает значение переменной окружения с логированием
-func getEnvWithLogging(ctx context.Context, key string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		logger.Warn(ctx, "Переменная окружения не установлена", zap.String("key", key))
+func setupInventoryService(ctx context.Context, env *TestEnvironment) error {
+	logger.Info(ctx, "Starting Inventory service container...")
+
+	// Подготавливаем переменные окружения для Inventory сервиса
+	inventoryEnv := map[string]string{
+		"GRPC_HOST":      "0.0.0.0",
+		"GRPC_PORT":      InventoryAppContainerPort,
+		"LOGGER_LEVEL":   loggerLevelValue,
+		"LOGGER_AS_JSON": "true",
+		"MONGO_HOST":     InventoryMongoContainerName,
+		"MONGO_PORT":     InventoryMongoContainerInternalPort,
+		"MONGO_DATABASE": env.InventoryMongoContainer.Config().Database,
+		"MONGO_USERNAME": env.InventoryMongoContainer.Config().Username,
+		"MONGO_PASSWORD": env.InventoryMongoContainer.Config().Password,
+		"MONGO_AUTH_SRC": env.InventoryMongoContainer.Config().AuthDB,
+		"IAM_GRPC_HOST":  IAMAppContainerName, // Используем Docker DNS
+		"IAM_GRPC_PORT":  IAMAppContainerPort,
 	}
 
-	return value
+	projectRoot := path.GetProjectRoot()
+	inventoryWaitStrategy := wait.ForListeningPort(nat.Port(InventoryAppContainerPort + "/tcp")).WithStartupTimeout(5 * time.Minute)
+
+	inventoryApp, err := app.NewContainer(
+		ctx,
+		app.WithName(InventoryAppContainerName),
+		app.WithDockerfile(projectRoot, InventoryDockerfile),
+		app.WithPort(InventoryAppContainerPort),
+		app.WithNetwork(env.Network.Name()),
+		app.WithEnv(inventoryEnv),
+		app.WithStartupWait(inventoryWaitStrategy),
+		app.WithLogger(logger.Logger()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create Inventory app container: %w", err)
+	}
+
+	env.InventoryAppContainer = inventoryApp
+
+	logger.Info(ctx, "Inventory service started", zap.String("address", inventoryApp.Address()))
+
+	return nil
+}
+
+func setupPostgresContainer(ctx context.Context, env *TestEnvironment) error {
+	logger.Info(ctx, "Starting PostgreSQL container...")
+
+	postgresContainer, err := postgres.NewContainer(
+		ctx,
+		postgres.WithNetworkName(env.Network.Name()),
+		postgres.WithContainerName(IAMPostgresContainerName),
+		postgres.WithImageName("postgres:17.0-alpine3.20"),
+		postgres.WithDatabase("iam-service-database"),
+		postgres.WithAuth("iam-service-username", "iam-service-password"),
+		postgres.WithSSLMode("disable"),
+		postgres.WithMigrationDir("migrations"),
+		postgres.WithLogger(logger.Logger()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create PostgreSQL container: %w", err)
+	}
+
+	env.IAMPostgresContainer = postgresContainer
+
+	// Получаем конфигурацию для установки переменных окружения
+	cfg := postgresContainer.Config()
+
+	// os.Setenv("PG_HOST", cfg.Host)
+	// os.Setenv("PG_PORT", cfg.Port)
+	// os.Setenv("PG_DB", cfg.Database)
+	// os.Setenv("PG_USER", cfg.Username)
+	// os.Setenv("PG_PASSWORD", cfg.Password)
+	// os.Setenv("PG_SSL_MODE", cfg.SSLMode)
+	// os.Setenv("MIGRATION_DIR", cfg.MigrationDir)
+
+	logger.Info(ctx, "PostgreSQL container started",
+		zap.String("host", cfg.Host),
+		zap.String("port", cfg.Port),
+		zap.String("database", cfg.Database),
+	)
+
+	return nil
+}
+
+func setupRedisContainer(ctx context.Context, env *TestEnvironment) error {
+	logger.Info(ctx, "Starting Redis container...")
+
+	redisContainer, err := redis.NewContainer(
+		ctx,
+		redis.WithNetworkName(env.Network.Name()),
+		redis.WithContainerName(IAMRedisContainerName),
+		redis.WithImageName("redis:7.2.5-alpine3.20"),
+		redis.WithConnectionTimeout(10*time.Second),
+		redis.WithIdleTimeout(10*time.Second),
+		redis.WithMaxIdle(10),
+		redis.WithLogger(logger.Logger()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create Redis container: %w", err)
+	}
+
+	env.IAMRedisContainer = redisContainer
+
+	// Получаем конфигурацию для установки переменных окружения
+	cfg := redisContainer.Config()
+
+	// os.Setenv("REDIS_HOST", cfg.Host)
+	// os.Setenv("REDIS_PORT", cfg.Port)
+	// os.Setenv("REDIS_CONNECTION_TIMEOUT", cfg.ConnectionTimeout.String())
+	// os.Setenv("REDIS_IDLE_TIMEOUT", cfg.IdleTimeout.String())
+	// os.Setenv("REDIS_MAX_IDLE", fmt.Sprintf("%d", cfg.MaxIdle))
+	// os.Setenv("SESSION_TTL", "24h")
+
+	logger.Info(ctx, "Redis container started",
+		zap.String("host", cfg.Host),
+		zap.String("port", cfg.Port),
+	)
+
+	return nil
+}
+
+func setupMongoContainer(ctx context.Context, env *TestEnvironment) error {
+	logger.Info(ctx, "Starting MongoDB container...")
+
+	mongoContainer, err := mongo.NewContainer(
+		ctx,
+		mongo.WithNetworkName(env.Network.Name()),
+		mongo.WithContainerName(InventoryMongoContainerName),
+		mongo.WithImageName("mongo:7.0.5"),
+		mongo.WithDatabase("inventory"),
+		mongo.WithAuth("inventory_admin", "inventory_secret"),
+		mongo.WithAuthDB("admin"),
+		mongo.WithLogger(logger.Logger()),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create MongoDB container: %w", err)
+	}
+
+	env.InventoryMongoContainer = mongoContainer
+
+	// Получаем конфигурацию для установки переменных окружения
+	cfg := mongoContainer.Config()
+
+	// os.Setenv("MONGO_HOST", cfg.Host)
+	// os.Setenv("MONGO_PORT", cfg.Port)
+	// os.Setenv("MONGO_INITDB_DATABASE", cfg.Database)
+	// os.Setenv("MONGO_AUTH_SOURCE", cfg.AuthDB)
+	// os.Setenv("MONGO_INITDB_ROOT_USERNAME", cfg.Username)
+	// os.Setenv("MONGO_INITDB_ROOT_PASSWORD", cfg.Password)
+
+	logger.Info(ctx, "MongoDB container started",
+		zap.String("host", cfg.Host),
+		zap.String("port", cfg.Port),
+		zap.String("database", cfg.Database),
+	)
+
+	return nil
 }
