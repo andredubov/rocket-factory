@@ -6,11 +6,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/docker/go-connections/nat"
 	"github.com/pkg/errors"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/wait"
 	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
@@ -27,18 +25,6 @@ type Logger interface {
 	Error(ctx context.Context, msg string, fields ...zap.Field)
 }
 
-type Config struct {
-	Name          string
-	DockerfileDir string
-	Dockerfile    string
-	Port          string
-	Env           map[string]string
-	Networks      []string
-	LogOutput     io.Writer
-	StartupWait   wait.Strategy
-	Logger        Logger
-}
-
 type Container struct {
 	container    testcontainers.Container
 	externalHost string
@@ -47,18 +33,9 @@ type Container struct {
 }
 
 func NewContainer(ctx context.Context, opts ...Option) (*Container, error) {
-	cfg := &Config{
-		Name:          defaultAppName,
-		Port:          defaultAppPort,
-		Dockerfile:    "Dockerfile",
-		DockerfileDir: ".",
-		LogOutput:     io.Discard,
-		StartupWait:   wait.ForListeningPort(defaultAppPort + "/tcp").WithStartupTimeout(defaultStartupTimeout),
-		Env:           make(map[string]string),
-		Logger:        &logger.NoopLogger{},
-	}
-	for _, opt := range opts {
-		opt(cfg)
+	cfg, err := buildConfig(opts...)
+	if err != nil {
+		return nil, err
 	}
 
 	req := testcontainers.ContainerRequest{
@@ -109,6 +86,10 @@ func (a *Container) Address() string {
 	return net.JoinHostPort(a.externalHost, a.externalPort)
 }
 
+func (c *Container) Config() *Config {
+	return c.cfg
+}
+
 func (a *Container) Terminate(ctx context.Context) error {
 	return a.container.Terminate(ctx)
 }
@@ -132,10 +113,4 @@ func streamContainerLogs(ctx context.Context, container testcontainers.Container
 			logger.Error(ctx, "error copying container logs", zap.Error(err))
 		}
 	}()
-}
-
-func DefaultHostConfig() func(hc *container.HostConfig) {
-	return func(hc *container.HostConfig) {
-		hc.AutoRemove = true
-	}
 }

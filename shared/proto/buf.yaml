@@ -8,3 +8,5 @@ lint:
   except:
     - RPC_RESPONSE_STANDARD_NAME
     - RPC_REQUEST_RESPONSE_UNIQUE
+  ignore:
+    - "validate/validate.proto"

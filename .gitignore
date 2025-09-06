@@ -20,7 +20,6 @@
 # env file
 /.env
 /.idea
-/.vscode
 /.cursor
 .DS_Store
 
