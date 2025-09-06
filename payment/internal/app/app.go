@@ -104,8 +104,16 @@ func (a *App) initListener(_ context.Context) error {
 
 // initGRPCServer configures and initializes the gRPC server with required services.
 func (a *App) initGRPCServer(ctx context.Context) error {
+	authInterceptor := a.diContainer.AuthInterceptor(ctx)
+	if authInterceptor == nil {
+		return errors.New("failed to initialize auth interceptor")
+	}
+
 	opts := []grpc.ServerOption{
 		grpc.Creds(insecure.NewCredentials()), // Disable TLS for development
+		grpc.ChainUnaryInterceptor(
+			authInterceptor.Unary(),
+		),
 	}
 
 	a.grpcServer = grpc.NewServer(opts...)
