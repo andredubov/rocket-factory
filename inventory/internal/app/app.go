@@ -48,10 +48,10 @@ func (a *App) initDeps(ctx context.Context) error {
 		a.initGRPCServer,
 	}
 
-	for _, f := range inits {
+	for i, f := range inits {
 		err := f(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("init step %d failed: %w", i, err)
 		}
 	}
 
@@ -96,9 +96,17 @@ func (a *App) initListener(_ context.Context) error {
 }
 
 func (a *App) initGRPCServer(ctx context.Context) error {
+	authInterceptor := a.diContainer.AuthInterceptor(ctx)
+	if authInterceptor == nil {
+		return errors.New("failed to initialize auth interceptor")
+	}
+
 	opts := []grpc.ServerOption{
 		grpc.Creds(insecure.NewCredentials()), // Disable TLS for development
-		grpc.UnaryInterceptor(interceptors.UnaryErrorInterceptor()),
+		grpc.ChainUnaryInterceptor(
+			interceptors.UnaryErrorInterceptor(),
+			authInterceptor.Unary(),
+		),
 	}
 
 	a.grpcServer = grpc.NewServer(opts...)
@@ -120,7 +128,7 @@ func (a *App) initGRPCServer(ctx context.Context) error {
 // runGRPCServer starts the gRPC server and begins listening for incoming requests.
 func (a *App) runGRPCServer(ctx context.Context) error {
 	address := config.AppConfig().GRPCServer.Address()
-	logger.Info(ctx, fmt.Sprintf("🚀 gRPC PaymentService server starting on %s", address))
+	logger.Info(ctx, fmt.Sprintf("🚀 gRPC InventoryService server starting on %s", address))
 
 	return a.grpcServer.Serve(a.listener) // Blocking call
 }

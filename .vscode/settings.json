@@ -1,0 +1,13 @@
+{
+    "protoc": {
+        "options": [
+            "-I=${workspaceRoot}/shared/proto",
+            "-I=${workspaceRoot}/shared/proto/validate"
+        ]
+    },
+    "gopls": {
+        "buildFlags": [
+            "-tags=integration"
+        ]
+    }
+}

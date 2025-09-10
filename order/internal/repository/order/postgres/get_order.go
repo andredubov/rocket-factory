@@ -19,7 +19,7 @@ import (
 func (r *ordersRepository) GetOrder(ctx context.Context, orderUUID uuid.UUID) (*model.Order, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction:: %w", err)
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	committed := false

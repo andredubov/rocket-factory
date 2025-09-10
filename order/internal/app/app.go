@@ -14,7 +14,9 @@ import (
 
 	"github.com/andredubov/rocket-factory/order/internal/config"
 	"github.com/andredubov/rocket-factory/platform/pkg/closer"
+	httphealth "github.com/andredubov/rocket-factory/platform/pkg/http/health"
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
+	middlewarehttp "github.com/andredubov/rocket-factory/platform/pkg/middleware/http"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 )
 
@@ -140,7 +142,13 @@ func (a *App) initHTTPServer(ctx context.Context) error {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 
-	router.Mount("/", orderServer)
+	router.Get("/health", httphealth.Handler())
+
+	router.Group(func(r chi.Router) {
+		auth := middlewarehttp.NewAuthMiddleware(a.diContainer.AuthClient(ctx))
+		r.Use(auth.Handle)
+		r.Mount("/", orderServer)
+	})
 
 	a.httpServer = http.Server{
 		Addr:              a.diContainer.HTTPConfig().Address(),

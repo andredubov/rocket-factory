@@ -51,7 +51,6 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 		if _, err := tx.Exec(ctx, orderQuery, orderQueryArgs...); err != nil {
 			return err
 		}
-		log.Printf("DEBUG: Order query: %s, args: %v", orderQuery, orderQueryArgs)
 
 		for _, partUUID := range order.PartUUIDs {
 			orderPartsBuilderInsert := sq.Insert(OrderPartsTable).
@@ -65,14 +64,12 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 				return err
 			}
 
-			log.Printf("DEBUG: Order query: %s, args: %v", orderQuery, orderQueryArgs)
-
 			if _, err := tx.Exec(ctx, orderPartsQuery, orderPartsQueryArgs...); err != nil {
 				log.Printf("ERROR: Failed to exec order query: %v", err)
 				return err
 			}
-			log.Printf("DEBUG: Order inserted successfully")
 		}
+
 		return nil
 	})
 }

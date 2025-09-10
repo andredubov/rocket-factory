@@ -6,6 +6,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"github.com/andredubov/rocket-factory/order/internal/config/env"
+	iamClient "github.com/andredubov/rocket-factory/order/internal/config/env/iam"
 	inventoryClient "github.com/andredubov/rocket-factory/order/internal/config/env/inventory"
 	paymentClient "github.com/andredubov/rocket-factory/order/internal/config/env/payment"
 )
@@ -18,6 +19,7 @@ type config struct {
 	PostgresDB                  PostgresDBConfig
 	InventoryClient             GRPCConfig
 	PaymentClient               GRPCConfig
+	IAMClient                   GRPCConfig
 	Kafka                       KafkaConfig
 	OrderPaidEventProducer      OrderPaidEventProducerConfig
 	OrderAssembledEventConsumer OrderAssembledEventConsumerConfig
@@ -44,12 +46,17 @@ func Load(path ...string) error {
 		return err
 	}
 
-	invetoryConfig, err := inventoryClient.NewGRPCConfig()
+	invetoryClientConfig, err := inventoryClient.NewGRPCConfig()
 	if err != nil {
 		return err
 	}
 
-	paymentConfig, err := paymentClient.NewGRPCConfig()
+	paymentClientConfig, err := paymentClient.NewGRPCConfig()
+	if err != nil {
+		return err
+	}
+
+	iamClientConfig, err := iamClient.NewGRPCConfig()
 	if err != nil {
 		return err
 	}
@@ -73,8 +80,9 @@ func Load(path ...string) error {
 		Logger:                      loggerConfig,
 		HTTPServer:                  httpConfig,
 		PostgresDB:                  postgresDBConfig,
-		InventoryClient:             invetoryConfig,
-		PaymentClient:               paymentConfig,
+		InventoryClient:             invetoryClientConfig,
+		PaymentClient:               paymentClientConfig,
+		IAMClient:                   iamClientConfig,
 		Kafka:                       kafkaCfg,
 		OrderPaidEventProducer:      orderPaidEventProducerCfg,
 		OrderAssembledEventConsumer: orderAssembledEventConsumerCfg,

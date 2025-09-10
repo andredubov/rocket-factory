@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/IBM/sarama"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -32,6 +34,7 @@ import (
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 	kafkaMiddleware "github.com/andredubov/rocket-factory/platform/pkg/middleware/kafka"
 	"github.com/andredubov/rocket-factory/platform/pkg/migrator"
+	auth_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/auth/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
@@ -57,6 +60,8 @@ type diContainer struct {
 	ordersRepository     service.OrdersRepository
 	ordersService        api.OrdersService
 	serverImplementation *api.OrderImplementation
+
+	authClient auth_v1.AuthServiceClient
 }
 
 func NewDIContainer() *diContainer {
@@ -313,4 +318,34 @@ func (d *diContainer) ServerImplementation(ctx context.Context) *api.OrderImplem
 	}
 
 	return d.serverImplementation
+}
+
+func (d *diContainer) AuthClient(ctx context.Context) auth_v1.AuthServiceClient {
+	if d.authClient == nil {
+		iamAddress := config.AppConfig().IAMClient.Address()
+		if iamAddress == "" {
+			logger.Error(ctx, "IAM client address is empty")
+			return nil
+		}
+
+		connectCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		iamConn, err := grpc.NewClient(
+			iamAddress,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		if err != nil {
+			logger.Error(connectCtx, "Failed to connect to IAM service", zap.Error(err))
+			return nil
+		}
+
+		closer.AddNamed("IAM grpc connection", func(ctx context.Context) error {
+			return iamConn.Close()
+		})
+
+		d.authClient = auth_v1.NewAuthServiceClient(iamConn)
+	}
+
+	return d.authClient
 }
