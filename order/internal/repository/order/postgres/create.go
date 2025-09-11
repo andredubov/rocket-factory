@@ -2,13 +2,14 @@ package postgres
 
 import (
 	"context"
-	"log"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository/converter"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 )
 
 func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) error {
@@ -44,11 +45,12 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 
 		orderQuery, orderQueryArgs, err := orderBuilderInsert.ToSql()
 		if err != nil {
-			log.Printf("ERROR: Failed to build order query: %v", err)
+			logger.Error(ctx, "Failed to build order query", zap.Error(err))
 			return err
 		}
 
 		if _, err := tx.Exec(ctx, orderQuery, orderQueryArgs...); err != nil {
+			logger.Error(ctx, "Failed to exect order query", zap.Error(err))
 			return err
 		}
 
@@ -60,12 +62,12 @@ func (r *ordersRepository) AddOrder(ctx context.Context, order model.Order) erro
 
 			orderPartsQuery, orderPartsQueryArgs, err := orderPartsBuilderInsert.ToSql()
 			if err != nil {
-				log.Printf("ERROR: Failed to build order query: %v", err)
+				logger.Error(ctx, "Failed to build order query", zap.Error(err))
 				return err
 			}
 
 			if _, err := tx.Exec(ctx, orderPartsQuery, orderPartsQueryArgs...); err != nil {
-				log.Printf("ERROR: Failed to exec order query: %v", err)
+				logger.Error(ctx, "Failed to exect order query", zap.Error(err))
 				return err
 			}
 		}

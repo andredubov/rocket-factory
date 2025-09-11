@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 )
 
 // GetOrder возвращает заказ по его UUID вместе со всеми связанными данными.
@@ -19,6 +20,7 @@ import (
 func (r *ordersRepository) GetOrder(ctx context.Context, orderUUID uuid.UUID) (*model.Order, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
+		logger.Error(ctx, "failed to begin transaction", zap.Error(err))
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
@@ -26,7 +28,7 @@ func (r *ordersRepository) GetOrder(ctx context.Context, orderUUID uuid.UUID) (*
 	defer func() {
 		if !committed {
 			if err := tx.Rollback(ctx); err != nil {
-				log.Printf("failed to rollback transaction: %v", err)
+				logger.Error(ctx, "failed to rollback transaction", zap.Error(err))
 			}
 		}
 	}()
@@ -44,6 +46,7 @@ func (r *ordersRepository) GetOrder(ctx context.Context, orderUUID uuid.UUID) (*
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		logger.Error(ctx, "failed to commit transaction", zap.Error(err))
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
@@ -69,6 +72,7 @@ func (r *ordersRepository) getOrderDetails(ctx context.Context, tx pgx.Tx, order
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
+		logger.Error(ctx, "failed to build query", zap.Error(err))
 		return nil, fmt.Errorf("failed to build query: %w", err)
 	}
 
@@ -111,11 +115,13 @@ func (r *ordersRepository) getOrderParts(ctx context.Context, tx pgx.Tx, orderUU
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
+		logger.Error(ctx, "failed to build parts query", zap.Error(err))
 		return nil, fmt.Errorf("failed to build parts query: %w", err)
 	}
 
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
+		logger.Error(ctx, "failed to execute parts query", zap.Error(err))
 		return nil, fmt.Errorf("failed to execute parts query: %w", err)
 	}
 	defer rows.Close()
@@ -124,12 +130,14 @@ func (r *ordersRepository) getOrderParts(ctx context.Context, tx pgx.Tx, orderUU
 	for rows.Next() {
 		var partUUID uuid.UUID
 		if err := rows.Scan(&partUUID); err != nil {
+			logger.Error(ctx, "failed to scan part UUID", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan part UUID: %w", err)
 		}
 		parts = append(parts, partUUID)
 	}
 
 	if err := rows.Err(); err != nil {
+		logger.Error(ctx, "error processing results", zap.Error(err))
 		return nil, fmt.Errorf("error processing results: %w", err)
 	}
 

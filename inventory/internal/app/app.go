@@ -63,11 +63,16 @@ func (a *App) initDIContainer(_ context.Context) error {
 	return nil
 }
 
-func (a *App) initLogger(_ context.Context) error {
-	return logger.Init(
-		config.AppConfig().Logger.Level(),
-		config.AppConfig().Logger.AsJson(),
-	)
+func (a *App) initLogger(ctx context.Context) error {
+	loggerConfig := logger.Config{
+		Level:              config.AppConfig().Logger.Level(),
+		AsJSON:             config.AppConfig().Logger.AsJson(),
+		EnableOTLP:         config.AppConfig().Logger.EnableOTLP(),
+		OTLPEndpoint:       config.AppConfig().Logger.OTLPEndpoint(),
+		ServiceName:        config.AppConfig().Logger.ServiceName(),
+		ServiceEnvironment: config.AppConfig().Logger.ServiceEnvironment(),
+	}
+	return logger.Init(ctx, loggerConfig)
 }
 
 func (a *App) initCloser(_ context.Context) error {

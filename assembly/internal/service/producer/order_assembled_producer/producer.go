@@ -27,13 +27,13 @@ func (p *service) ProduceOrderAssembledEvent(ctx context.Context, event model.Or
 
 	payload, err := proto.Marshal(msg)
 	if err != nil {
-		logger.Error(ctx, "failed to marshal OrderAssembledEvent", zap.Error(err))
+		logger.Error(ctx, "❌ failed to marshal OrderAssembledEvent", zap.Error(err))
 		return err
 	}
 
 	err = p.orderAssembledProducer.Send(ctx, []byte(event.UUID), payload)
 	if err != nil {
-		logger.Error(ctx, "failed to publish OrderAssembledEvent", zap.Error(err))
+		logger.Error(ctx, "❌ failed to publish OrderAssembledEvent", zap.Error(err))
 		return err
 	}
 

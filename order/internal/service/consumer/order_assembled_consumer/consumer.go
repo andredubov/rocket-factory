@@ -30,11 +30,11 @@ func NewService(
 }
 
 func (s *consumerService) RunConsumer(ctx context.Context) error {
-	logger.Info(ctx, "Starting OrderAssembledEventConsumer service")
+	logger.Info(ctx, "🚀 Starting OrderAssembledEventConsumer service")
 
 	err := s.orderAssembledEventConsumer.Consume(ctx, s.OrderHandler)
 	if err != nil {
-		logger.Error(ctx, "Consume from order.assembled topic error", zap.Error(err))
+		logger.Error(ctx, "❌ consume from order.assembled topic error", zap.Error(err))
 		return err
 	}
 

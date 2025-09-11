@@ -169,7 +169,7 @@ func setupIAMService(ctx context.Context, env *TestEnvironment) error {
 	}
 
 	projectRoot := path.GetProjectRoot()
-	iamWaitStrategy := wait.ForListeningPort(nat.Port(IAMAppContainerPort + "/tcp")).WithStartupTimeout(5 * time.Minute)
+	iamWaitStrategy := wait.ForListeningPort(nat.Port(IAMAppContainerPort + "/tcp")).WithStartupTimeout(1 * time.Minute)
 
 	iamApp, err := app.NewContainer(
 		ctx,
@@ -212,7 +212,7 @@ func setupInventoryService(ctx context.Context, env *TestEnvironment) error {
 	}
 
 	projectRoot := path.GetProjectRoot()
-	inventoryWaitStrategy := wait.ForListeningPort(nat.Port(InventoryAppContainerPort + "/tcp")).WithStartupTimeout(5 * time.Minute)
+	inventoryWaitStrategy := wait.ForListeningPort(nat.Port(InventoryAppContainerPort + "/tcp")).WithStartupTimeout(1 * time.Minute)
 
 	inventoryApp, err := app.NewContainer(
 		ctx,
@@ -258,14 +258,6 @@ func setupPostgresContainer(ctx context.Context, env *TestEnvironment) error {
 	// Получаем конфигурацию для установки переменных окружения
 	cfg := postgresContainer.Config()
 
-	// os.Setenv("PG_HOST", cfg.Host)
-	// os.Setenv("PG_PORT", cfg.Port)
-	// os.Setenv("PG_DB", cfg.Database)
-	// os.Setenv("PG_USER", cfg.Username)
-	// os.Setenv("PG_PASSWORD", cfg.Password)
-	// os.Setenv("PG_SSL_MODE", cfg.SSLMode)
-	// os.Setenv("MIGRATION_DIR", cfg.MigrationDir)
-
 	logger.Info(ctx, "PostgreSQL container started",
 		zap.String("host", cfg.Host),
 		zap.String("port", cfg.Port),
@@ -297,13 +289,6 @@ func setupRedisContainer(ctx context.Context, env *TestEnvironment) error {
 	// Получаем конфигурацию для установки переменных окружения
 	cfg := redisContainer.Config()
 
-	// os.Setenv("REDIS_HOST", cfg.Host)
-	// os.Setenv("REDIS_PORT", cfg.Port)
-	// os.Setenv("REDIS_CONNECTION_TIMEOUT", cfg.ConnectionTimeout.String())
-	// os.Setenv("REDIS_IDLE_TIMEOUT", cfg.IdleTimeout.String())
-	// os.Setenv("REDIS_MAX_IDLE", fmt.Sprintf("%d", cfg.MaxIdle))
-	// os.Setenv("SESSION_TTL", "24h")
-
 	logger.Info(ctx, "Redis container started",
 		zap.String("host", cfg.Host),
 		zap.String("port", cfg.Port),
@@ -333,13 +318,6 @@ func setupMongoContainer(ctx context.Context, env *TestEnvironment) error {
 
 	// Получаем конфигурацию для установки переменных окружения
 	cfg := mongoContainer.Config()
-
-	// os.Setenv("MONGO_HOST", cfg.Host)
-	// os.Setenv("MONGO_PORT", cfg.Port)
-	// os.Setenv("MONGO_INITDB_DATABASE", cfg.Database)
-	// os.Setenv("MONGO_AUTH_SOURCE", cfg.AuthDB)
-	// os.Setenv("MONGO_INITDB_ROOT_USERNAME", cfg.Username)
-	// os.Setenv("MONGO_INITDB_ROOT_PASSWORD", cfg.Password)
 
 	logger.Info(ctx, "MongoDB container started",
 		zap.String("host", cfg.Host),

@@ -15,7 +15,7 @@ services:
         condition: service_healthy
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.5
+        ipv4_address: 172.19.0.13
 
   inventory-mongo:
     # Контейнер с MongoDB — используется для хранения данных об инвентаре (например, запчасти, компоненты)
@@ -46,7 +46,7 @@ services:
     # Но если мы остановим его вручную — он не запустится повторно
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.6
+        ipv4_address: 172.19.0.14
       # Подключаем контейнер к общей сети всех микросервисов, чтобы они могли взаимодействовать между собой по имени
 
 volumes:

@@ -136,9 +136,9 @@ var _ = ginkgo.Describe("InventoryService", func() {
 
 		ginkgo.It("Должен возвращать список деталей", func() {
 			// Setup
-			const quanity = 2
+			const quantity = 3
 			partUUIDs := make([]string, 0)
-			for i := 0; i < quanity; i++ {
+			for i := 0; i < quantity; i++ {
 				partUUID, err := env.InsertTestPart(ctx)
 				gomega.Expect(err).ToNot(gomega.HaveOccurred())
 				gomega.Expect(partUUID).ToNot(gomega.BeEmpty())
@@ -156,8 +156,23 @@ var _ = ginkgo.Describe("InventoryService", func() {
 			gomega.Expect(err).ToNot(gomega.HaveOccurred())
 			gomega.Expect(resp.GetParts()).ToNot(gomega.BeNil())
 			gomega.Expect(len(resp.GetParts())).To(gomega.Equal(len(partUUIDs)))
-			for i := 0; i < quanity; i++ {
-				gomega.Expect(resp.GetParts()[i].GetUuid()).To(gomega.Equal(partUUIDs[i]))
+
+			// Создаем map для проверки наличия всех ожидаемых UUID
+			expectedUUIDs := make(map[string]bool)
+			for _, uuid := range partUUIDs {
+				expectedUUIDs[uuid] = true
+			}
+
+			// Проверяем, что все возвращенные детали соответствуют ожидаемым UUID
+			returnedUUIDs := make(map[string]bool)
+			for _, part := range resp.GetParts() {
+				returnedUUIDs[part.GetUuid()] = true
+				gomega.Expect(expectedUUIDs[part.GetUuid()]).To(gomega.BeTrue(), "неожиданный UUID детали: %s", part.GetUuid())
+			}
+
+			// Проверяем, что все ожидаемые UUID присутствуют в ответе
+			for _, uuid := range partUUIDs {
+				gomega.Expect(returnedUUIDs[uuid]).To(gomega.BeTrue(), "ожидали UUID %s в ответе", uuid)
 			}
 		})
 	})

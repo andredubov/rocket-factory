@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,19 +14,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 )
-
-// Helper function to capture log output
-func captureLogOutput(f func()) string {
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-	f()
-	log.SetOutput(os.Stderr)
-	return buf.String()
-}
 
 func TestGetOrderByOrderUUID_Success(t *testing.T) {
 	// Setup
@@ -507,8 +500,22 @@ func TestGetOrderByOrderUUID_RollbackFailure(t *testing.T) {
 	defer mock.Close()
 
 	repo := postgres.NewOrderRepository(mock)
-
 	orderUUID := uuid.New()
+
+	// Create a buffer to capture zap log output
+	var logBuffer bytes.Buffer
+
+	// Create a test zap logger that writes to our buffer
+	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+	core := zapcore.NewCore(encoder, zapcore.AddSync(&logBuffer), zap.DebugLevel)
+	testLogger := zap.New(core)
+
+	// Save original logger and restore after test
+	originalLogger := logger.GetGlobalLogger()
+	defer logger.SetTestLogger(originalLogger)
+
+	// Set our test logger
+	logger.SetTestLogger(testLogger)
 
 	// Expectations
 	mock.ExpectBegin()
@@ -522,18 +529,17 @@ func TestGetOrderByOrderUUID_RollbackFailure(t *testing.T) {
 	mock.ExpectRollback().
 		WillReturnError(fmt.Errorf("rollback failed"))
 
-	// Capture log output
-	logOutput := captureLogOutput(func() {
-		// Test
-		order, err := repo.GetOrder(context.Background(), orderUUID)
+	// Test
+	order, err := repo.GetOrder(context.Background(), orderUUID)
 
-		// Verify
-		require.Error(t, err, "Should return error")
-		require.Nil(t, order, "Should not return order")
-	})
+	// Verify
+	require.Error(t, err, "Should return error")
+	require.Nil(t, order, "Should not return order")
 
-	// Verify rollback error was logged
-	require.Contains(t, logOutput, "failed to rollback transaction", "Should log rollback error")
+	// Check that rollback error was logged by zap
+	logContents := logBuffer.String()
+	require.Contains(t, logContents, "failed to rollback transaction", "Should log rollback error")
+	require.Contains(t, logContents, "rollback failed", "Should log rollback error details")
 	require.NoError(t, mock.ExpectationsWereMet(), "Should meet all expectations")
 }
 

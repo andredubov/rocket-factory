@@ -30,11 +30,11 @@ func NewService(
 }
 
 func (s *consumerService) RunConsumer(ctx context.Context) error {
-	logger.Info(ctx, "Starting OrderPaidEventConsumer service")
+	logger.Info(ctx, "🚀 starting OrderPaidEventConsumer service")
 
 	err := s.orderPaidEventConsumer.Consume(ctx, s.OrderHandler)
 	if err != nil {
-		logger.Error(ctx, "Consume from order.paid topic error", zap.Error(err))
+		logger.Error(ctx, "❌ consume from order.paid topic error", zap.Error(err))
 		return err
 	}
 

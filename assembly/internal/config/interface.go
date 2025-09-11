@@ -7,6 +7,10 @@ import (
 type LoggerConfig interface {
 	Level() string
 	AsJson() bool
+	EnableOTLP() bool
+	OTLPEndpoint() string
+	ServiceName() string
+	ServiceEnvironment() string
 }
 
 type KafkaConfig interface {
