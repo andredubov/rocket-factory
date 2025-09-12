@@ -10,7 +10,7 @@ services:
       - .env
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.19
+        ipv4_address: 172.19.0.22
 
 networks:
   # Сетевые настройки

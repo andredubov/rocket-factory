@@ -15,7 +15,7 @@ services:
         condition: service_healthy
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.16
+        ipv4_address: 172.19.0.19
 
   order-postgres:
     # Контейнер с PostgreSQL, используемый для хранения данных заказов
@@ -47,7 +47,7 @@ services:
     # Если контейнер был остановлен вручную — не перезапускаем
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.17
+        ipv4_address: 172.19.0.20
       # Подключаемся к общей сети, чтобы другие микросервисы (например, Order-сервис) могли найти этот контейнер по имени "postgres-order"
 
 volumes:

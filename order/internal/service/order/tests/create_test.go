@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/andredubov/rocket-factory/order/internal/metrics"
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/service/mocks"
 	orders "github.com/andredubov/rocket-factory/order/internal/service/order"
@@ -15,6 +16,10 @@ import (
 
 // TestCreateOrder_Success tests the successful order creation scenario.
 func TestCreateOrder_Success(t *testing.T) {
+	// Инициализируем метрики
+	err := metrics.Init(context.Background())
+	require.NoError(t, err)
+
 	var (
 		ordersRepository       = mocks.NewOrdersRepository(t)
 		paymentClient          = mocks.NewPaymentClient(t)
@@ -41,7 +46,7 @@ func TestCreateOrder_Success(t *testing.T) {
 	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(nil)
 
 	// Test
-	err := ordersService.CreateOrder(ctx, &order)
+	err = ordersService.CreateOrder(ctx, &order)
 
 	// Verify
 	require.NoError(t, err)
@@ -119,6 +124,10 @@ func TestCreateOrder_InventoryClientError(t *testing.T) {
 
 // TestCreateOrder_RepositoryError tests order creation when repository fails.
 func TestCreateOrder_RepositoryError(t *testing.T) {
+	// Инициализируем метрики
+	err := metrics.Init(context.Background())
+	require.NoError(t, err)
+
 	var (
 		ordersRepository       = mocks.NewOrdersRepository(t)
 		paymentClient          = mocks.NewPaymentClient(t)
@@ -146,7 +155,7 @@ func TestCreateOrder_RepositoryError(t *testing.T) {
 	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(model.ErrOrderAlreadyExists)
 
 	// Test
-	err := ordersService.CreateOrder(ctx, &order)
+	err = ordersService.CreateOrder(ctx, &order)
 
 	// Verify
 	require.Error(t, err)

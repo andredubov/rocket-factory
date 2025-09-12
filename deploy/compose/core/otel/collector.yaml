@@ -1,0 +1,69 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317  # Слушать на всех сетевых интерфейсах на порту 4317 по gRPC
+      http:
+        endpoint: 0.0.0.0:4318 # Слушать на всех сетевых интерфейсах на порту 4318 по HTTP
+
+processors:
+  resource:
+    attributes:
+      # - key: service.name
+      #   from_attribute: service.name
+      #   action: insert
+      - key: deployment.environment # Добавляет атрибут deployment.environment="dev" 
+        value: dev                  # к каждому логу, метрике и трейсу
+        action: insert # Добавить атрибут, если он еще не существует.
+  batch:
+    send_batch_size: 1000 # Отправлять пачки по 1000 метрик/логов
+    timeout: 10s           # Или ждать максимум 5 секунд, прежде чем отправить накопившееся
+
+  memory_limiter:
+    check_interval: 1s
+    limit_mib: 100
+    spike_limit_mib: 20
+
+exporters:
+  elasticsearch:
+    endpoints: ["http://elasticsearch:9200"] # Адрес Elasticsearch в Docker-сети
+    tls:
+      insecure: true # Отключить проверку SSL-сертификата (OK для dev, плохо для prod)
+    logs_index: "otel-logs" # Имя индекса, куда будут писаться логи
+    mapping:
+      mode: ecs  # Преобразовать данные в формат ECS (Elastic Common Schema), что упрощает их анализ в Kibana.
+
+  prometheus: # Экспортирует метрики в формате, который понимает Prometheus.
+    endpoint: 0.0.0.0:8889 # endpoint OTEL Collector'a для предоставления метрик приложений (Prometheus будет подключаться к otel-collector:8889 для сбора этих метрик)
+    namespace: "otel" # Добавляет префикс otel_ ко всем именам метрик (например, метрика orders_total в Prometheus будет называться otel_orders_total).
+
+  # jaeger: # Экспортирует трейсы в формате, который понимает Jaeger.
+  #   endpoint: jaeger:4317 # Адрес Jaeger в Docker-сети
+  #   tls:
+  #     insecure: true # Отключить проверку SSL-сертификата (OK для dev, плохо для prod)
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133 # Поднимает HTTP-сервер на порту 13133, который отвечает, жив ли Collector. Это используется оркестраторами (Kubernetes, Docker) и системами мониторинга для проверки состояния контейнера.
+
+service:
+  telemetry:
+    metrics:
+      address: 0.0.0.0:8888 # Это инструкция для Collector'а: "Подними встроенный HTTP-сервер, который будет предоставлять метрики о внутренней работе коллектора по указанному адресу и порту".
+  extensions: [health_check]  # Включаем расширение health_check
+
+  pipelines:
+    logs:                                 # Конвейер для ЛОГОВ
+      receivers: [otlp]                   # 1. Принимаем данные по OTLP (gRPC/HTTP)
+      processors: [resource, batch]       # 2. Обрабатываем: добавляем атрибут `environment=dev`
+      exporters: [elasticsearch]          # 3. Отправляем результат в Elasticsearch
+
+    metrics:                              # Конвейер для МЕТРИК
+      receivers: [otlp]                   # 1. Принимаем
+      processors: [batch]                 # 2. Обрабатываем: только батчинг (ресурсный процессор не нужен, т.к. метрики уже имеют атрибуты)
+      exporters: [prometheus]             # 3. Отправляем в Prometheus
+
+    # traces:                               # Конвейер для ТРЕЙСОВ
+    #   receivers: [otlp]                   # 1. Принимаем
+    #   processors: [batch]                 # 2. Обрабатываем: батчинг
+    #   exporters: [jaeger]                 # 3. Отправляем в Jaeger

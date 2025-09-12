@@ -38,6 +38,19 @@ services:
       retries: 10
       start_period: 20s
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '2'
+        reservations:
+          memory: 512M
+          cpus: '1'
     networks:
       rocketfactory-net:
         ipv4_address: 172.19.0.3
@@ -91,34 +104,31 @@ services:
     # contrib версия включает экспортеры для разных систем (Elasticsearch, Prometheus, etc.)
     image: otel/opentelemetry-collector-contrib:0.123.0
     container_name: otel-collector
-    # КОМАНДА ЗАПУСКА: указываем путь к файлу конфигурации
     command: [ "--config=/etc/otel-collector-config.yaml" ]
     volumes:
-      # МОНТИРОВАНИЕ КОНФИГУРАЦИИ: подключаем локальный файл в контейнер
-      # Изменения в otel-collector-config.yaml требуют перезапуска контейнера
-      - ../../otel/collector.yaml:/etc/otel-collector-config.yaml
+      - ./otel/collector.yaml:/etc/otel-collector-config.yaml
     ports:
-      # ПОРТ 8888: метрики самого коллектора (Prometheus формат)
-      # Можно мониторить производительность коллектора: curl localhost:8888/metrics
-      - "8888:8888"
-      # ПОРТ 4317: OTLP gRPC endpoint для приема логов от приложений
-      # Go приложения отправляют логи именно на этот порт
+      - "${OTEL_COLLECTOR_METRICS_EXTERNAL_PORT}:${OTEL_COLLECTOR_METRICS_INTERNAL_PORT}"
       - "${OTEL_COLLECTOR_EXTERNAL_GRPC_PORT}:${OTEL_COLLECTOR_INTERNAL_GRPC_PORT}"
+      - "${OTEL_COLLECTOR_EXTERNAL_HTTP_PORT}:${OTEL_COLLECTOR_INTERNAL_HTTP_PORT}"
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--spider", "http://localhost:${OTEL_COLLECTOR_METRICS_INTERNAL_PORT}/metrics" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
     networks:
       rocketfactory-net:
         ipv4_address: 172.19.0.6
     depends_on:
-      # ЗАВИСИМОСТЬ ОТ ELASTICSEARCH: коллектор отправляет данные в Elasticsearch,
-      # поэтому должен запуститься после готовности Elasticsearch
       elasticsearch:
+        condition: service_healthy
+      prometheus:
         condition: service_healthy
 
   elasticsearch:
-    # Официальный образ Elasticsearch версии 9.0.4
-    # Это стабильная версия с поддержкой ECS (Elastic Common Schema)
     image: docker.elastic.co/elasticsearch/elasticsearch:9.0.4
-    # Имя контейнера для удобства обращения из других контейнеров
     container_name: elasticsearch
     environment:
       # РЕЖИМ ОДНОГО УЗЛА: Elasticsearch запускается как single-node кластер
@@ -130,13 +140,9 @@ services:
       # ИМЯ КЛАСТЕРА: логическое имя для группировки узлов
       - cluster.name=es-docker-cluster
     volumes:
-      # ПОСТОЯННОЕ ХРАНЕНИЕ: данные Elasticsearch сохраняются на диске
-      # Если контейнер перезапустится, данные не потеряются
       - elasticsearch_data:/usr/share/elasticsearch/data
     ports:
-      # ПОРТ 9200: REST API для взаимодействия с Elasticsearch
       # Через этот порт OTel Collector отправляет логи
-      # Также можно делать запросы напрямую: curl localhost:9200/_search
       - "${ELASTICSEARCH_EXTERNAL_PORT}:${ELASTICSEARCH_INTERNAL_PORT}"
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:${ELASTICSEARCH_INTERNAL_PORT}/_cluster/health >/dev/null" ]
@@ -145,6 +151,12 @@ services:
       retries: 20 # максимум 20 попыток (итого ~3 минуты)
       start_period: 30s # ждем 30 секунд перед первой проверкой
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     networks:
       rocketfactory-net:
         ipv4_address: 172.19.0.7
@@ -209,12 +221,12 @@ services:
         done
 
         # СОЗДАНИЕ DATA VIEW: настраиваем Kibana для просмотра логов
-        echo "Creating Data View easy-logs* ..."
+        echo "Creating Data View otel-logs* ..."
         # Создаем Data View через Kibana API
         RESPONSE=$$(curl -sS -X POST http://kibana:${KIBANA_INTERNAL_PORT}/api/data_views/data_view \
           -H "kbn-xsrf: true" \
           -H "Content-Type: application/json" \
-          --data '{"data_view":{"title":"easy-logs*","name":"Easy Logs","timeFieldName":"@timestamp","allowNoIndex":true},"override":true}' || echo "{}")
+          --data '{"data_view":{"title":"otel-logs*","name":"Rocket Factory Logs","timeFieldName":"@timestamp","allowNoIndex":true},"override":true}' || echo "{}")
 
         # ИЗВЛЕЧЕНИЕ ID DATA VIEW: парсим JSON ответ для получения ID
         echo "Response: $$RESPONSE"
@@ -236,14 +248,68 @@ services:
     networks:
       rocketfactory-net:
         ipv4_address: 172.19.0.9
-    # НЕ ПЕРЕЗАПУСКАТЬ: это одноразовая задача инициализации
     restart: "no"
+
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    container_name: prometheus
+    ports:
+      - "${PROMETHEUS_EXTERNAL_PORT}:${PROMETHEUS_INTERNAL_PORT}"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml' # Указываем путь к файлу конфигурации
+      - '--storage.tsdb.path=/prometheus' # Директория для хранения временных рядов
+      - '--web.enable-lifecycle' # Включает HTTP API для управления Prometheus
+      - '--web.enable-remote-write-receiver' # Включает поддержку remote write API для приема метрик
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--spider", "http://localhost:${PROMETHEUS_INTERNAL_PORT}/-/healthy" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.10
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    container_name: grafana
+    ports:
+      - "${GRAFANA_EXTERNAL_PORT}:${GRAFANA_INTERNAL_PORT}"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--spider", "http://localhost:${GRAFANA_INTERNAL_PORT}/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.11
 
 volumes:
   kafka_data:
     name: core_kafka_volume
   elasticsearch_data:
     name: core_elasticsearch_volume
+  prometheus_data:
+    name: core_prometheus_data
+  grafana_data:
+    name: core_grafana_data
 
 networks:
   rocketfactory-net:

@@ -43,3 +43,9 @@ type OrderAssembledEventConsumerConfig interface {
 	GroupID() string
 	Config() *sarama.Config
 }
+
+type MetricsConfig interface {
+	CollectorEndpoint() string
+	CollectorInterval() time.Duration
+	CollectorTimeout() time.Duration
+}

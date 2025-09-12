@@ -23,7 +23,7 @@ services:
       start_period: 10s
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.10
+        ipv4_address: 172.19.0.13
 
   iam-postgres:
     # Контейнер с PostgreSQL, используемый для хранения данных заказов
@@ -56,7 +56,7 @@ services:
     # Если контейнер был остановлен вручную — не перезапускаем
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.11
+        ipv4_address: 172.19.0.14
       # Подключаемся к общей сети, чтобы другие микросервисы (например, Order-сервис) могли найти этот контейнер по имени "postgres-order"
 
   iam-redis:
@@ -79,7 +79,7 @@ services:
     # Если контейнер был остановлен вручную — не перезапускаем
     networks:
       rocketfactory-net:
-        ipv4_address: 172.19.0.12
+        ipv4_address: 172.19.0.15
       # Подключаемся к общей сети, чтобы другие микросервисы (например, IAM-сервис) могли найти этот контейнер по имени "iam-redis"
 
 volumes:

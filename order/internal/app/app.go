@@ -6,15 +6,18 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/order/internal/config"
+	"github.com/andredubov/rocket-factory/order/internal/metrics"
 	"github.com/andredubov/rocket-factory/platform/pkg/closer"
 	httphealth "github.com/andredubov/rocket-factory/platform/pkg/http/health"
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
+	platformMetrics "github.com/andredubov/rocket-factory/platform/pkg/metrics"
 	middlewarehttp "github.com/andredubov/rocket-factory/platform/pkg/middleware/http"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 )
@@ -78,6 +81,7 @@ func (a *App) initDeps(ctx context.Context) error {
 	inits := []func(context.Context) error{
 		a.initDIContainer,
 		a.initLogger,
+		a.initMetrics,
 		a.initCloser,
 		a.initListener,
 		a.initHTTPServer,
@@ -110,14 +114,32 @@ func (a *App) initLogger(ctx context.Context) error {
 	return logger.Init(ctx, loggerConfig)
 }
 
+func (a *App) initMetrics(ctx context.Context) error {
+	// Инициализируем платформенный провайдер метрик
+	err := platformMetrics.InitProvider(ctx, config.AppConfig().Metrics)
+	if err != nil {
+		logger.Error(ctx, "❌ failed to init platform metrics provider", zap.Error(err))
+		return err
+	}
+
+	closer.AddNamed("Metrics provider", func(ctx context.Context) error {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		return platformMetrics.Shutdown(shutdownCtx)
+	})
+
+	return metrics.Init(ctx)
+}
+
 func (a *App) initCloser(_ context.Context) error {
 	closer.SetLogger(logger.Logger())
 	return nil
 }
 
-func (a *App) initListener(_ context.Context) error {
+func (a *App) initListener(ctx context.Context) error {
 	listener, err := net.Listen("tcp", config.AppConfig().HTTPServer.Address())
 	if err != nil {
+		logger.Error(ctx, "❌ failed to init tcp listener", zap.Error(err))
 		return err
 	}
 

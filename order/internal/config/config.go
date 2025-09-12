@@ -23,6 +23,7 @@ type config struct {
 	Kafka                       KafkaConfig
 	OrderPaidEventProducer      OrderPaidEventProducerConfig
 	OrderAssembledEventConsumer OrderAssembledEventConsumerConfig
+	Metrics                     MetricsConfig
 }
 
 func Load(path ...string) error {
@@ -76,6 +77,11 @@ func Load(path ...string) error {
 		return err
 	}
 
+	metricsCfg, err := env.NewMetricsConfig()
+	if err != nil {
+		return err
+	}
+
 	appConfig = &config{
 		Logger:                      loggerConfig,
 		HTTPServer:                  httpConfig,
@@ -86,6 +92,7 @@ func Load(path ...string) error {
 		Kafka:                       kafkaCfg,
 		OrderPaidEventProducer:      orderPaidEventProducerCfg,
 		OrderAssembledEventConsumer: orderAssembledEventConsumerCfg,
+		Metrics:                     metricsCfg,
 	}
 
 	return nil

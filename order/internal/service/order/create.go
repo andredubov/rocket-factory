@@ -7,6 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/andredubov/rocket-factory/order/internal/converter"
+	"github.com/andredubov/rocket-factory/order/internal/metrics"
 	"github.com/andredubov/rocket-factory/order/internal/model"
 )
 
@@ -27,6 +28,9 @@ func (s *ordersService) CreateOrder(ctx context.Context, order *model.Order) err
 	order.Status = model.OrderStatusPending
 	order.OrderUUID = uuid.New()
 	order.TotalPrice = calculateTotalPrice(parts)
+
+	metrics.IncOrdersTotal(ctx)
+	metrics.AddRevenue(ctx, order.TotalPrice, "RUB")
 
 	return s.ordersRepository.AddOrder(ctx, *order)
 }
