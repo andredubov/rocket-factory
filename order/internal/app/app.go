@@ -19,6 +19,7 @@ import (
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 	platformMetrics "github.com/andredubov/rocket-factory/platform/pkg/metrics"
 	middlewarehttp "github.com/andredubov/rocket-factory/platform/pkg/middleware/http"
+	"github.com/andredubov/rocket-factory/platform/pkg/tracing"
 	order_v1 "github.com/andredubov/rocket-factory/shared/pkg/openapi/order/v1"
 )
 
@@ -82,6 +83,7 @@ func (a *App) initDeps(ctx context.Context) error {
 		a.initDIContainer,
 		a.initLogger,
 		a.initMetrics,
+		a.initTracing,
 		a.initCloser,
 		a.initListener,
 		a.initHTTPServer,
@@ -128,7 +130,26 @@ func (a *App) initMetrics(ctx context.Context) error {
 		return platformMetrics.Shutdown(shutdownCtx)
 	})
 
+	logger.Info(ctx, "✅ Metrics initialized successfully")
+
 	return metrics.Init(ctx)
+}
+
+func (a *App) initTracing(ctx context.Context) error {
+	err := tracing.InitTracer(ctx, config.AppConfig().Tracing)
+	if err != nil {
+		logger.Error(ctx, "❌ failed to init tracing", zap.Error(err))
+		return err
+	}
+
+	closer.AddNamed("Tracing", func(ctx context.Context) error {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		return tracing.ShutdownTracer(shutdownCtx)
+	})
+
+	logger.Info(ctx, "✅ Tracing initialized successfully")
+	return nil
 }
 
 func (a *App) initCloser(_ context.Context) error {
@@ -153,6 +174,7 @@ func (a *App) initListener(ctx context.Context) error {
 	})
 
 	a.listener = listener
+	logger.Info(ctx, "✅ TCP listener initialized successfully")
 
 	return nil
 }
@@ -181,6 +203,8 @@ func (a *App) initHTTPServer(ctx context.Context) error {
 		Handler:           router,
 		ReadHeaderTimeout: a.diContainer.HTTPConfig(ctx).ReadHeaderTimeout(),
 	}
+
+	logger.Info(ctx, "✅ HTTP server initialized successfully")
 
 	return nil
 }

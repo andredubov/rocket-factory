@@ -42,8 +42,8 @@ func TestCreateOrder_Success(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
-	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(nil)
+	inventoryClient.On("ListParts", mock.Anything, partFilter).Return(parts, nil)
+	ordersRepository.On("AddOrder", mock.Anything, mock.Anything).Return(nil)
 
 	// Test
 	err = ordersService.CreateOrder(ctx, &order)
@@ -110,7 +110,7 @@ func TestCreateOrder_InventoryClientError(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryClient.On("ListParts", ctx, partFilter).Return(parts, model.ErrInvalidPartFilter)
+	inventoryClient.On("ListParts", mock.Anything, partFilter).Return(parts, model.ErrInvalidPartFilter)
 
 	// Test
 	err := ordersService.CreateOrder(ctx, &order)
@@ -151,8 +151,8 @@ func TestCreateOrder_RepositoryError(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryClient.On("ListParts", ctx, partFilter).Return(parts, nil)
-	ordersRepository.On("AddOrder", ctx, mock.Anything).Return(model.ErrOrderAlreadyExists)
+	inventoryClient.On("ListParts", mock.Anything, partFilter).Return(parts, nil)
+	ordersRepository.On("AddOrder", mock.Anything, mock.Anything).Return(model.ErrOrderAlreadyExists)
 
 	// Test
 	err = ordersService.CreateOrder(ctx, &order)

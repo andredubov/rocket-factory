@@ -9,9 +9,9 @@ receivers:
 processors:
   resource:
     attributes:
-      # - key: service.name
-      #   from_attribute: service.name
-      #   action: insert
+      - key: service.name
+        from_attribute: service.name
+        action: insert
       - key: deployment.environment # Добавляет атрибут deployment.environment="dev" 
         value: dev                  # к каждому логу, метрике и трейсу
         action: insert # Добавить атрибут, если он еще не существует.
@@ -37,10 +37,10 @@ exporters:
     endpoint: 0.0.0.0:8889 # endpoint OTEL Collector'a для предоставления метрик приложений (Prometheus будет подключаться к otel-collector:8889 для сбора этих метрик)
     namespace: "otel" # Добавляет префикс otel_ ко всем именам метрик (например, метрика orders_total в Prometheus будет называться otel_orders_total).
 
-  # jaeger: # Экспортирует трейсы в формате, который понимает Jaeger.
-  #   endpoint: jaeger:4317 # Адрес Jaeger в Docker-сети
-  #   tls:
-  #     insecure: true # Отключить проверку SSL-сертификата (OK для dev, плохо для prod)
+  otlp/jaeger: # Экспортирует трейсы в формате, который понимает Jaeger.
+    endpoint: jaeger:4317 # Адрес Jaeger в Docker-сети
+    tls:
+      insecure: true # Отключить проверку SSL-сертификата (OK для dev, плохо для prod)
 
 extensions:
   health_check:
@@ -63,7 +63,7 @@ service:
       processors: [batch]                 # 2. Обрабатываем: только батчинг (ресурсный процессор не нужен, т.к. метрики уже имеют атрибуты)
       exporters: [prometheus]             # 3. Отправляем в Prometheus
 
-    # traces:                               # Конвейер для ТРЕЙСОВ
-    #   receivers: [otlp]                   # 1. Принимаем
-    #   processors: [batch]                 # 2. Обрабатываем: батчинг
-    #   exporters: [jaeger]                 # 3. Отправляем в Jaeger
+    traces:                               # Конвейер для ТРЕЙСОВ
+      receivers: [otlp]                   # 1. Принимаем
+      processors: [batch]                 # 2. Обрабатываем: батчинг
+      exporters: [otlp/jaeger]                 # 3. Отправляем в Jaeger

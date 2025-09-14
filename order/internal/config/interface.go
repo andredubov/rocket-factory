@@ -49,3 +49,10 @@ type MetricsConfig interface {
 	CollectorInterval() time.Duration
 	CollectorTimeout() time.Duration
 }
+
+type TracingConfig interface {
+	CollectorEndpoint() string
+	ServiceName() string
+	Environment() string
+	ServiceVersion() string
+}

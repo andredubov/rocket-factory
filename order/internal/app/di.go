@@ -34,6 +34,7 @@ import (
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 	kafkaMiddleware "github.com/andredubov/rocket-factory/platform/pkg/middleware/kafka"
 	"github.com/andredubov/rocket-factory/platform/pkg/migrator"
+	"github.com/andredubov/rocket-factory/platform/pkg/tracing"
 	auth_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/auth/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
@@ -114,6 +115,7 @@ func (d *diContainer) InventoryClient(ctx context.Context) service.InventoryClie
 	if d.inventoryClient == nil {
 		dialOptions := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor(config.AppConfig().Tracing.ServiceName())),
 		}
 
 		conn, err := grpc.NewClient(d.InventoryGRPCConfig(ctx).Address(), dialOptions...)
@@ -133,6 +135,7 @@ func (d *diContainer) PaymentClient(ctx context.Context) service.PaymentClient {
 	if d.paymentClient == nil {
 		dialOptions := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor(config.AppConfig().Tracing.ServiceName())),
 		}
 
 		conn, err := grpc.NewClient(d.PaymentGRPCConfig(ctx).Address(), dialOptions...)

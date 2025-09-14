@@ -301,6 +301,32 @@ services:
       rocketfactory-net:
         ipv4_address: 172.19.0.11
 
+  jaeger:
+    # Сервис Jaeger для распределенной трассировки
+    image: jaegertracing/jaeger:2.6.0 # Последняя стабильная версия Jaeger v2
+    container_name: jaeger # Имя контейнера для удобного обращения
+    ports:
+      - "${JAEGER_UI_EXTERNAL_PORT}:${JAEGER_UI_INTERNAL_PORT}" # Порт для веб-интерфейса Jaeger UI
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true # Включаем поддержку протокола OpenTelemetry
+      - STORAGE_TYPE=badger # Используем Badger как хранилище данных (встроенная key-value БД)
+      - BADGER_EPHEMERAL=false # Сохраняем данные на диск между перезапусками
+      - BADGER_DIRECTORY_VALUE=/badger/data # Директория для хранения значений (спаны, теги, логи)
+      - BADGER_DIRECTORY_KEY=/badger/key # Директория для хранения индексов (для быстрого поиска)
+    volumes:
+      - jaeger_data:/badger/data # Том для хранения данных трейсов
+      - jaeger_key:/badger/key # Том для хранения индексов
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "localhost:${JAEGER_UI_INTERNAL_PORT}" ] # Проверка доступности UI
+      interval: 5s # Интервал проверки
+      timeout: 3s # Таймаут проверки
+      retries: 3 # Количество попыток
+      start_period: 5s # Время ожидания перед началом проверок
+    restart: unless-stopped
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.12
+
 volumes:
   kafka_data:
     name: core_kafka_volume
@@ -310,6 +336,10 @@ volumes:
     name: core_prometheus_data
   grafana_data:
     name: core_grafana_data
+  jaeger_data:
+    name: core_jaeger_data
+  jaeger_key:
+    name: core_jaeger_key
 
 networks:
   rocketfactory-net:

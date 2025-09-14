@@ -21,10 +21,10 @@
 /.env
 /.idea
 /.cursor
+/.vscode
 .DS_Store
 
 /bin
 node_modules
 /shared/api/bundles/
 /coverage/
-/.vscode
