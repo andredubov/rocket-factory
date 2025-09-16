@@ -2,11 +2,11 @@ package app
 
 import (
 	"context"
-	"log"
 
 	redigo "github.com/gomodule/redigo/redis"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
+	"go.uber.org/zap"
 
 	authAPI "github.com/andredubov/rocket-factory/iam/internal/api/v1/auth"
 	userAPI "github.com/andredubov/rocket-factory/iam/internal/api/v1/user"
@@ -51,11 +51,12 @@ func NewDIContainer() *diContainer {
 }
 
 // GRPCConfig loads GRPC configuration from environment variables
-func (s *diContainer) GRPCConfig() config.GRPCConfig {
+func (s *diContainer) GRPCConfig(ctx context.Context) config.GRPCConfig {
 	if s.grpcConfig == nil {
 		cfg, err := env.NewGRPCConfig()
 		if err != nil {
-			log.Fatalf("failed to get grpc config: %s", err.Error())
+			logger.Error(ctx, "failed to get grpc config:", zap.Error(err))
+			return nil
 		}
 		s.grpcConfig = cfg
 	}
@@ -63,11 +64,11 @@ func (s *diContainer) GRPCConfig() config.GRPCConfig {
 	return s.grpcConfig
 }
 
-func (d *diContainer) RedisConfig() config.RedisConfig {
+func (d *diContainer) RedisConfig(ctx context.Context) config.RedisConfig {
 	if d.redisConfig == nil {
 		cfg, err := env.NewRedisConfig()
 		if err != nil {
-			log.Printf("failed to get Redis cache config: %s", err.Error())
+			logger.Error(ctx, "failed to get Redis cache config", zap.Error(err))
 			return nil
 		}
 		d.redisConfig = cfg
@@ -76,11 +77,11 @@ func (d *diContainer) RedisConfig() config.RedisConfig {
 	return d.redisConfig
 }
 
-func (d *diContainer) PostgresConfig() config.PostgresDBConfig {
+func (d *diContainer) PostgresConfig(ctx context.Context) config.PostgresDBConfig {
 	if d.postgresDBConfig == nil {
 		cfg, err := env.NewPostgresDBConfig()
 		if err != nil {
-			log.Printf("failed to get Postgres database config: %s", err.Error())
+			logger.Error(ctx, "failed to get Postgres database config", zap.Error(err))
 			return nil
 		}
 		d.postgresDBConfig = cfg
@@ -91,24 +92,24 @@ func (d *diContainer) PostgresConfig() config.PostgresDBConfig {
 
 func (d *diContainer) PostgresDatabase(ctx context.Context) *pgxpool.Pool {
 	if d.postgresConnPool == nil {
-		dbPool, err := pgxpool.New(ctx, d.PostgresConfig().DSN())
+		dbPool, err := pgxpool.New(ctx, d.PostgresConfig(ctx).DSN())
 		if err != nil {
-			log.Printf("failed to connect to database: %v\n", err)
+			logger.Error(ctx, "failed to connect to database", zap.Error(err))
 			return nil
 		}
 
 		err = dbPool.Ping(ctx)
 		if err != nil {
-			log.Printf("postgres unawailable: %v\n", err)
+			logger.Error(ctx, "postgres unawailable", zap.Error(err))
 			return nil
 		}
 
 		d.postgresConnPool = dbPool
 
-		migratorRunner := migrator.NewMigrator(stdlib.OpenDBFromPool(dbPool), d.PostgresConfig().MigrationDirectory())
+		migratorRunner := migrator.NewMigrator(stdlib.OpenDBFromPool(dbPool), d.PostgresConfig(ctx).MigrationDirectory())
 		err = migratorRunner.Up()
 		if err != nil {
-			log.Printf("failed to up database migration: %v\n", err)
+			logger.Error(ctx, "failed to up database migration", zap.Error(err))
 			return nil
 		}
 	}

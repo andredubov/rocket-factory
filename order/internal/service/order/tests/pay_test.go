@@ -66,10 +66,10 @@ func TestPayOrder_Success(t *testing.T) {
 	}
 
 	// Mock expectations
-	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
-	paymentClient.On("PayOrder", ctx, order).Return(transactionUUID, nil)
-	ordersRepository.On("UpdateOrder", ctx, updateInfo).Return(nil)
-	orderPaidEventProducer.On("ProduceOrderPaidEvent", ctx, event).Return(nil)
+	ordersRepository.On("GetOrder", mock.Anything, orderUUID).Return(order, nil)
+	paymentClient.On("PayOrder", mock.Anything, order).Return(transactionUUID, nil)
+	ordersRepository.On("UpdateOrder", mock.Anything, updateInfo).Return(nil)
+	orderPaidEventProducer.On("ProduceOrderPaidEvent", mock.Anything, event).Return(nil)
 
 	// Test
 	result, err := ordersService.PayOrder(ctx, orderUUID, paymentMethod)
@@ -103,7 +103,7 @@ func TestPayOrder_InvalidStatus(t *testing.T) {
 	)
 
 	// Mock expectations
-	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
+	ordersRepository.On("GetOrder", mock.Anything, orderUUID).Return(order, nil)
 
 	// Test
 	result, err := ordersService.PayOrder(ctx, orderUUID, paymentMethod)
@@ -136,7 +136,7 @@ func TestPayOrder_InvalidPaymentMethod(t *testing.T) {
 	)
 
 	// Mock expectations
-	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
+	ordersRepository.On("GetOrder", mock.Anything, orderUUID).Return(order, nil)
 
 	// Test
 	result, err := ordersService.PayOrder(ctx, orderUUID, paymentMethod)
@@ -170,8 +170,8 @@ func TestPayOrder_PaymentFailed(t *testing.T) {
 	)
 
 	// Mock expectations
-	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
-	paymentClient.On("PayOrder", ctx, order).Return(uuid.Nil, paymentError)
+	ordersRepository.On("GetOrder", mock.Anything, orderUUID).Return(order, nil)
+	paymentClient.On("PayOrder", mock.Anything, order).Return(uuid.Nil, paymentError)
 
 	// Test
 	result, err := ordersService.PayOrder(ctx, orderUUID, paymentMethod)
@@ -208,9 +208,9 @@ func TestPayOrder_UpdateFailed(t *testing.T) {
 	)
 
 	// Mock expectations
-	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
-	paymentClient.On("PayOrder", ctx, order).Return(transactionUUID, nil)
-	ordersRepository.On("UpdateOrder", ctx, mock.Anything).Return(updateError)
+	ordersRepository.On("GetOrder", mock.Anything, orderUUID).Return(order, nil)
+	paymentClient.On("PayOrder", mock.Anything, order).Return(transactionUUID, nil)
+	ordersRepository.On("UpdateOrder", mock.Anything, mock.Anything).Return(updateError)
 
 	// Test
 	result, err := ordersService.PayOrder(ctx, orderUUID, paymentMethod)
@@ -238,7 +238,7 @@ func TestPayOrder_GetOrderFromRepoFailed(t *testing.T) {
 	)
 
 	// Mock expectations
-	ordersRepository.On("GetOrder", ctx, orderUUID).Return(nil, expectedError)
+	ordersRepository.On("GetOrder", mock.Anything, orderUUID).Return(nil, expectedError)
 
 	// Test
 	result, err := ordersService.PayOrder(ctx, orderUUID, paymentMethod)
@@ -287,10 +287,10 @@ func TestPayOrder_ProduceEventFailed(t *testing.T) {
 	}
 
 	// Mock expectations
-	ordersRepository.On("GetOrder", ctx, orderUUID).Return(order, nil)
-	paymentClient.On("PayOrder", ctx, order).Return(transactionUUID, nil)
-	ordersRepository.On("UpdateOrder", ctx, mock.Anything).Return(nil)
-	orderPaidEventProducer.On("ProduceOrderPaidEvent", ctx, expectedEvent).Return(produceError)
+	ordersRepository.On("GetOrder", mock.Anything, orderUUID).Return(order, nil)
+	paymentClient.On("PayOrder", mock.Anything, order).Return(transactionUUID, nil)
+	ordersRepository.On("UpdateOrder", mock.Anything, mock.Anything).Return(nil)
+	orderPaidEventProducer.On("ProduceOrderPaidEvent", mock.Anything, expectedEvent).Return(produceError)
 
 	// Test
 	result, err := ordersService.PayOrder(ctx, orderUUID, paymentMethod)

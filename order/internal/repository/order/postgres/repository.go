@@ -7,8 +7,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/order/internal/service"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 )
 
 const (
@@ -52,12 +54,14 @@ func WithTx(ctx context.Context, pool PgxPool, action func(tx pgx.Tx) error) err
 	committed := false
 	tx, err := pool.Begin(ctx)
 	if err != nil {
+		logger.Error(ctx, "failed to begin transaction", zap.Error(err))
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	defer func() {
 		if !committed {
 			if err := tx.Rollback(ctx); err != nil {
+				logger.Error(ctx, "failed to rollback transaction", zap.Error(err))
 				log.Printf("failed to rollback transaction: %v", err)
 			}
 		}
@@ -68,6 +72,7 @@ func WithTx(ctx context.Context, pool PgxPool, action func(tx pgx.Tx) error) err
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		logger.Error(ctx, "failed to commit transaction", zap.Error(err))
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 

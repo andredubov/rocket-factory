@@ -3,20 +3,22 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 )
 
 // GetUserOrders возвращает все заказы указанного пользователя вместе с их составными частями.
 func (r *ordersRepository) GetUserOrders(ctx context.Context, userUUID uuid.UUID) ([]model.Order, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
+		logger.Error(ctx, "failed to begin transaction", zap.Error(err))
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
@@ -24,7 +26,7 @@ func (r *ordersRepository) GetUserOrders(ctx context.Context, userUUID uuid.UUID
 	defer func() {
 		if !committed {
 			if err := tx.Rollback(ctx); err != nil {
-				log.Printf("failed to rollback transaction: %v", err)
+				logger.Error(ctx, "failed to rollback transaction", zap.Error(err))
 			}
 		}
 	}()
@@ -51,6 +53,7 @@ func (r *ordersRepository) GetUserOrders(ctx context.Context, userUUID uuid.UUID
 	}
 
 	if err := tx.Commit(ctx); err != nil {
+		logger.Error(ctx, "failed to commit transaction", zap.Error(err))
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
@@ -77,11 +80,13 @@ func (r *ordersRepository) getUserOrderDetails(ctx context.Context, tx pgx.Tx, u
 		OrderBy(CreatedAtTableColumn + " DESC").
 		ToSql()
 	if err != nil {
+		logger.Error(ctx, "failed to build orders query", zap.Error(err))
 		return nil, nil, fmt.Errorf("failed to build orders query: %w", err)
 	}
 
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
+		logger.Error(ctx, "failed to query user orders", zap.Error(err))
 		return nil, nil, fmt.Errorf("failed to query user orders: %w", err)
 	}
 	defer rows.Close()
@@ -99,6 +104,7 @@ func (r *ordersRepository) getUserOrderDetails(ctx context.Context, tx pgx.Tx, u
 	}
 
 	if err := rows.Err(); err != nil {
+		logger.Error(ctx, "error during orders iteration", zap.Error(err))
 		return nil, nil, fmt.Errorf("error during orders iteration: %w", err)
 	}
 
@@ -183,11 +189,13 @@ func (r *ordersRepository) getOrderPartsMap(ctx context.Context, tx pgx.Tx, orde
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
+		logger.Error(ctx, "failed to build parts query", zap.Error(err))
 		return nil, fmt.Errorf("failed to build parts query: %w", err)
 	}
 
 	partsRows, err := tx.Query(ctx, partsQuery, partsArgs...)
 	if err != nil {
+		logger.Error(ctx, "failed to query order parts", zap.Error(err))
 		return nil, fmt.Errorf("failed to query order parts: %w", err)
 	}
 	defer partsRows.Close()
@@ -199,12 +207,14 @@ func (r *ordersRepository) getOrderPartsMap(ctx context.Context, tx pgx.Tx, orde
 			partUUID  uuid.UUID
 		)
 		if err := partsRows.Scan(&orderUUID, &partUUID); err != nil {
+			logger.Error(ctx, "failed to scan part", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan part: %w", err)
 		}
 		partsMap[orderUUID] = append(partsMap[orderUUID], partUUID)
 	}
 
 	if err := partsRows.Err(); err != nil {
+		logger.Error(ctx, "error during parts iteration", zap.Error(err))
 		return nil, fmt.Errorf("error during parts iteration: %w", err)
 	}
 

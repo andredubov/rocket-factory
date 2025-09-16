@@ -318,8 +318,8 @@ func TestUpdateOrder_UpdateError(t *testing.T) {
 
 	// Verify
 	require.Error(t, err, "UpdateOrder should return an error")
-	require.Contains(t, err.Error(), "failed to update order")
-	// require.NoError(t, mock.ExpectationsWereMet())
+	// require.Contains(t, err.Error(), "failed to update order")
+	require.Contains(t, err.Error(), "failed to execute update order")
 }
 
 func TestUpdateOrder_DeletePartsError(t *testing.T) {

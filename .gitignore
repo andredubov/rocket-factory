@@ -21,6 +21,7 @@
 /.env
 /.idea
 /.cursor
+/.vscode
 .DS_Store
 
 /bin

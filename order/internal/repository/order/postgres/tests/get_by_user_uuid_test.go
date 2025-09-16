@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -11,9 +12,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
 	"github.com/andredubov/rocket-factory/order/internal/repository/order/postgres"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 )
 
 func TestGetUserOrders_Success(t *testing.T) {
@@ -387,32 +391,45 @@ func TestGetUserOrders_RollbackError(t *testing.T) {
 	repo := postgres.NewOrderRepository(mock)
 	userUUID := uuid.New()
 
-	// Capture log output
-	logOutput := captureLogOutput(func() {
-		// Expectations
-		mock.ExpectBegin()
+	// Create a buffer to capture log output
+	var logBuffer bytes.Buffer
 
-		// Simulate error in orders query
-		mock.ExpectQuery(`SELECT .* FROM ` + postgres.OrdersTable).
-			WithArgs(userUUID.String()).
-			WillReturnError(fmt.Errorf("database error"))
+	// Create a test zap logger that writes to our buffer
+	encoder := zapcore.NewConsoleEncoder(zap.NewDevelopmentEncoderConfig())
+	core := zapcore.NewCore(encoder, zapcore.AddSync(&logBuffer), zap.DebugLevel)
+	testLogger := zap.New(core)
 
-		// Simulate rollback error
-		mock.ExpectRollback().
-			WillReturnError(fmt.Errorf("rollback failed"))
+	// Save original logger and restore after test
+	originalLogger := logger.GetGlobalLogger()
+	defer logger.SetTestLogger(originalLogger)
 
-		// Test
-		orders, err := repo.GetUserOrders(context.Background(), userUUID)
+	// Set our test logger
+	logger.SetTestLogger(testLogger)
 
-		// Verify
-		require.Error(t, err, "Should return error")
-		require.Nil(t, orders, "Should not return orders")
-		require.Contains(t, err.Error(), "failed to query user orders", "Should return original error")
-	})
+	// Expectations
+	mock.ExpectBegin()
 
-	// Verify rollback error was logged
-	require.Contains(t, logOutput, "failed to rollback transaction", "Should log rollback error")
-	require.Contains(t, logOutput, "rollback failed", "Should log rollback error details")
+	// Simulate error in orders query
+	mock.ExpectQuery(`SELECT .* FROM ` + postgres.OrdersTable).
+		WithArgs(userUUID.String()).
+		WillReturnError(fmt.Errorf("database error"))
+
+	// Simulate rollback error
+	mock.ExpectRollback().
+		WillReturnError(fmt.Errorf("rollback failed"))
+
+	// Test
+	orders, err := repo.GetUserOrders(context.Background(), userUUID)
+
+	// Verify
+	require.Error(t, err, "Should return error")
+	require.Nil(t, orders, "Should not return orders")
+	require.Contains(t, err.Error(), "failed to query user orders", "Should return original error")
+
+	// Check that rollback error was logged
+	logContents := logBuffer.String()
+	require.Contains(t, logContents, "failed to rollback transaction", "Should log rollback error")
+	require.Contains(t, logContents, "rollback failed", "Should log rollback error details")
 	require.NoError(t, mock.ExpectationsWereMet(), "Should meet all expectations")
 }
 

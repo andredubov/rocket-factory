@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -14,6 +16,7 @@ import (
 	"github.com/andredubov/rocket-factory/platform/pkg/closer"
 	"github.com/andredubov/rocket-factory/platform/pkg/grpc/health"
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
+	"github.com/andredubov/rocket-factory/platform/pkg/tracing"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
 )
 
@@ -46,15 +49,16 @@ func (a *App) initDeps(ctx context.Context) error {
 	inits := []func(context.Context) error{
 		a.initDIContainer,
 		a.initLogger,
+		a.initTracing,
 		a.initCloser,
 		a.initListener,
 		a.initGRPCServer,
 	}
 
-	for _, f := range inits {
+	for i, f := range inits {
 		err := f(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("init step %d failed: %w", i, err)
 		}
 	}
 
@@ -68,11 +72,36 @@ func (a *App) initDIContainer(_ context.Context) error {
 }
 
 // initLogger initializes the application logger with configured settings.
-func (a *App) initLogger(_ context.Context) error {
-	return logger.Init(
-		config.AppConfig().Logger.Level(),
-		config.AppConfig().Logger.AsJson(),
-	)
+func (a *App) initLogger(ctx context.Context) error {
+	loggerConfig := logger.Config{
+		Level:              config.AppConfig().Logger.Level(),
+		AsJSON:             config.AppConfig().Logger.AsJson(),
+		EnableOTLP:         config.AppConfig().Logger.EnableOTLP(),
+		OTLPEndpoint:       config.AppConfig().Logger.OTLPEndpoint(),
+		ServiceName:        config.AppConfig().Logger.ServiceName(),
+		ServiceEnvironment: config.AppConfig().Logger.ServiceEnvironment(),
+	}
+
+	return logger.Init(ctx, loggerConfig)
+}
+
+// initTracing sets up the application tracing with the configured settings.
+func (a *App) initTracing(ctx context.Context) error {
+	err := tracing.InitTracer(ctx, config.AppConfig().Tracing)
+	if err != nil {
+		logger.Error(ctx, "❌ failed to init tracing", zap.Error(err))
+		return err
+	}
+
+	closer.AddNamed("Tracing", func(ctx context.Context) error {
+		shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		return tracing.ShutdownTracer(shutdownCtx)
+	})
+
+	logger.Info(ctx, "✅ Tracing initialized successfully")
+
+	return nil
 }
 
 // initCloser sets up the application closer with the configured logger.
@@ -82,7 +111,7 @@ func (a *App) initCloser(_ context.Context) error {
 }
 
 // initListener creates a TCP listener on the configured gRPC server address.
-func (a *App) initListener(_ context.Context) error {
+func (a *App) initListener(ctx context.Context) error {
 	listener, err := net.Listen("tcp", config.AppConfig().GRPCServer.Address())
 	if err != nil {
 		return err
@@ -99,6 +128,8 @@ func (a *App) initListener(_ context.Context) error {
 
 	a.listener = listener
 
+	logger.Info(ctx, "✅ TCP listener initialized successfully")
+
 	return nil
 }
 
@@ -113,6 +144,7 @@ func (a *App) initGRPCServer(ctx context.Context) error {
 		grpc.Creds(insecure.NewCredentials()), // Disable TLS for development
 		grpc.ChainUnaryInterceptor(
 			authInterceptor.Unary(),
+			tracing.UnaryServerInterceptor(config.AppConfig().Tracing.ServiceName()),
 		),
 	}
 
@@ -123,11 +155,11 @@ func (a *App) initGRPCServer(ctx context.Context) error {
 		return nil
 	})
 
-	reflection.Register(a.grpcServer) // Enable reflection API
-
+	reflection.Register(a.grpcServer)    // Enable reflection API
 	health.RegisterService(a.grpcServer) // for healthcheck
-
 	payment_v1.RegisterPaymentServiceServer(a.grpcServer, a.diContainer.ServerImplementation(ctx))
+
+	logger.Info(ctx, "✅ gRPC server initialized successfully")
 
 	return nil
 }

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/dvln/testify/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -49,7 +50,7 @@ func TestGetPart_Success(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryRepository.On("GetPart", ctx, uuid).Return(expectedPart, nil).Once()
+	inventoryRepository.On("GetPart", mock.Anything, uuid).Return(expectedPart, nil).Once()
 
 	// Test
 	retrievedPart, err := inventoryService.GetPart(ctx, uuid)
@@ -83,7 +84,7 @@ func TestGetPart_NotFoundError(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryRepository.On("GetPart", ctx, uuid).Return(nil, expectedErr).Once()
+	inventoryRepository.On("GetPart", mock.Anything, uuid).Return(nil, expectedErr).Once()
 
 	// Test
 	retrievedPart, err := inventoryService.GetPart(ctx, uuid)
@@ -109,7 +110,7 @@ func TestGetPart_EmptyUUID(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryRepository.On("GetPart", ctx, emptyUUID).Return(nil, expectedErr).Once()
+	inventoryRepository.On("GetPart", mock.Anything, emptyUUID).Return(nil, expectedErr).Once()
 
 	// Test
 	part, err := inventoryService.GetPart(ctx, emptyUUID)

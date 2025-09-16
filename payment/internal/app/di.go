@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"go.uber.org/zap"
@@ -35,11 +34,11 @@ func NewDIContainer() *diContainer {
 }
 
 // GRPCConfig loads and provides the gRPC server configuration.
-func (s *diContainer) GRPCConfig() config.GRPCConfig {
+func (s *diContainer) GRPCConfig(ctx context.Context) config.GRPCConfig {
 	if s.grpcConfig == nil {
 		cfg, err := env.NewGRPCConfig()
 		if err != nil {
-			log.Fatalf("failed to get grpc config: %s", err.Error())
+			logger.Error(ctx, "failed to get grpc config", zap.Error(err))
 		}
 		s.grpcConfig = cfg
 	}

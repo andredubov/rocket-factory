@@ -72,10 +72,10 @@ func (a *App) initDeps(ctx context.Context) error {
 		a.initTelegramBot,
 	}
 
-	for _, f := range inits {
+	for i, f := range inits {
 		err := f(ctx)
 		if err != nil {
-			return err
+			return fmt.Errorf("init step %d failed: %w", i, err)
 		}
 	}
 
@@ -95,13 +95,13 @@ func (a *App) initTelegramBot(ctx context.Context) error {
 			Text:   "🔔 Notification Bot активирован! Теперь вы будете получать уведомления о оплате частей и сборки корабля.",
 		})
 		if err != nil {
-			logger.Error(ctx, "Failed to send activation message", zap.Error(err))
+			logger.Error(ctx, "❌ failed to send activation message", zap.Error(err))
 		}
 	})
 
 	// Запускаем бота в фоне
 	go func() {
-		logger.Info(ctx, "🤖 Telegram bot started...")
+		logger.Info(ctx, "🚀 Telegram bot started...")
 		telegramBot.Start(ctx)
 	}()
 
@@ -113,11 +113,16 @@ func (a *App) initDIContainer(_ context.Context) error {
 	return nil
 }
 
-func (a *App) initLogger(_ context.Context) error {
-	return logger.Init(
-		config.AppConfig().Logger.Level(),
-		config.AppConfig().Logger.AsJson(),
-	)
+func (a *App) initLogger(ctx context.Context) error {
+	loggerConfig := logger.Config{
+		Level:              config.AppConfig().Logger.Level(),
+		AsJSON:             config.AppConfig().Logger.AsJson(),
+		EnableOTLP:         config.AppConfig().Logger.EnableOTLP(),
+		OTLPEndpoint:       config.AppConfig().Logger.OTLPEndpoint(),
+		ServiceName:        config.AppConfig().Logger.ServiceName(),
+		ServiceEnvironment: config.AppConfig().Logger.ServiceEnvironment(),
+	}
+	return logger.Init(ctx, loggerConfig)
 }
 
 func (a *App) initCloser(_ context.Context) error {
@@ -126,23 +131,25 @@ func (a *App) initCloser(_ context.Context) error {
 }
 
 func (a *App) runOrderPaidEventConsumer(ctx context.Context) error {
-	logger.Info(ctx, "🚀 OrderPaidEvent Kafka consumer running")
-
 	err := a.diContainer.OrderPaidEventConsumerService(ctx).RunConsumer(ctx)
 	if err != nil {
+		logger.Error(ctx, "❌ failed to start OrderPaidEvent Kafka consumer", zap.Error(err))
 		return err
 	}
+
+	logger.Info(ctx, "🚀 OrderPaidEvent Kafka consumer successfully started and running")
 
 	return nil
 }
 
 func (a *App) runOrderAssembledEventConsumer(ctx context.Context) error {
-	logger.Info(ctx, "🚀 OrderAssembledEvent Kafka consumer running")
-
 	err := a.diContainer.OrderAssembledEventConsumerService(ctx).RunConsumer(ctx)
 	if err != nil {
+		logger.Error(ctx, "❌ Failed to start OrderAssembledEvent Kafka consumer", zap.Error(err))
 		return err
 	}
+
+	logger.Info(ctx, "🚀 OrderAssembledEvent Kafka consumer successfully started and running")
 
 	return nil
 }

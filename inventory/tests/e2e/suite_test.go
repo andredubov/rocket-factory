@@ -30,7 +30,11 @@ func TestIntegration(t *testing.T) {
 }
 
 var _ = ginkgo.BeforeSuite(func() {
-	err := logger.Init(loggerLevelValue, true)
+	err := logger.Init(context.Background(), logger.Config{
+		Level:      "info",
+		AsJSON:     true,
+		EnableOTLP: false,
+	})
 	if err != nil {
 		panic(fmt.Sprintf("не удалось инициализировать логгер: %v", err))
 	}

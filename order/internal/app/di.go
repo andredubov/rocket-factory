@@ -34,6 +34,7 @@ import (
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 	kafkaMiddleware "github.com/andredubov/rocket-factory/platform/pkg/middleware/kafka"
 	"github.com/andredubov/rocket-factory/platform/pkg/migrator"
+	"github.com/andredubov/rocket-factory/platform/pkg/tracing"
 	auth_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/auth/v1"
 	inventory_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/inventory/v1"
 	payment_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/payment/v1"
@@ -68,11 +69,11 @@ func NewDIContainer() *diContainer {
 	return &diContainer{}
 }
 
-func (d *diContainer) HTTPConfig() config.HTTPConfig {
+func (d *diContainer) HTTPConfig(ctx context.Context) config.HTTPConfig {
 	if d.httpConfig == nil {
 		cfg, err := env.NewHTTPConfig()
 		if err != nil {
-			log.Printf("failed to get http server config: %s\n", err.Error())
+			logger.Error(ctx, "failed to get http server config", zap.Error(err))
 			return nil
 		}
 
@@ -82,11 +83,11 @@ func (d *diContainer) HTTPConfig() config.HTTPConfig {
 	return d.httpConfig
 }
 
-func (d *diContainer) InventoryGRPCConfig() config.GRPCConfig {
+func (d *diContainer) InventoryGRPCConfig(ctx context.Context) config.GRPCConfig {
 	if d.inventoryClientConfig == nil {
 		cfg, err := inventoryClient.NewGRPCConfig()
 		if err != nil {
-			log.Printf("failed to create inventory grpc client config: %v\n", err)
+			logger.Error(ctx, "failed to create inventory grpc client config", zap.Error(err))
 			return nil
 		}
 
@@ -96,11 +97,11 @@ func (d *diContainer) InventoryGRPCConfig() config.GRPCConfig {
 	return d.inventoryClientConfig
 }
 
-func (d *diContainer) PaymentGRPCConfig() config.GRPCConfig {
+func (d *diContainer) PaymentGRPCConfig(ctx context.Context) config.GRPCConfig {
 	if d.paymentClientConfig == nil {
 		cfg, err := paymentClient.NewGRPCConfig()
 		if err != nil {
-			log.Printf("failed to create payment grpc client config: %v\n", err)
+			logger.Error(ctx, "failed to create payment grpc client config", zap.Error(err))
 			return nil
 		}
 
@@ -110,15 +111,16 @@ func (d *diContainer) PaymentGRPCConfig() config.GRPCConfig {
 	return d.paymentClientConfig
 }
 
-func (d *diContainer) InventoryClient() service.InventoryClient {
+func (d *diContainer) InventoryClient(ctx context.Context) service.InventoryClient {
 	if d.inventoryClient == nil {
 		dialOptions := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor(config.AppConfig().Tracing.ServiceName())),
 		}
 
-		conn, err := grpc.NewClient(d.InventoryGRPCConfig().Address(), dialOptions...)
+		conn, err := grpc.NewClient(d.InventoryGRPCConfig(ctx).Address(), dialOptions...)
 		if err != nil {
-			log.Printf("failed to create inventory grpc client: %v\n", err)
+			logger.Error(ctx, "failed to create inventory grpc client", zap.Error(err))
 			return nil
 		}
 
@@ -129,13 +131,14 @@ func (d *diContainer) InventoryClient() service.InventoryClient {
 	return d.inventoryClient
 }
 
-func (d *diContainer) PaymentClient() service.PaymentClient {
+func (d *diContainer) PaymentClient(ctx context.Context) service.PaymentClient {
 	if d.paymentClient == nil {
 		dialOptions := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor(config.AppConfig().Tracing.ServiceName())),
 		}
 
-		conn, err := grpc.NewClient(d.PaymentGRPCConfig().Address(), dialOptions...)
+		conn, err := grpc.NewClient(d.PaymentGRPCConfig(ctx).Address(), dialOptions...)
 		if err != nil {
 			log.Printf("failed to create Payment grpc client: %v\n", err)
 			return nil
@@ -244,11 +247,11 @@ func (d *diContainer) ProducerService() service.ProducerService {
 	return d.producerService
 }
 
-func (d *diContainer) PostgresDBConfig() config.PostgresDBConfig {
+func (d *diContainer) PostgresDBConfig(ctx context.Context) config.PostgresDBConfig {
 	if d.postgresDBConfig == nil {
 		cfg, err := env.NewPostgresDBConfig()
 		if err != nil {
-			log.Printf("failed to get Postgres database config: %s", err.Error())
+			logger.Error(ctx, "failed to get Postgres database config", zap.Error(err))
 			return nil
 		}
 
@@ -260,24 +263,24 @@ func (d *diContainer) PostgresDBConfig() config.PostgresDBConfig {
 
 func (d *diContainer) PostgresDatabase(ctx context.Context) *pgxpool.Pool {
 	if d.postgresDB == nil {
-		dbPool, err := pgxpool.New(ctx, d.PostgresDBConfig().DSN())
+		dbPool, err := pgxpool.New(ctx, d.PostgresDBConfig(ctx).DSN())
 		if err != nil {
-			log.Printf("failed to connect to database: %v\n", err)
+			logger.Error(ctx, "failed to connect to database", zap.Error(err))
 			return nil
 		}
 
 		err = dbPool.Ping(ctx)
 		if err != nil {
-			log.Printf("postgres unawailable: %v\n", err)
+			logger.Error(ctx, "postgres unawailable", zap.Error(err))
 			return nil
 		}
 
 		d.postgresDB = dbPool
 
-		migratorRunner := migrator.NewMigrator(stdlib.OpenDBFromPool(dbPool), d.PostgresDBConfig().MigrationDirectory())
+		migratorRunner := migrator.NewMigrator(stdlib.OpenDBFromPool(dbPool), d.PostgresDBConfig(ctx).MigrationDirectory())
 		err = migratorRunner.Up()
 		if err != nil {
-			log.Printf("failed to up database migration: %v\n", err)
+			logger.Error(ctx, "failed to up database migration", zap.Error(err))
 			return nil
 		}
 	}
@@ -299,8 +302,8 @@ func (d *diContainer) OrdersService(ctx context.Context) api.OrdersService {
 	if d.ordersService == nil {
 		d.ordersService = orders.NewService(
 			d.OrdersRepository(ctx),
-			d.PaymentClient(),
-			d.InventoryClient(),
+			d.PaymentClient(ctx),
+			d.InventoryClient(ctx),
 			d.ProducerService(),
 		)
 	}
@@ -312,8 +315,8 @@ func (d *diContainer) ServerImplementation(ctx context.Context) *api.OrderImplem
 	if d.serverImplementation == nil {
 		d.serverImplementation = api.NewOrderHandler(
 			d.OrdersService(ctx),
-			d.PaymentClient(),
-			d.InventoryClient(),
+			d.PaymentClient(ctx),
+			d.InventoryClient(ctx),
 		)
 	}
 

@@ -6,6 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/andredubov/rocket-factory/assembly/internal/metrics"
 	"github.com/andredubov/rocket-factory/assembly/internal/model"
 	"github.com/andredubov/rocket-factory/platform/pkg/kafka"
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
@@ -45,6 +46,8 @@ func (c *consumerService) produceOrderAssembledEvent(ctx context.Context, event 
 			UserUUID:     event.UserUUID,
 			BuildTimeSec: int64(buildTime.Seconds()),
 		}
+
+		metrics.RecordAssemblyDuration(ctx, buildTime)
 
 		produceCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		defer cancel()

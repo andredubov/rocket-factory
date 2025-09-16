@@ -7,8 +7,10 @@ import (
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 
 	"github.com/andredubov/rocket-factory/order/internal/model"
+	"github.com/andredubov/rocket-factory/platform/pkg/logger"
 )
 
 func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.OrderUpdateInfo) error {
@@ -36,12 +38,14 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.OrderUpd
 
 		updateQuery, updateArgs, err := updateBuilder.ToSql()
 		if err != nil {
+			logger.Error(ctx, "failed to build update query", zap.Error(err))
 			return fmt.Errorf("failed to build update query: %w", err)
 		}
 
 		result, err := tx.Exec(ctx, updateQuery, updateArgs...)
 		if err != nil {
-			return fmt.Errorf("failed to update order: %w", err)
+			logger.Error(ctx, "failed to execute update order", zap.Error(err))
+			return fmt.Errorf("failed to execute update order: %w", err)
 		}
 
 		if result.RowsAffected() == 0 {
@@ -56,10 +60,12 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.OrderUpd
 				PlaceholderFormat(sq.Dollar).
 				ToSql()
 			if err != nil {
+				logger.Error(ctx, "failed to build delete parts query", zap.Error(err))
 				return fmt.Errorf("failed to build delete parts query: %w", err)
 			}
 
 			if _, err := tx.Exec(ctx, deletePartsQuery, deletePartsArgs...); err != nil {
+				logger.Error(ctx, "failed to delete order parts", zap.Error(err))
 				return fmt.Errorf("failed to delete order parts: %w", err)
 			}
 
@@ -74,10 +80,12 @@ func (r *ordersRepository) UpdateOrder(ctx context.Context, order model.OrderUpd
 
 				insertPartsQuery, insertPartsArgs, err := insertPartsBuilder.ToSql()
 				if err != nil {
+					logger.Error(ctx, "failed to build insert parts query", zap.Error(err))
 					return fmt.Errorf("failed to build insert parts query: %w", err)
 				}
 
 				if _, err := tx.Exec(ctx, insertPartsQuery, insertPartsArgs...); err != nil {
+					logger.Error(ctx, "failed to insert order parts", zap.Error(err))
 					return fmt.Errorf("failed to insert order parts: %w", err)
 				}
 			}

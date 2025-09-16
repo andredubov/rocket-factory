@@ -9,6 +9,10 @@ import (
 type LoggerConfig interface {
 	Level() string
 	AsJson() bool
+	EnableOTLP() bool
+	OTLPEndpoint() string
+	ServiceName() string
+	ServiceEnvironment() string
 }
 
 type GRPCConfig interface {
@@ -38,4 +42,17 @@ type OrderAssembledEventConsumerConfig interface {
 	Topic() string
 	GroupID() string
 	Config() *sarama.Config
+}
+
+type MetricsConfig interface {
+	CollectorEndpoint() string
+	CollectorInterval() time.Duration
+	CollectorTimeout() time.Duration
+}
+
+type TracingConfig interface {
+	CollectorEndpoint() string
+	ServiceName() string
+	Environment() string
+	ServiceVersion() string
 }

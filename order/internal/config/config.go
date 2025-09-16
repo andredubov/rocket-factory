@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -23,6 +24,8 @@ type config struct {
 	Kafka                       KafkaConfig
 	OrderPaidEventProducer      OrderPaidEventProducerConfig
 	OrderAssembledEventConsumer OrderAssembledEventConsumerConfig
+	Metrics                     MetricsConfig
+	Tracing                     TracingConfig
 }
 
 func Load(path ...string) error {
@@ -76,6 +79,16 @@ func Load(path ...string) error {
 		return err
 	}
 
+	metricsCfg, err := env.NewMetricsConfig()
+	if err != nil {
+		return err
+	}
+
+	tracingCfg, err := env.NewTracingConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load tracing config: %w", err)
+	}
+
 	appConfig = &config{
 		Logger:                      loggerConfig,
 		HTTPServer:                  httpConfig,
@@ -86,6 +99,8 @@ func Load(path ...string) error {
 		Kafka:                       kafkaCfg,
 		OrderPaidEventProducer:      orderPaidEventProducerCfg,
 		OrderAssembledEventConsumer: orderAssembledEventConsumerCfg,
+		Metrics:                     metricsCfg,
+		Tracing:                     tracingCfg,
 	}
 
 	return nil

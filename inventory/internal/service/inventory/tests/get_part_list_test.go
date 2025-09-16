@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/dvln/testify/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -50,7 +51,7 @@ func TestGetPartList_Success(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil).Once()
+	inventoryRepository.On("GetPartList", mock.Anything, filter).Return(parts, nil).Once()
 
 	// Test
 	retrivedParts, err := inventoryService.GetPartList(ctx, filter)
@@ -80,7 +81,7 @@ func TestGetPartList_EmptyFilter(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryRepository.On("GetPartList", ctx, filter).Return(parts, nil)
+	inventoryRepository.On("GetPartList", mock.Anything, filter).Return(parts, nil)
 
 	// Test
 	retrivedParts, err := inventoryService.GetPartList(ctx, filter)
@@ -107,7 +108,7 @@ func TestGetPartList_RepositoryError(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryRepository.On("GetPartList", ctx, filter).Return(nil, expectedErr)
+	inventoryRepository.On("GetPartList", mock.Anything, filter).Return(nil, expectedErr)
 
 	// Test
 	parts, err := inventoryService.GetPartList(ctx, filter)
@@ -132,7 +133,7 @@ func TestGetPartList_EmptyResult(t *testing.T) {
 	)
 
 	// Mock expectations
-	inventoryRepository.On("GetPartList", ctx, filter).Return([]model.Part{}, nil)
+	inventoryRepository.On("GetPartList", mock.Anything, filter).Return([]model.Part{}, nil)
 
 	// Test
 	retrievedParts, err := inventoryService.GetPartList(ctx, filter)

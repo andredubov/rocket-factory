@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -16,6 +17,7 @@ type config struct {
 	GRPCServer GRPCConfig
 	MongoDB    MongoDBConfig
 	IAMClient  GRPCConfig
+	Tracing    TracingConfig
 }
 
 func Load(path ...string) error {
@@ -44,11 +46,17 @@ func Load(path ...string) error {
 		return err
 	}
 
+	tracingConfig, err := env.NewTracingConfig()
+	if err != nil {
+		return fmt.Errorf("failed to load tracing config: %w", err)
+	}
+
 	appConfig = &config{
 		Logger:     loggerConfig,
 		GRPCServer: grpcServerConfig,
 		MongoDB:    mongoDBConfig,
 		IAMClient:  iamClientConfig,
+		Tracing:    tracingConfig,
 	}
 
 	return nil
