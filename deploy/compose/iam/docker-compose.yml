@@ -5,18 +5,16 @@ services:
     container_name: iam_service
     build:
       context: ../../..
-      dockerfile: ./iam/Dockerfile
+      dockerfile: ./deploy/docker/iam/Dockerfile
     env_file:
       - .env
-    ports:
-      - ${GRPC_PORT}:${GRPC_PORT}
     depends_on:
       iam-postgres:
         condition: service_healthy
       iam-redis:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "grpc_health_probe", "-addr=:${GRPC_PORT}" ]
+      test: [ "CMD", "grpc_health_probe", "-addr=:50053" ]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -40,8 +38,8 @@ services:
       - iam_postgres_volume:/var/lib/postgresql/data
       # Определяем том, который будет использоваться для хранения данных PostgreSQL
       # Он сохраняет данные между перезапусками контейнера
-    ports:
-      - "${EXTERNAL_PG_PORT}:${INTERNAL_PG_PORT}"
+      # ports:
+      #   - "${EXTERNAL_PG_PORT}:${INTERNAL_PG_PORT}"
       # Пробрасываем внутренний порт PostgreSQL (${PG_PORT}) на порт хоста (${PG_PORT_OUT})
       # Это нужно, чтобы другие сервисы или инструменты могли подключиться к базе
     healthcheck:
@@ -65,8 +63,8 @@ services:
     container_name: iam_redis # Явное имя контейнера Redis
     env_file:
       - .env
-    ports:
-      - "${EXTERNAL_REDIS_PORT}:${INTERNAL_REDIS_PORT}"
+      # ports:
+      #   - "${EXTERNAL_REDIS_PORT}:${INTERNAL_REDIS_PORT}"
       # Пробрасываем внутренний порт Redis на внешний, указанный в .env (например, 6380)
       # Это позволяет IAM-сервису обращаться к Redis по порту хоста
     healthcheck:

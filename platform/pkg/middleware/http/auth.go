@@ -9,7 +9,7 @@ import (
 	common_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/common/v1"
 )
 
-const SessionUUIDHeader = "X-Session-Uuid"
+const SessionUUIDHeader = "X-Session-UUID"
 
 // IAMClient это алиас для сгенерированного gRPC клиента
 type IAMClient = auth_v1.AuthServiceClient
@@ -26,11 +26,11 @@ func NewAuthMiddleware(iamClient IAMClient) *AuthMiddleware {
 	}
 }
 
-// client (X-Session-Uuid) -> auth middleware (add session_uuid in ctx (incomming)) -> order api (outgoing)-> auth interceptor ->inventory
+// client (X-Session-UUID) -> auth middleware (add session_uuid in ctx (incomming)) -> order api (outgoing)-> auth interceptor ->inventory
 // Handle обрабатывает HTTP запрос с аутентификацией
 func (m *AuthMiddleware) Handle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Извлекаем session UUID из заголовка
+		// Извлекаем session UUID из разных заголовков
 		sessionUUID := r.Header.Get(SessionUUIDHeader)
 		if sessionUUID == "" {
 			writeErrorResponse(w, http.StatusUnauthorized, "MISSING_SESSION", "Authentication required")

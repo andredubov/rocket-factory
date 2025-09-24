@@ -5,7 +5,7 @@ services:
     container_name: assembly_service
     build:
       context: ../../..
-      dockerfile: ./assembly/Dockerfile
+      dockerfile: ./deploy/docker/assembly/Dockerfile
     env_file:
       - .env
     networks:

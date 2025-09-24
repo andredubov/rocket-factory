@@ -190,7 +190,7 @@ func (a *App) initHTTPServer(ctx context.Context) error {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 
-	router.Get("/health", httphealth.Handler())
+	router.Get("/healthz", httphealth.Handler())
 
 	router.Group(func(r chi.Router) {
 		auth := middlewarehttp.NewAuthMiddleware(a.diContainer.AuthClient(ctx))
