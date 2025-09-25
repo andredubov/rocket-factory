@@ -168,15 +168,14 @@ static_resources:
                         typed_config:
                           "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
                           compression_level: BEST_COMPRESSION
-                          compression_strategy: DEFAULT_STRATEGY
-                          content_type:
-                            - text/html
-                            - application/json
-                            - application/javascript
-                            - text/css
-                            - text/plain
                           memory_level: 9
-                      content_length: 1024  # Минимальный размер для сжатия
+                      content_type: 
+                        - text/html
+                        - application/json
+                        - application/javascript
+                        - text/css
+                        - text/plain
+                      content_length: 1024
                       remove_accept_encoding_header: false
 
                   # 6. Роутер - всегда последний
