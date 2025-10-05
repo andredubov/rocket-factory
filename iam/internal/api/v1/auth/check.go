@@ -3,114 +3,93 @@ package api
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 	"time"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	authv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/google/uuid"
+	"go.uber.org/zap"
 	statusv3 "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 
 	"github.com/andredubov/rocket-factory/platform/pkg/logger"
-	auth_v1 "github.com/andredubov/rocket-factory/shared/pkg/proto/auth/v1"
 )
 
 const (
-	SessionCookieName   = "session-uuid"
-	HeaderUserUUID      = "X-User-Uuid"
-	HeaderUserLogin     = "X-User-Login"
-	HeaderContentType   = "content-type"
-	HeaderAuthStatus    = "X-Auth-Status"
-	HeaderCookie        = "cookie"
-	HeaderAuthorization = "authorization"
-	ContentTypeJSON     = "application/json"
-	AuthStatusDenied    = "denied"
+	HeaderContentType = "content-type"
+	HeaderAuthStatus  = "x-auth-status"
+
+	HeaderCookie             = "cookie"
+	HeaderAuthorization      = "authorization"
+	HeaderSessionUUIDPrimary = "session-uuid"
+	HeaderSessionUUIDAlt     = "x-session-uuid"
+
+	ContentTypeJSON = "application/json"
+
+	AuthStatusDenied = "denied"
 )
 
+// Check реализует External Authorization для Envoy
 func (a *AuthImplementation) Check(ctx context.Context, req *authv3.CheckRequest) (*authv3.CheckResponse, error) {
-	logger.Debug(ctx, "🔐 External Authorization Check called")
+	logger.Info(ctx, "🔒 External Authorization Check called")
 
-	sessionUUID, err := a.extractSessionUUID(req)
+	sessionUUIDStr, err := a.extractSessionUUID(ctx, req)
 	if err != nil {
-		logger.Error(ctx, fmt.Sprintf("❌ Session extraction failed: %v", err))
-		return a.denyRequest("Missing or invalid session", 403), nil
+		logger.Error(ctx, "❌ Session extraction failed", zap.Error(err))
+		return a.denyRequest("Missing or invalid session", 401), nil
 	}
 
-	logger.Debug(ctx, fmt.Sprintf("✅ Extracted session_uuid: %s", sessionUUID))
+	logger.Info(ctx, "🔑 Extracted session-uuid", zap.String("value", sessionUUIDStr))
 
-	// Проверим валидность сессии через Whoami
-	logger.Debug(ctx, fmt.Sprintf("🔍 Calling Whoami for session: %s", sessionUUID))
-	whoamiResp, err := a.Whoami(ctx, &auth_v1.WhoamiRequest{
-		SessionUuid: sessionUUID,
-	})
+	sessionUUID, err := uuid.Parse(sessionUUIDStr)
 	if err != nil {
-		logger.Error(ctx, fmt.Sprintf("❌ Whoami failed: %v", err))
+		logger.Error(ctx, "❌ Invalid session UUID format", zap.Error(err))
+		return a.denyRequest("Invalid session format", 401), nil
+	}
+
+	sessionUser, err := a.authService.Whoami(ctx, sessionUUID)
+	if err != nil {
+		logger.Error(ctx, "❌ Whoami failed", zap.Error(err))
 		return a.denyRequest("Invalid session", 403), nil
 	}
 
-	logger.Debug(ctx, fmt.Sprintf("✅ Whoami successful. User: %s", whoamiResp.User.Uuid))
+	logger.Info(ctx, "✅ Authorization successful for user", zap.String("user's login", sessionUser.User.Info.Login))
 
-	// Проверим создание ответа
-	response := a.allowRequest(whoamiResp)
-	logger.Debug(ctx, "✅ Auth check passed, allowing request")
-
-	return response, nil
+	return a.allowRequest(sessionUUID), nil
 }
 
-func (a *AuthImplementation) extractSessionUUID(req *authv3.CheckRequest) (string, error) {
+// extractSessionUUID извлекает session UUID из различных источников в запросе
+func (a *AuthImplementation) extractSessionUUID(ctx context.Context, req *authv3.CheckRequest) (string, error) {
 	if req.Attributes == nil || req.Attributes.Request == nil {
 		return "", fmt.Errorf("no HTTP request found")
 	}
 
 	headers := req.Attributes.Request.Http.Headers
 
-	if cookieHeader, ok := headers[HeaderCookie]; ok && cookieHeader != "" {
-		sessionUUID := a.extractSessionFromCookies(cookieHeader)
-		if sessionUUID != "" {
-			return sessionUUID, nil
-		}
+	if sessionHeader, ok := headers[HeaderSessionUUIDAlt]; ok && sessionHeader != "" {
+		logger.Info(ctx, "✅ Session header", zap.String(HeaderSessionUUIDAlt, sessionHeader))
+		return sessionHeader, nil
 	}
 
-	return "", fmt.Errorf("session uuid not found in cookies")
+	logger.Error(ctx, "❌ Session uuid not found in any headers or cookies")
+
+	return "", fmt.Errorf("session uuid not found in any headers or cookies")
 }
 
-func (a *AuthImplementation) extractSessionFromCookies(cookieHeader string) string {
-	req := &http.Request{Header: make(http.Header)}
-	req.Header.Add(HeaderCookie, cookieHeader)
-
-	if cookie, err := req.Cookie(SessionCookieName); err == nil {
-		var sessionUUID string
-		sessionUUID, err = url.QueryUnescape(cookie.Value)
-		if err != nil {
-			return cookie.Value
-		}
-
-		return sessionUUID
-	}
-
-	return ""
-}
-
-func (a *AuthImplementation) allowRequest(whoamiResp *auth_v1.WhoamiResponse) *authv3.CheckResponse {
+// allowRequest создает разрешающий ответ с пользовательскими заголовками
+func (a *AuthImplementation) allowRequest(sessionUUID uuid.UUID) *authv3.CheckResponse {
 	headers := []*corev3.HeaderValueOption{
 		{
 			Header: &corev3.HeaderValue{
-				Key:   HeaderUserUUID,
-				Value: whoamiResp.User.Uuid,
-			},
-		},
-		{
-			Header: &corev3.HeaderValue{
-				Key:   HeaderUserLogin,
-				Value: whoamiResp.User.Info.Login,
+				Key:   HeaderSessionUUIDPrimary,
+				Value: sessionUUID.String(),
 			},
 		},
 	}
 
 	return &authv3.CheckResponse{
-		Status: &statusv3.Status{Code: 0},
+		Status: &statusv3.Status{Code: int32(codes.OK)},
 		HttpResponse: &authv3.CheckResponse_OkResponse{
 			OkResponse: &authv3.OkHttpResponse{
 				Headers:         headers,
@@ -121,16 +100,8 @@ func (a *AuthImplementation) allowRequest(whoamiResp *auth_v1.WhoamiResponse) *a
 }
 
 func (a *AuthImplementation) denyRequest(message string, statusCode int32) *authv3.CheckResponse {
-	code := codes.Unauthenticated
-	if statusCode == 403 {
-		code = codes.PermissionDenied
-	}
-
-	// Коды gRPC стандартизированы и всегда находятся в безопасном диапазоне для int32
-	statusCodeInt32 := int32(code) // nolint:gosec
-
 	return &authv3.CheckResponse{
-		Status: &statusv3.Status{Code: statusCodeInt32},
+		Status: &statusv3.Status{Code: int32(codes.Unauthenticated)},
 		HttpResponse: &authv3.CheckResponse_DeniedResponse{
 			DeniedResponse: &authv3.DeniedHttpResponse{
 				Status: &typev3.HttpStatus{

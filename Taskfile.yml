@@ -533,7 +533,7 @@ tasks:
         echo "👤 Тест 3: Проверка whoami с session UUID"
         WHOAMI_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/auth/whoami" \
           -H "Content-Type: application/json" \
-          -H "Cookie: session-uuid=$SESSION_UUID" \
+          -H "X-Session-UUID: $SESSION_UUID" \
           -d "{\"session_uuid\":\"$SESSION_UUID\"}")
         
         if [[ -z "$WHOAMI_RESPONSE" || "$WHOAMI_RESPONSE" == *"error"* ]]; then
@@ -611,7 +611,7 @@ tasks:
         
         echo
         echo "🎉 Все тесты отклонения неавторизованных запросов завершены!"
-
+ 
   test-api-with-auth:
     desc: "✅ Тестирование API микросервисов с корректной аутентификацией"
     silent: true
@@ -633,8 +633,9 @@ tasks:
 
         echo
         echo "📦 Тест 1: Получение списка деталей из Inventory (с аутентификацией)"
-        PARTS_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/inventory" \
-          -H "Cookie: session-uuid=$TEST_SESSION_UUID")
+        PARTS_RESPONSE=$(curl -s -w "HTTP_CODE:%{http_code}" -X GET "http://localhost:8080/api/v1/inventory" \
+          -H "X-Session-UUID: $TEST_SESSION_UUID" \
+          -H "Accept: application/json")
 
         if [[ -z "$PARTS_RESPONSE" || "$PARTS_RESPONSE" == *"error"* ]]; then
           echo "❌ Не удалось получить список деталей."
@@ -653,8 +654,9 @@ tasks:
 
         echo
         echo "🔍 Тест 2: Получение информации о детали по UUID (с аутентификацией)"
-        PART_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/inventory/$PART_UUID" \
-          -H "Cookie: session-uuid=$TEST_SESSION_UUID")
+        PART_RESPONSE=$(curl -s -w "HTTP_CODE:%{http_code}" -X GET "http://localhost:8080/api/v1/inventory/$PART_UUID" \
+          -H "X-Session-UUID: $TEST_SESSION_UUID" \
+          -H "Accept: application/json")
 
         if [[ -z "$PART_RESPONSE" || "$PART_RESPONSE" == *"error"* ]]; then
           echo "❌ Не удалось получить информацию о детали."
@@ -675,7 +677,7 @@ tasks:
         echo "📝 Тест 3: Создание заказа (REST API с аутентификацией)"
         ORDER_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders" \
           -H "Content-Type: application/json" \
-          -H "Cookie: session-uuid=$TEST_SESSION_UUID" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID" \
           -d "{\"user_uuid\":\"$TEST_USER_UUID\",\"part_uuids\":[\"$PART_UUID\"]}")
 
         if [[ -z "$ORDER_RESPONSE" || "$ORDER_RESPONSE" == *"error"* ]]; then
@@ -695,170 +697,170 @@ tasks:
           fi
         else
           # Извлекаем UUID заказа с учетом разных форматов JSON
-          ORDER_UUID=$(echo $ORDER_RESPONSE | grep -o '"order_uuid":"[^"]*' | cut -d'"' -f4)
+        ORDER_UUID=$(echo $ORDER_RESPONSE | grep -o '"order_uuid":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER_UUID" ]; then
+          ORDER_UUID=$(echo $ORDER_RESPONSE | grep -o '"order_uuid": "[^"]*' | cut -d'"' -f4)
           if [ -z "$ORDER_UUID" ]; then
-            ORDER_UUID=$(echo $ORDER_RESPONSE | grep -o '"order_uuid": "[^"]*' | cut -d'"' -f4)
-            if [ -z "$ORDER_UUID" ]; then
-              echo "❌ Не удалось извлечь UUID заказа из ответа."
-              echo "🔍 Ответ сервера: $ORDER_RESPONSE"
-              exit 1
-            fi
+            echo "❌ Не удалось извлечь UUID заказа из ответа."
+            echo "🔍 Ответ сервера: $ORDER_RESPONSE"
+            exit 1
           fi
-          echo "✅ Успешно создан заказ с UUID: $ORDER_UUID"
+        fi
+        echo "✅ Успешно создан заказ с UUID: $ORDER_UUID"
 
-          echo
-          echo "📊 Тест 4: Проверка начального статуса заказа (должен быть PENDING_PAYMENT)"
-          ORDER_INFO_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER_UUID" \
-            -H "Cookie: session-uuid=$TEST_SESSION_UUID")
+        echo
+        echo "📊 Тест 4: Проверка начального статуса заказа (должен быть PENDING_PAYMENT)"
+        ORDER_INFO_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER_UUID" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID")
 
-          if [[ -z "$ORDER_INFO_RESPONSE" || "$ORDER_INFO_RESPONSE" == *"error"* ]]; then
-            echo "❌ Не удалось получить информацию о заказе."
+        if [[ -z "$ORDER_INFO_RESPONSE" || "$ORDER_INFO_RESPONSE" == *"error"* ]]; then
+          echo "❌ Не удалось получить информацию о заказе."
+          echo "🔍 Ответ сервера: $ORDER_INFO_RESPONSE"
+          exit 1
+        fi
+
+        # Извлекаем статус заказа с учетом разных форматов JSON
+        ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER_STATUS" ]; then
+          ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+          if [ -z "$ORDER_STATUS" ]; then
+            echo "❌ Не удалось извлечь статус заказа из ответа."
             echo "🔍 Ответ сервера: $ORDER_INFO_RESPONSE"
             exit 1
           fi
+        fi
+        
+        # Проверяем, что начальный статус PENDING_PAYMENT
+        if [[ "$ORDER_STATUS" != *"PENDING_PAYMENT"* ]]; then
+          echo "❌ Неверный начальный статус заказа. Ожидался PENDING_PAYMENT, получен: $ORDER_STATUS"
+          exit 1
+        fi
+        echo "✅ Начальный статус заказа корректный: $ORDER_STATUS"
+        
+        echo
+        echo "💰 Тест 5: Оплата заказа (REST API с аутентификацией)"
+        PAY_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders/$ORDER_UUID/pay" \
+          -H "Content-Type: application/json" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID" \
+          -d "{\"payment_method\":\"CARD\"}")
 
-          # Извлекаем статус заказа с учетом разных форматов JSON
-          ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status":"[^"]*' | cut -d'"' -f4)
-          if [ -z "$ORDER_STATUS" ]; then
-            ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status": "[^"]*' | cut -d'"' -f4)
-            if [ -z "$ORDER_STATUS" ]; then
-              echo "❌ Не удалось извлечь статус заказа из ответа."
-              echo "🔍 Ответ сервера: $ORDER_INFO_RESPONSE"
-              exit 1
-            fi
-          fi
+        if [[ "$PAY_RESPONSE" == *"error"* ]]; then
+          echo "❌ Ошибка при оплате заказа."
+          echo "🔍 Ответ сервера: $PAY_RESPONSE"
+          exit 1
+        fi
+        echo "✅ Заказ успешно оплачен"
+
+        echo
+        echo "📊 Тест 6: Проверка статуса после оплаты (должен быть PAID)"
+        # Ждем небольшую паузу для обновления статуса
+        sleep 1
+        ORDER_INFO_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER_UUID" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID")
+        
+        # Извлекаем статус заказа
+        ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER_STATUS" ]; then
+          ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+        fi
+        
+        # Проверяем, что статус стал PAID
+        if [[ "$ORDER_STATUS" != *"PAID"* ]]; then
+          echo "❌ Неверный статус заказа после оплаты. Ожидался PAID или ASSEMBLED, получен: $ORDER_STATUS"
+          exit 1
+        fi
+        echo "✅ Статус заказа после оплаты: $ORDER_STATUS"
+        
+        # Если статус PAID, ждем сборку
+        if [[ "$ORDER_STATUS" == *"PAID"* ]]; then
+          echo "Ожидаем сборку заказа (11 секунд)..."
+          sleep 11
           
-          # Проверяем, что начальный статус PENDING_PAYMENT
-          if [[ "$ORDER_STATUS" != *"PENDING_PAYMENT"* ]]; then
-            echo "❌ Неверный начальный статус заказа. Ожидался PENDING_PAYMENT, получен: $ORDER_STATUS"
-            exit 1
-          fi
-          echo "✅ Начальный статус заказа корректный: $ORDER_STATUS"
-          
-          echo
-          echo "💰 Тест 5: Оплата заказа (REST API с аутентификацией)"
-          PAY_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders/$ORDER_UUID/pay" \
-            -H "Content-Type: application/json" \
-            -H "Cookie: session-uuid=$TEST_SESSION_UUID" \
-            -d "{\"payment_method\":\"CARD\"}")
-
-          if [[ "$PAY_RESPONSE" == *"error"* ]]; then
-            echo "❌ Ошибка при оплате заказа."
-            echo "🔍 Ответ сервера: $PAY_RESPONSE"
-            exit 1
-          fi
-          echo "✅ Заказ успешно оплачен"
-
-          echo
-          echo "📊 Тест 6: Проверка статуса после оплаты (должен быть PAID)"
-          # Ждем небольшую паузу для обновления статуса
-          sleep 1
           ORDER_INFO_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER_UUID" \
-            -H "Cookie: session-uuid=$TEST_SESSION_UUID")
-          
-          # Извлекаем статус заказа
+            -H "X-Session-Uuid: $TEST_SESSION_UUID")
           ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status":"[^"]*' | cut -d'"' -f4)
           if [ -z "$ORDER_STATUS" ]; then
             ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status": "[^"]*' | cut -d'"' -f4)
           fi
           
-          # Проверяем, что статус стал PAID
-          if [[ "$ORDER_STATUS" != *"PAID"* ]]; then
-            echo "❌ Неверный статус заказа после оплаты. Ожидался PAID или ASSEMBLED, получен: $ORDER_STATUS"
+          # Проверяем, что статус изменился на ASSEMBLED
+          if [[ "$ORDER_STATUS" != *"ASSEMBLED"* ]]; then
+            echo "❌ Статус заказа не изменился на ASSEMBLED после ожидания. Текущий статус: $ORDER_STATUS"
             exit 1
           fi
-          echo "✅ Статус заказа после оплаты: $ORDER_STATUS"
           
-          # Если статус PAID, ждем сборку
-          if [[ "$ORDER_STATUS" == *"PAID"* ]]; then
-            echo "Ожидаем сборку заказа (11 секунд)..."
-            sleep 11
-            
-            ORDER_INFO_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER_UUID" \
-             -H "Cookie: session-uuid=$TEST_SESSION_UUID")
-            ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status":"[^"]*' | cut -d'"' -f4)
-            if [ -z "$ORDER_STATUS" ]; then
-              ORDER_STATUS=$(echo $ORDER_INFO_RESPONSE | grep -o '"status": "[^"]*' | cut -d'"' -f4)
-            fi
-            
-            # Проверяем, что статус изменился на ASSEMBLED
-            if [[ "$ORDER_STATUS" != *"ASSEMBLED"* ]]; then
-              echo "❌ Статус заказа не изменился на ASSEMBLED после ожидания. Текущий статус: $ORDER_STATUS"
-              exit 1
-            fi
-            
-            echo "✅ Статус заказа после ожидания сборки: $ORDER_STATUS (ожидали ASSEMBLED)"
-          fi
-          
-          echo
-          echo "📝 Тест 7: Создание второго заказа для отмены (REST API с аутентификацией)"
-          ORDER2_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders" \
-            -H "Content-Type: application/json" \
-            -H "Cookie: session-uuid=$TEST_SESSION_UUID"\
-            -d "{\"user_uuid\":\"$TEST_USER_UUID\",\"part_uuids\":[\"$PART_UUID\"]}")
+          echo "✅ Статус заказа после ожидания сборки: $ORDER_STATUS (ожидали ASSEMBLED)"
+        fi
+        
+        echo
+        echo "📝 Тест 7: Создание второго заказа для отмены (REST API с аутентификацией)"
+        ORDER2_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders" \
+          -H "Content-Type: application/json" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID" \
+          -d "{\"user_uuid\":\"$TEST_USER_UUID\",\"part_uuids\":[\"$PART_UUID\"]}")
 
-          if [[ -z "$ORDER2_RESPONSE" || "$ORDER2_RESPONSE" == *"error"* ]]; then
-            echo "❌ Не удалось создать второй заказ."
+        if [[ -z "$ORDER2_RESPONSE" || "$ORDER2_RESPONSE" == *"error"* ]]; then
+          echo "❌ Не удалось создать второй заказ."
+          echo "🔍 Ответ сервера: $ORDER2_RESPONSE"
+          exit 1
+        fi
+
+        # Извлекаем UUID второго заказа с учетом разных форматов JSON
+        ORDER2_UUID=$(echo $ORDER2_RESPONSE | grep -o '"order_uuid":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER2_UUID" ]; then
+          ORDER2_UUID=$(echo $ORDER2_RESPONSE | grep -o '"order_uuid": "[^"]*' | cut -d'"' -f4)
+          if [ -z "$ORDER2_UUID" ]; then
+            echo "❌ Не удалось извлечь UUID второго заказа из ответа."
             echo "🔍 Ответ сервера: $ORDER2_RESPONSE"
             exit 1
           fi
-
-          # Извлекаем UUID второго заказа с учетом разных форматов JSON
-          ORDER2_UUID=$(echo $ORDER2_RESPONSE | grep -o '"order_uuid":"[^"]*' | cut -d'"' -f4)
-          if [ -z "$ORDER2_UUID" ]; then
-            ORDER2_UUID=$(echo $ORDER2_RESPONSE | grep -o '"order_uuid": "[^"]*' | cut -d'"' -f4)
-            if [ -z "$ORDER2_UUID" ]; then
-              echo "❌ Не удалось извлечь UUID второго заказа из ответа."
-              echo "🔍 Ответ сервера: $ORDER2_RESPONSE"
-              exit 1
-            fi
-          fi
-          echo "✅ Успешно создан второй заказ с UUID: $ORDER2_UUID"
+        fi
+        echo "✅ Успешно создан второй заказ с UUID: $ORDER2_UUID"
+        
+        # Проверяем его начальный статус
+        ORDER2_INFO=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER2_UUID" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID")
+        ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER2_STATUS" ]; then
+          ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+        fi
+        
+        if [[ "$ORDER2_STATUS" != *"PENDING_PAYMENT"* ]]; then
+          echo "❌ Неверный начальный статус второго заказа. Ожидался PENDING_PAYMENT, получен: $ORDER2_STATUS"
+          exit 1
+        fi
+        echo "✅ Начальный статус второго заказа: $ORDER2_STATUS"
+        
+        echo
+        echo "❌ Тест 8: Отмена второго заказа (REST API с аутентификацией)"
+        echo "Ожидаем 2 секунды перед отменой..."
+        sleep 2
+        
+        curl -s -X POST "http://localhost:8080/api/v1/orders/$ORDER2_UUID/cancel" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID"
+        
+        echo "Проверяем статус после отмены..."
+        
+        ORDER2_INFO=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER2_UUID" \
+          -H "X-Session-Uuid: $TEST_SESSION_UUID")
+        ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+        if [ -z "$ORDER2_STATUS" ]; then
+          ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status": "[^"]*' | cut -d'"' -f4)
+        fi
+        
+        if [[ "$ORDER2_STATUS" != *"CANCELLED"* ]]; then
+          echo "❌ Неверный статус отмененного заказа. Ожидался CANCELLED, получен: $ORDER2_STATUS"
+          echo "🔍 Детали заказа: $ORDER2_INFO"
+          exit 1
+        fi
+          echo "✅ Статус второго заказа после отмены: $ORDER2_STATUS"
           
-          # Проверяем его начальный статус
-          ORDER2_INFO=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER2_UUID" \
-            -H "Cookie: session-uuid=$TEST_SESSION_UUID")
-          ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status":"[^"]*' | cut -d'"' -f4)
-          if [ -z "$ORDER2_STATUS" ]; then
-            ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status": "[^"]*' | cut -d'"' -f4)
-          fi
-          
-          if [[ "$ORDER2_STATUS" != *"PENDING_PAYMENT"* ]]; then
-            echo "❌ Неверный начальный статус второго заказа. Ожидался PENDING_PAYMENT, получен: $ORDER2_STATUS"
-            exit 1
-          fi
-          echo "✅ Начальный статус второго заказа: $ORDER2_STATUS"
+          # Очищаем временные файлы
+          rm -f /tmp/test_auth_data.sh
           
           echo
-          echo "❌ Тест 8: Отмена второго заказа (REST API с аутентификацией)"
-          echo "Ожидаем 2 секунды перед отменой..."
-          sleep 2
-          
-          curl -s -X POST "http://localhost:8080/api/v1/orders/$ORDER2_UUID/cancel" \
-           -H "Cookie: session-uuid=$TEST_SESSION_UUID"
-          
-          echo "Проверяем статус после отмены..."
-          
-          ORDER2_INFO=$(curl -s -X GET "http://localhost:8080/api/v1/orders/$ORDER2_UUID" \
-            -H "Cookie: session-uuid=$TEST_SESSION_UUID")
-          ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status":"[^"]*' | cut -d'"' -f4)
-          if [ -z "$ORDER2_STATUS" ]; then
-            ORDER2_STATUS=$(echo $ORDER2_INFO | grep -o '"status": "[^"]*' | cut -d'"' -f4)
-          fi
-          
-          if [[ "$ORDER2_STATUS" != *"CANCELLED"* ]]; then
-            echo "❌ Неверный статус отмененного заказа. Ожидался CANCELLED, получен: $ORDER2_STATUS"
-            echo "🔍 Детали заказа: $ORDER2_INFO"
-            exit 1
-          fi
-            echo "✅ Статус второго заказа после отмены: $ORDER2_STATUS"
-            
-            # Очищаем временные файлы
-            rm -f /tmp/test_auth_data.sh
-            
-            echo
-            echo "🎉 Все тесты API с аутентификацией выполнены успешно!"
-          fi
+          echo "🎉 Все тесты API с аутентификацией выполнены успешно!"
+        fi
 
   test-api:
     desc: "🚀 Полное тестирование API: проверка аутентификации + функциональные тесты"
