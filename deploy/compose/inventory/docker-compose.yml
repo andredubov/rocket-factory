@@ -5,11 +5,15 @@ services:
     container_name: inventory_service
     build:
       context: ../../..
-      dockerfile: ./inventory/Dockerfile
+      dockerfile: ./deploy/docker/inventory/Dockerfile
     env_file:
       - .env
-    ports:
-      - ${GRPC_PORT}:${GRPC_PORT}
+    healthcheck:
+      test: [ "CMD", "grpc-health-probe", "-addr=localhost:50051" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     depends_on:
       inventory-mongo:
         condition: service_healthy
@@ -32,8 +36,6 @@ services:
       # Это нужно для сохранения данных между перезапусками контейнера
     ports:
       - "${EXTERNAL_MONGO_PORT}:${INTERNAL_MONGO_PORT}"
-      # Пробрасываем внутренний порт MongoDB ${MG_PORT} наружу на порт ${MG_PORT_OUT}:
-      # Это позволяет подключаться к Mongo из внешних инструментов
     healthcheck:
       test: [ "CMD-SHELL", "echo 'db.runCommand({ ping: 1 }).ok' | mongosh --quiet -u ${MONGO_INITDB_ROOT_USERNAME} -p ${MONGO_INITDB_ROOT_PASSWORD} --authenticationDatabase ${MONGO_AUTH_SOURCE}" ]
       # Проверка готовности MongoDB: выполняем команду ping через mongosh с указанием логина и пароля

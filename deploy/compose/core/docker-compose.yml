@@ -327,6 +327,26 @@ services:
       rocketfactory-net:
         ipv4_address: 172.19.0.12
 
+  envoy:
+    image: envoyproxy/envoy:v1.34.0
+    container_name: envoy
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml
+      - ../../../shared/pkg/proto/descriptor.pb:/etc/envoy/descriptor.pb
+    ports:
+      - "${ENVOY_PORT}:8080"
+      - "${ENVOY_ADMIN_PORT}:8081"
+    healthcheck:
+      test: [ "CMD-SHELL", "timeout 1 bash -c '</dev/tcp/localhost/8081'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      rocketfactory-net:
+        ipv4_address: 172.19.0.23
+
 volumes:
   kafka_data:
     name: core_kafka_volume

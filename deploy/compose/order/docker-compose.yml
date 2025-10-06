@@ -5,11 +5,15 @@ services:
     container_name: order_service
     build:
       context: ../../..
-      dockerfile: ./order/Dockerfile
+      dockerfile: ./deploy/docker/order/Dockerfile
     env_file:
       - .env
-    ports:
-      - ${HTTP_PORT}:${HTTP_PORT}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/api/v1/orders/healthcheck" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     depends_on:
       order-postgres:
         condition: service_healthy
@@ -30,12 +34,6 @@ services:
       POSTGRES_PASSWORD: ${PG_PASSWORD} # Пароль для указанного пользователя
     volumes:
       - order_postgres_volume:/var/lib/postgresql/data
-      # Определяем том, который будет использоваться для хранения данных PostgreSQL
-      # Он сохраняет данные между перезапусками контейнера
-    ports:
-      - "${EXTERNAL_PG_PORT}:${INTERNAL_PG_PORT}"
-      # Пробрасываем внутренний порт PostgreSQL (${PG_PORT}) на порт хоста (${PG_PORT_OUT})
-      # Это нужно, чтобы другие сервисы или инструменты могли подключиться к базе
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DB}" ]
       # Настраиваем проверку готовности контейнера — pg_isready проверяет, принимает ли база подключения

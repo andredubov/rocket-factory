@@ -1,0 +1,353 @@
+admin:
+  address:
+    socket_address:
+      address: 0.0.0.0
+      port_value: 8081
+
+static_resources:
+  listeners:
+    - name: rocket_factory_api_listener
+      address:
+        socket_address:
+          address: 0.0.0.0
+          port_value: 8080
+      access_log:
+        - name: envoy.access_loggers.stdout
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+            log_format:
+              json_format:
+                start_time: "%START_TIME%"
+                method: "%REQ(:METHOD)%"
+                path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                protocol: "%PROTOCOL%"
+                response_code: "%RESPONSE_CODE%"
+                response_flags: "%RESPONSE_FLAGS%"
+                bytes_received: "%BYTES_RECEIVED%"
+                bytes_sent: "%BYTES_SENT%"
+                duration: "%DURATION%"
+                forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+                user_agent: "%REQ(USER-AGENT)%"
+                request_id: "%REQ(X-REQUEST-ID)%"
+                authority: "%REQ(:AUTHORITY)%"
+                upstream_host: "%UPSTREAM_HOST%"
+      filter_chains:
+        - filters:
+            - name: envoy.filters.network.http_connection_manager
+              # HTTP Connection Manager — основной фильтр для обработки HTTP-трафика
+              # Этот фильтр парсит HTTP-запросы, применяет маршрутизацию, добавляет заголовки
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+                stat_prefix: rocker_factory_api
+                route_config:
+                  name: rocket_factory_routes
+                  virtual_hosts:
+                    - name: rocket_factory_service
+                      domains: ["*"]
+                      typed_per_filter_config:
+                        envoy.filters.http.cors:
+                          "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
+                          allow_origin_string_match:
+                            - prefix: "http://localhost:8080"
+                          allow_methods: GET, PUT, DELETE, POST, OPTIONS
+                          allow_headers: keep-alive,user-agent,cache-control,content-type,authorization,session-uuid,x-session-id,cookie
+                          max_age: "1728000"
+                          expose_headers: x-user-uuid,x-user-login,x-user-email,x-session-uuid,x-session-expires,grpc-status,grpc-message
+                      routes:
+                        # Публичные эндпоинты - БЕЗ авторизации
+                        - match:
+                            prefix: "/healthz"
+                          route:
+                            cluster: inventory_grpc_cluster
+                            timeout: 30s
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match:
+                            path: "/api/v1/auth/login"
+                          route:
+                            cluster: iam_grpc_cluster
+                            timeout: 30s
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        - match:
+                            path: "/api/v1/users/register"
+                          route:
+                            cluster: iam_grpc_cluster
+                            timeout: 30s
+                          typed_per_filter_config:
+                            envoy.filters.http.ext_authz:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthzPerRoute
+                              disabled: true
+                        # Защищенные эндпоинты - требуют авторизации
+                        - match:
+                            prefix: "/api/v1/orders"
+                          route:
+                            cluster: order_api_cluster
+                            timeout: 30s
+                        - match:
+                            prefix: "/api/v1/inventory"
+                          route:
+                            cluster: inventory_grpc_cluster
+                            timeout: 30s
+                        - match:
+                            path: "/api/v1/auth/whoami"
+                          route:
+                            cluster: iam_grpc_cluster
+                            timeout: 30s
+                        - match:
+                            prefix: "/api/v1/users"
+                          route:
+                            cluster: iam_grpc_cluster
+                            timeout: 30s
+                        # Catch-all
+                        - match:
+                            prefix: "/"
+                          direct_response:
+                            status: 404
+                            body:
+                              inline_string: |
+                                {
+                                  "error": "Not Found",
+                                  "message": "Available endpoints",
+                                  "endpoints": {
+                                    "inventory": [
+                                      "GET /api/v1/inventory/parts",
+                                      "GET /api/v1/inventory/parts/{uuid}"
+                                    ],
+                                    "orders": [
+                                      "POST /api/v1/orders",
+                                      "GET /api/v1/orders/{order_id}",
+                                      "POST /api/v1/orders/{order_id}/pay",
+                                      "POST /api/v1/orders/{order_id}/cancel"
+                                    ],
+                                    "auth": [
+                                      "POST /auth/login",
+                                      "POST /auth/register"
+                                      "GET /auth/whoiam"
+                                    ],
+                                    "health": [
+                                      "GET /healthz",
+                                    ]
+                                  },
+                                  "authentication": {
+                                    "required": true,
+                                    "public_endpoints": ["/auth/login", "/auth/register", "/healthz"],
+                                    "methods": [
+                                      "Header: Session-UUID: <uuid>",
+                                      "Header: X-Session-ID: <uuid>", 
+                                      "Header: Authorization: Bearer <uuid>",
+                                      "Cookie: session_uuid=<uuid>"
+                                    ]
+                                  }
+                                }
+                http_filters:
+                  # 1. CORS должен быть первым для обработки OPTIONS запросов
+                  - name: envoy.filters.http.cors
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+
+                  # 2. Rate Limiting - после CORS, но до аутентификации
+                  - name: envoy.filters.http.local_ratelimit
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+                      stat_prefix: http_local_rate_limiter
+                      token_bucket:
+                        max_tokens: 100
+                        tokens_per_fill: 100
+                        fill_interval: 60s
+                      filter_enabled:
+                        default_value:
+                          numerator: 100
+                          denominator: HUNDRED
+                      filter_enforced:
+                        default_value:
+                          numerator: 100
+                          denominator: HUNDRED
+
+                  # 3. Аутентификация
+                  - name: envoy.filters.http.ext_authz
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz
+                      # Испульзуем gRPC IAM сервис
+                      grpc_service:
+                        envoy_grpc:
+                          cluster_name: iam_grpc_cluster
+                        timeout: 2s
+                      transport_api_version: V3
+                      failure_mode_allow: false # Запрещать доступ если auth сервис недоступен
+                      # Включать тело запроса в авторизацию (для POST/PUT)
+                      with_request_body:
+                        max_request_bytes: 8192
+                        allow_partial_message: true
+                        pack_as_bytes: false
+                      # Передаем метаданные о запросе
+                      include_peer_certificate: false 
+                      # Заголовки, которые отправляем в auth service
+                      allowed_headers:
+                        patterns:
+                          - exact: "authorization"     # Bearer token
+                          - exact: "cookie"           # Session cookies
+                          - exact: "session-uuid"     # Основной заголовок
+                          - exact: "x-session-uuid"   # Альтернативный заголовок из тестов
+                          - exact: "user-agent"       # Для аналитики
+                          - exact: "x-forwarded-for"  # IP адрес клиента
+                          - exact: "x-real-ip"        # Реальный IP
+                          - exact: "host"             # Хост
+
+                  # 4. gRPC-JSON транскодер
+                  - name: envoy.filters.http.grpc_json_transcoder
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.grpc_json_transcoder.v3.GrpcJsonTranscoder
+                      proto_descriptor: "/etc/envoy/descriptor.pb"
+                      services: 
+                        - "inventory.v1.InventoryService"
+                        - "auth.v1.AuthService" 
+                        - "user.v1.UserService"
+                      match_incoming_request_route: true
+                      convert_grpc_status: true # Передаем заголовки от External Authorization в gRPC metadata
+                      print_options:
+                        add_whitespace: true
+                        always_print_primitive_fields: true
+                        preserve_proto_field_names: true
+
+                  # 5. Компрессия - после аутентификации, но до роутера
+                  - name: envoy.filters.http.compressor
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+                      compressor_library:
+                        name: text_optimized
+                        typed_config:
+                          "@type": type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+                          compression_level: BEST_COMPRESSION
+                          memory_level: 9
+                      content_type: 
+                        - text/html
+                        - application/json
+                        - application/javascript
+                        - text/css
+                        - text/plain
+                      content_length: 1024
+                      remove_accept_encoding_header: false
+
+                  # 6. Роутер - всегда последний
+                  - name: envoy.filters.http.router
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+
+  clusters:
+    # Order API Cluster (HTTP)
+    - name: order_api_cluster
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      # Health checking для Order сервиса
+      health_checks:
+        - timeout: 3s
+          interval: 10s
+          unhealthy_threshold: 3
+          healthy_threshold: 2
+          http_health_check:
+            path: "/healthz"
+            expected_statuses:
+              - start: 200
+                end: 399
+      # Endpoint Order API сервиса
+      load_assignment:
+        cluster_name: order_api_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address:
+                      address: order-service
+                      port_value: 8080
+
+    # Inventory gRPC Service Cluster
+    - name: inventory_grpc_cluster
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      # HTTP/2 для gRPC
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options: {}
+      # Circuit breaker для Inventory сервиса - защита от перегрузки
+      circuit_breakers:
+        thresholds:
+        - priority: DEFAULT
+          max_connections: 50
+          max_pending_requests: 100
+          max_requests: 1000
+          max_retries: 3
+      # Health checking для Inventory сервиса
+      health_checks:
+        - timeout: 3s
+          interval: 10s
+          unhealthy_threshold: 3
+          healthy_threshold: 2
+          grpc_health_check:
+            service_name: "inventory.v1.InventoryService"
+            authority: inventory-service
+      # Endpoint Inventory gRPC сервиса
+      load_assignment:
+        cluster_name: inventory_grpc_cluster
+        endpoints:
+          - lb_endpoints:
+              - endpoint:
+                  address:
+                    socket_address: 
+                      address: inventory-service # docker service name
+                      port_value: 50051  # gRPC порт Inventory сервиса
+
+    # IAM Authorization Cluster
+    - name: iam_grpc_cluster
+      type: STRICT_DNS
+      lb_policy: ROUND_ROBIN
+      # HTTP/2 обязательно для gRPC
+      typed_extension_protocol_options:
+        envoy.extensions.upstreams.http.v3.HttpProtocolOptions:
+          "@type": type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+          explicit_http_config:
+            http2_protocol_options:
+              # Настройки HTTP/2 для оптимальной производительности
+              max_concurrent_streams: 100
+              initial_stream_window_size: 65536
+              initial_connection_window_size: 1048576
+      # Connection pooling для производительности
+      circuit_breakers:
+        thresholds:
+        - priority: DEFAULT
+          max_connections: 10          # Ограничиваем количество соединений
+          max_pending_requests: 50     # Очередь запросов
+          max_requests: 100            # Максимальные активные запросы
+          max_retries: 3               # Максимальные retry попытки
+          track_remaining: true
+      # Настройки соединений
+      upstream_connection_options:
+        tcp_keepalive:
+          keepalive_probes: 3
+          keepalive_time: 30
+          keepalive_interval: 5
+      # Health checking для Inventory сервиса
+      health_checks:
+        - timeout: 3s
+          interval: 10s
+          unhealthy_threshold: 3
+          healthy_threshold: 2
+          grpc_health_check:
+            service_name: "auth.v1.AuthService"
+            authority: iam-service
+      # Endpoint IAM Authorization сервиса
+      load_assignment:
+        cluster_name: iam_grpc_cluster
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: iam-service    # Docker service name - тот же сервис IAM
+                  port_value: 50053       # Порт IAM сервиса (тот же для обычных методов и Authorization)

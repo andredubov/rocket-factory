@@ -5,11 +5,15 @@ services:
     container_name: payment_service
     build:
       context: ../../..
-      dockerfile: ./payment/Dockerfile
+      dockerfile: ./deploy/docker/payment/Dockerfile
     env_file:
       - .env
-    ports:
-      - ${GRPC_PORT}:${GRPC_PORT}
+    healthcheck:
+      test: [ "CMD", "grpc-health-probe", "-addr=localhost:50052" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks:
       rocketfactory-net:
         ipv4_address: 172.19.0.21

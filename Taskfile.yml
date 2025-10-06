@@ -161,6 +161,29 @@ tasks:
           chmod +x {{.BUF}}
         }
 
+  install-protoc:
+    desc: "Установка protoc в bin директорию"
+    cmds:
+      - |
+        if [ ! -f "{{.BIN_DIR}}/protoc" ]; then
+          echo "📥 Устанавливаем protoc..."
+          # Для macOS
+          if [[ "$(uname)" == "Darwin" ]]; then
+            curl -L -o protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-27.3-osx-x86_64.zip
+          # Для Linux
+          elif [[ "$(uname)" == "Linux" ]]; then
+            curl -L -o protoc.zip https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-27.3-linux-x86_64.zip
+          fi
+          
+          unzip -o protoc.zip -d tmp-protoc
+          mv tmp-protoc/bin/protoc {{.BIN_DIR}}/
+          chmod +x {{.BIN_DIR}}/protoc
+          rm -rf tmp-protoc protoc.zip
+          echo "✅ protoc установлен в {{.BIN_DIR}}/protoc"
+        else
+          echo "✅ protoc уже установлен"
+        fi
+
   proto:install-plugins:
     desc: "Устанавливает protoc плагины в каталог bin"
     cmds:
@@ -192,6 +215,72 @@ tasks:
     cmds:
       - '{{.BUF}} lint'
 
+  proto:update-deps:
+    deps: [ install-buf ]
+    desc: Обновляет зависимости protobuf из удаленных репозиториев (googleapis и т.д.)
+    dir: ./shared/proto
+    cmds:
+      - |
+        echo "🔄 Обновляем зависимости buf..."
+        {{.BUF}} dep update
+
+  proto:build:auth:
+    desc: Сборка proto файлов Auth сервиса
+    deps: [ install-buf, proto:install-plugins, proto:build:common ]
+    dir: ./shared/proto
+    cmds:
+      - 'mkdir -p ../pkg/proto/auth/v1'
+      - '{{.BUF}} build --path auth --path common --as-file-descriptor-set --output "../pkg/proto/auth/v1/auth_service_descriptor.pb"'
+
+  proto:build:user:
+    desc: Сборка proto файлов User сервиса
+    deps: [ install-buf, proto:install-plugins, proto:build:common ]
+    dir: ./shared/proto
+    cmds:
+      - 'mkdir -p ../pkg/proto/user/v1'
+      - '{{.BUF}} build --path user --path common --as-file-descriptor-set --output "../pkg/proto/user/v1/user_service_descriptor.pb"'
+
+  proto:build:inventory:
+    desc: Сборка proto файлов inventory сервиса
+    deps: [ install-buf, proto:install-plugins ]
+    dir: ./shared/proto
+    cmds:
+      - 'mkdir -p ../pkg/proto/inventory/v1'
+      - '{{.BUF}} build --path inventory --path common --as-file-descriptor-set --output "../pkg/proto/inventory/v1/inventory_service_descriptor.pb"'
+
+  proto:build:common:
+    desc: Сборка proto файлов Common пакета
+    deps: [ install-buf, proto:install-plugins ]
+    dir: ./shared/proto
+    cmds:
+      - 'mkdir -p ../pkg/proto/common/v1'
+      - '{{.BUF}} build --path common --as-file-descriptor-set --output "../pkg/proto/common/v1/common_descriptor.pb"'
+
+  proto:build:all:
+    desc: Сборка всех proto дескрипторов для каждого сервиса отдельно
+    deps: [proto:build:auth, proto:build:common, proto:build:user, proto:build:inventory]
+
+  proto:build:envoy-descriptor:
+    desc: "Генерация единого дескриптора для Envoy с помощью buf"
+    deps: [install-buf, proto:install-plugins, install-protoc]
+    dir: ./shared/proto
+    cmds:
+      - |
+        echo "🔗 Генерируем единый дескриптор для Envoy с помощью buf..."
+        mkdir -p ../pkg/proto
+        
+        # Обновляем зависимости buf
+        echo "📥 Обновляем зависимости buf..."
+        {{.BUF}} dep update
+        
+        # Генерируем единый дескриптор
+        echo "🏗️  Генерируем descriptor.pb..."
+        {{.BUF}} build --output ../pkg/proto/descriptor.pb
+        
+        echo "✅ Единый файл дескриптора создан: ../pkg/proto/descriptor.pb"
+        echo "📊 Проверяем содержимое дескриптора..."
+        {{.BIN_DIR}}/protoc --decode_raw < ../pkg/proto/descriptor.pb | grep -A2 -B2 "inventory.v1.InventoryService\|auth.v1.AuthService\|user.v1.UserService" || echo "ℹ️  Проверка завершена"
+
   ogen:install:
     desc: "Скачивает ogen в папку bin"
     cmds:
@@ -212,6 +301,7 @@ tasks:
     desc: "Генерация всех proto и OpenAPI деклараций"
     cmds:
       - task: proto:gen
+      - task: proto:build:envoy-descriptor
       - task: ogen:gen
 
   deps:update:
@@ -382,11 +472,10 @@ tasks:
 
   test-iam:
     desc: "🔐 Тестирование IAM сервиса (регистрация, логин, whoami)"
-    deps: [ grpcurl:install ]
     silent: true
     cmds:
       - |
-        echo "🔐 Тестирование IAM сервиса"
+        echo "🔐 Тестирование IAM сервиса через HTTP/JSON"
         
         # Генерируем уникальные данные для пользователя
         TIMESTAMP=$(date +%s)
@@ -394,7 +483,9 @@ tasks:
         USER_PASSWORD="SecurePassword123!"
         
         echo "📝 Тест 1: Регистрация пользователя"
-        REGISTER_RESPONSE=$({{.GRPCURL}} -plaintext -d "{\"info\":{\"email\":\"$USER_EMAIL\",\"login\":\"$USER_EMAIL\"},\"password\":\"$USER_PASSWORD\"}" localhost:50053 user.v1.UserService/Register)
+        REGISTER_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/users/register" \
+          -H "Content-Type: application/json" \
+          -d "{\"info\":{\"email\":\"$USER_EMAIL\",\"login\":\"$USER_EMAIL\"},\"password\":\"$USER_PASSWORD\"}")
         
         if [[ -z "$REGISTER_RESPONSE" || "$REGISTER_RESPONSE" == *"error"* ]]; then
           echo "❌ Не удалось зарегистрировать пользователя."
@@ -403,17 +494,22 @@ tasks:
         fi
         
         # Извлекаем UUID пользователя
-        USER_UUID=$(echo $REGISTER_RESPONSE | grep -o '"userUuid": "[^"]*' | cut -d'"' -f4)
+        USER_UUID=$(echo $REGISTER_RESPONSE | grep -o '"user_uuid": "[^"]*' | cut -d'"' -f4)
         if [ -z "$USER_UUID" ]; then
-          echo "❌ Не удалось извлечь UUID пользователя из ответа регистрации."
-          echo "🔍 Ответ сервера: $REGISTER_RESPONSE"
-          exit 1
+          USER_UUID=$(echo $REGISTER_RESPONSE | grep -o '"user_uuid":"[^"]*' | cut -d'"' -f4)
+          if [ -z "$USER_UUID" ]; then
+            echo "❌ Не удалось извлечь UUID пользователя из ответа регистрации."
+            echo "🔍 Ответ сервера: $REGISTER_RESPONSE"
+            exit 1
+          fi
         fi
         echo "✅ Пользователь зарегистрирован: $USER_EMAIL (UUID: $USER_UUID)"
         
         echo
         echo "🔑 Тест 2: Логин пользователя"
-        LOGIN_RESPONSE=$({{.GRPCURL}} -plaintext -d "{\"login\":\"$USER_EMAIL\",\"password\":\"$USER_PASSWORD\"}" localhost:50053 auth.v1.AuthService/Login)
+        LOGIN_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/auth/login" \
+          -H "Content-Type: application/json" \
+          -d "{\"login\":\"$USER_EMAIL\",\"password\":\"$USER_PASSWORD\"}")
         
         if [[ -z "$LOGIN_RESPONSE" || "$LOGIN_RESPONSE" == *"error"* ]]; then
           echo "❌ Не удалось войти в систему."
@@ -422,17 +518,23 @@ tasks:
         fi
         
         # Извлекаем session UUID
-        SESSION_UUID=$(echo $LOGIN_RESPONSE | grep -o '"sessionUuid": "[^"]*' | cut -d'"' -f4)
+        SESSION_UUID=$(echo $LOGIN_RESPONSE | grep -o '"session_uuid": "[^"]*' | cut -d'"' -f4)
         if [ -z "$SESSION_UUID" ]; then
-          echo "❌ Не удалось извлечь session UUID из ответа логина."
-          echo "🔍 Ответ сервера: $LOGIN_RESPONSE"
-          exit 1
+          SESSION_UUID=$(echo $LOGIN_RESPONSE | grep -o '"session_uuid":"[^"]*' | cut -d'"' -f4)
+          if [ -z "$SESSION_UUID" ]; then
+            echo "❌ Не удалось извлечь session UUID из ответа логина."
+            echo "🔍 Ответ сервера: $LOGIN_RESPONSE"
+            exit 1
+          fi
         fi
         echo "✅ Пользователь вошел в систему. Session UUID: $SESSION_UUID"
         
         echo
         echo "👤 Тест 3: Проверка whoami с session UUID"
-        WHOAMI_RESPONSE=$({{.GRPCURL}} -plaintext -d "{\"session_uuid\":\"$SESSION_UUID\"}" localhost:50053 auth.v1.AuthService/Whoami)
+        WHOAMI_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/auth/whoami" \
+          -H "Content-Type: application/json" \
+          -H "X-Session-UUID: $SESSION_UUID" \
+          -d "{\"session_uuid\":\"$SESSION_UUID\"}")
         
         if [[ -z "$WHOAMI_RESPONSE" || "$WHOAMI_RESPONSE" == *"error"* ]]; then
           echo "❌ Не удалось получить информацию о текущем пользователе."
@@ -478,36 +580,38 @@ tasks:
 
         # Получаем тестовые данные для использования в тестах
         echo "📦 Получение тестовых данных из Inventory..."
-        PARTS_RESPONSE=$({{.GRPCURL}} -plaintext -H "session-uuid: $TEST_SESSION_UUID" -d '{"filter":{}}' localhost:50051 inventory.v1.InventoryService/ListParts)
+        PARTS_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/inventory" \
+          -H "Cookie: session-uuid=$TEST_SESSION_UUID" \
+          )
         PART_UUID=$(echo $PARTS_RESPONSE | grep -o '"uuid": "[^"]*' | head -1 | cut -d'"' -f4)
         
         echo
-        echo "🔍 Тест 1: Проверка отказа доступа без аутентификации (Inventory gRPC)"
-        UNAUTHORIZED_RESPONSE=$({{.GRPCURL}} -plaintext -d '{"filter":{}}' localhost:50051 inventory.v1.InventoryService/ListParts 2>&1 || true)
+        echo "🔍 Тест 1: Проверка отказа доступа без аутентификации (Inventory REST API)"
+        UNAUTHORIZED_RESPONSE=$(curl -s -X GET "http://localhost:8080/api/v1/inventory" -w "%{http_code}")
         
-        if [[ "$UNAUTHORIZED_RESPONSE" != *"Unauthenticated"* ]]; then
-          echo "⚠️  Запрос без аутентификации не был отклонен (ожидаемое поведение может отличаться)."
+        if [[ "$UNAUTHORIZED_RESPONSE" != *"401"* && "$UNAUTHORIZED_RESPONSE" != *"403"* ]]; then
+          echo "⚠️  Запрос без аутентификации не был отклонен (ожидалось 401/403)."
           echo "🔍 Ответ сервера: $UNAUTHORIZED_RESPONSE"
         else
-          echo "✅ Запрос без аутентификации корректно отклонен"
+          echo "✅ Запрос без аутентификации корректно отклонен с кодом: $(echo "$UNAUTHORIZED_RESPONSE" | tail -1)"
         fi
         
         echo
         echo "🔍 Тест 2: Проверка отказа доступа без аутентификации (Order REST API)"
         UNAUTHORIZED_ORDER_RESPONSE=$(curl -s -X POST "http://localhost:8080/api/v1/orders" \
           -H "Content-Type: application/json" \
-          -d "{\"user_uuid\":\"$TEST_USER_UUID\",\"part_uuids\":[\"$PART_UUID\"]}")
+          -d "{\"user_uuid\":\"$TEST_USER_UUID\",\"part_uuids\":[\"$PART_UUID\"]}" -w "%{http_code}")
         
-        if [[ "$UNAUTHORIZED_ORDER_RESPONSE" != *"unauthorized"* && "$UNAUTHORIZED_ORDER_RESPONSE" != *"Unauthorized"* && "$UNAUTHORIZED_ORDER_RESPONSE" != *"Authentication required"* && "$UNAUTHORIZED_ORDER_RESPONSE" != *"MISSING_SESSION"* ]]; then
-          echo "⚠️  Запрос без аутентификации к Order API не был отклонен (ожидаемое поведение может отличаться)."
+        if [[ "$UNAUTHORIZED_ORDER_RESPONSE" != *"401"* && "$UNAUTHORIZED_ORDER_RESPONSE" != *"403"* ]]; then
+          echo "⚠️  Запрос без аутентификации к Order API не был отклонен (ожидалось 401/403)."
           echo "🔍 Ответ сервера: $UNAUTHORIZED_ORDER_RESPONSE"
         else
-          echo "✅ Запрос без аутентификации к Order API корректно отклонен"
+          echo "✅ Запрос без аутентификации к Order API корректно отклонен с кодом: $(echo "$UNAUTHORIZED_ORDER_RESPONSE" | tail -1)"
         fi
         
         echo
         echo "🎉 Все тесты отклонения неавторизованных запросов завершены!"
-
+ 
   test-api-with-auth:
     desc: "✅ Тестирование API микросервисов с корректной аутентификацией"
     silent: true
@@ -529,7 +633,9 @@ tasks:
 
         echo
         echo "📦 Тест 1: Получение списка деталей из Inventory (с аутентификацией)"
-        PARTS_RESPONSE=$({{.GRPCURL}} -plaintext -H "session-uuid: $TEST_SESSION_UUID" -d '{"filter":{}}' localhost:50051 inventory.v1.InventoryService/ListParts)
+        PARTS_RESPONSE=$(curl -s -w "HTTP_CODE:%{http_code}" -X GET "http://localhost:8080/api/v1/inventory" \
+          -H "X-Session-UUID: $TEST_SESSION_UUID" \
+          -H "Accept: application/json")
 
         if [[ -z "$PARTS_RESPONSE" || "$PARTS_RESPONSE" == *"error"* ]]; then
           echo "❌ Не удалось получить список деталей."
@@ -548,7 +654,9 @@ tasks:
 
         echo
         echo "🔍 Тест 2: Получение информации о детали по UUID (с аутентификацией)"
-        PART_RESPONSE=$({{.GRPCURL}} -plaintext -H "session-uuid: $TEST_SESSION_UUID" -d "{\"uuid\":\"$PART_UUID\"}" localhost:50051 inventory.v1.InventoryService/GetPart)
+        PART_RESPONSE=$(curl -s -w "HTTP_CODE:%{http_code}" -X GET "http://localhost:8080/api/v1/inventory/$PART_UUID" \
+          -H "X-Session-UUID: $TEST_SESSION_UUID" \
+          -H "Accept: application/json")
 
         if [[ -z "$PART_RESPONSE" || "$PART_RESPONSE" == *"error"* ]]; then
           echo "❌ Не удалось получить информацию о детали."

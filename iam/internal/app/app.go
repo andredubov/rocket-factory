@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 
+	authv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -98,8 +99,12 @@ func (a *App) initGRPCServer(ctx context.Context) error {
 	reflection.Register(a.grpcServer)    // Enable reflection API
 	health.RegisterService(a.grpcServer) // for healthcheck
 
-	auth_v1.RegisterAuthServiceServer(a.grpcServer, a.diContainer.AuthServerImplementation(ctx))
+	// Получаем реализацию сервера из DI-контейнера
+	authImplementation := a.diContainer.AuthServerImplementation(ctx)
+
+	auth_v1.RegisterAuthServiceServer(a.grpcServer, authImplementation)
 	user_v1.RegisterUserServiceServer(a.grpcServer, a.diContainer.UsersServerImplementation(ctx))
+	authv3.RegisterAuthorizationServer(a.grpcServer, authImplementation)
 
 	return nil
 }

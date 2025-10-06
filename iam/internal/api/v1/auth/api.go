@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	authv3 "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/google/uuid"
 
 	"github.com/andredubov/rocket-factory/iam/internal/model"
@@ -16,6 +17,7 @@ type AuthService interface {
 
 type AuthImplementation struct {
 	auth_v1.UnimplementedAuthServiceServer
+	authv3.UnimplementedAuthorizationServer
 	authService AuthService
 }
 
